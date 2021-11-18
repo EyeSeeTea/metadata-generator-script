@@ -1,3 +1,4 @@
+import { D2Api } from "@eyeseetea/d2-api/2.34";
 import { command, run } from "cmd-ts";
 import { config } from "dotenv-flow";
 import { google, sheets_v4 } from "googleapis";
@@ -5,7 +6,8 @@ import _ from "lodash";
 import path from "path";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
-import { getUid } from "../utils/uid";
+import { writeFile } from "../utils/fs";
+import { generateUid, getUid } from "../utils/uid";
 
 config();
 
@@ -49,27 +51,34 @@ function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
 async function buildDataSets(sheets: Sheet[]) {
     const sheetDataSets = extractObjects(sheets, "dataSets");
     const sheetDataElements = extractObjects(sheets, "dataElements");
-    const sheetDataSetSections = extractObjects(sheets, "dataSetSections");
+    const sheetDataSetSections = extractObjects(sheets, "sections");
     const sheetCategoryCombos = extractObjects(sheets, "categoryCombos");
     const sheetCategoryOptions = extractObjects(sheets, "categoryOptions");
     const sheetCategories = extractObjects(sheets, "categories");
     const sheetOptionSets = extractObjects(sheets, "optionSets");
     const sheetOptions = extractObjects(sheets, "options");
+    const sheetTrackedEntityAttributes = extractObjects(sheets, "trackedEntityAttributes");
+    const sheetTrackedEntityTypes = extractObjects(sheets, "trackedEntityTypes");
+    const sheetProgramDataElements = extractObjects(sheets, "programDataElements");
+    const sheetPrograms = extractObjects(sheets, "programs");
+    const sheetProgramStages = extractObjects(sheets, "programStages");
+    const sheetProgramStageSections = extractObjects(sheets, "programStageSections");
 
     const options = _(sheetOptions)
         .map(option => {
-            const optionSet = sheetOptionSets.find(({ name }) => name === option.optionSet);
+            const optionSet = sheetOptionSets.find(({ name }) => name === option.optionSet)?.id;
 
             return { ...option, optionSet: { id: optionSet } };
         })
         .groupBy(({ optionSet }) => optionSet.id)
-        .mapValues((option, index) => ({ ...option, sortOrder: index + 1 }))
+        .mapValues(options => options.map((option, index) => ({ ...option, sortOrder: index + 1 })))
         .values()
+        .flatten()
         .value();
 
-    const dataSetSections = _(sheetDataSetSections)
+    const sections = _(sheetDataSetSections)
         .map(section => {
-            const dataSet = sheetDataSets.find(({ name }) => name === section.dataSet);
+            const dataSet = sheetDataSets.find(({ name }) => name === section.dataSet)?.id;
             const dataElements = sheetDataElements
                 .filter(({ dataSetSection }) => dataSetSection === section.name)
                 .map(({ id }) => ({ id }));
@@ -79,14 +88,24 @@ async function buildDataSets(sheets: Sheet[]) {
         .groupBy(({ dataSet }) => dataSet.id)
         .mapValues(items => items.map((section, index) => ({ ...section, sortOrder: index + 1 })))
         .values()
+        .flatten()
         .value();
 
     const dataElements = sheetDataElements.map(dataElement => {
         const categoryCombo =
-            sheetCategoryCombos.find(({ id }) => id === dataElement.categoryCombo)?.id ??
+            sheetCategoryCombos.find(({ name }) => name === dataElement.categoryCombo)?.id ??
             process.env.DEFAULT_CATEGORY_COMBO_ID;
 
-        return { ...dataElement, categoryCombo: { id: categoryCombo } };
+        const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
+
+        return {
+            ...dataElement,
+            categoryCombo: { id: categoryCombo },
+            aggregationType: mapAggregationType(dataElement.aggregationType),
+            valueType: mapValueType(dataElement.valueType),
+            optionSet: optionSet ? { id: optionSet } : undefined,
+            domainType: "AGGREGATE",
+        };
     });
 
     const dataSets = sheetDataSets.map(dataSet => {
@@ -101,25 +120,30 @@ async function buildDataSets(sheets: Sheet[]) {
                     process.env.DEFAULT_CATEGORY_COMBO_ID;
 
                 return {
-                    dataSet: dataSet.id,
-                    dataElement: id,
-                    categoryCombo: categoryComboId,
+                    dataSet: { id: dataSet.id },
+                    dataElement: { id },
+                    categoryCombo: { id: categoryComboId },
                 };
             });
-        return { ...dataSet, dataSetElements };
+
+        const categoryCombo =
+            sheetCategoryCombos.find(({ name }) => name === dataSet.categoryCombo)?.id ??
+            process.env.DEFAULT_CATEGORY_COMBO_ID;
+
+        return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
     });
 
     const categories = sheetCategories.map(category => {
         const categoryOptions = sheetCategoryOptions
-            .filter(({ category }) => category === category.name)
+            .filter(option => option.category === category.name)
             .map(({ id }) => ({ id }));
 
         return { ...category, categoryOptions };
     });
 
-    /**const categoryCombos = sheetCategoryCombos.map(categoryCombo => {
+    const categoryCombos = sheetCategoryCombos.map(categoryCombo => {
         const categories = sheetCategories
-            .filter(({ categoryCombo }) => categoryCombo === categoryCombo.name)
+            .filter(category => category.categoryCombo === categoryCombo?.name)
             .map(({ id }) => ({ id }));
 
         return { ...categoryCombo, categories };
@@ -128,28 +152,147 @@ async function buildDataSets(sheets: Sheet[]) {
     const optionSets = sheetOptionSets.map(optionSet => {
         const options = sheetOptions.filter(({ optionSet }) => optionSet === optionSet.name).map(({ id }) => ({ id }));
 
-        return { ...optionSet, ...options };
-    });**/
+        return { ...optionSet, options, valueType: mapValueType(optionSet.valueType) };
+    });
+
+    const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id);
+
+    const trackedEntityAttributes: any[] = sheetTrackedEntityAttributes.map(attribute => {
+        const optionSet = sheetOptionSets.find(({ name }) => name === attribute.optionSet)?.id;
+
+        return {
+            ...attribute,
+            aggregationType: mapAggregationType(attribute.aggregationType),
+            valueType: mapValueType(attribute.valueType),
+            optionSet: optionSet ? { id: optionSet } : undefined,
+        };
+    });
+
+    const trackedEntityTypes = sheetTrackedEntityTypes.map(type => {
+        const trackedEntityTypeAttributes = trackedEntityAttributes
+            .filter(({ trackedEntityType }) => trackedEntityType === type.name)
+            .map(({ id, name, searchable, mandatory, unique, valueType, displayInList, optionSet }) => ({
+                value: id,
+                text: name,
+                searchable,
+                mandatory,
+                unique,
+                valueType,
+                displayInList,
+                trackedEntityAttribute: { id },
+                optionSet,
+            }));
+
+        return { ...type, trackedEntityTypeAttributes };
+    });
+
+    const programDataElements = sheetProgramDataElements.map(dataElement => {
+        const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
+
+        return {
+            ...dataElement,
+            domainType: "TRACKER",
+            aggregationType: mapAggregationType(dataElement.aggregationType),
+            valueType: mapValueType(dataElement.valueType),
+            optionSet: optionSet ? { id: optionSet } : undefined,
+        };
+    });
 
     return {
         dataSets,
-        dataElements,
+        dataElements: [...dataElements, ...programDataElements],
         options,
-        dataSetSections,
+        sections,
         categories,
-        categoryCombos: sheetCategoryCombos,
-        categoryOptions: sheetCategoryOptions,
-        optionSets: sheetOptionSets,
+        categoryCombos,
+        categoryOptions,
+        optionSets,
+        trackedEntityAttributes,
+        trackedEntityTypes,
     };
 }
 
 async function getSheet() {
+    const api = new D2Api({
+        baseUrl: process.env.DHIS2_BASE_URL,
+        auth: { username: process.env.DHIS2_USERNAME ?? "", password: process.env.DHIS2_PASSWORD ?? "" },
+    });
+
     const { data } = await spreadsheets.get({ spreadsheetId: process.env.GOOGLE_SHEET_ID, includeGridData: true });
     const sheets = getSheets(data);
     const results = await buildDataSets(sheets);
-    const json = JSON.stringify(results, null, 4);
+    await writeFile("out.json", results).toPromise();
 
-    console.log(json);
+    const { response } = await api.metadata
+        .postAsync(results as any, { importStrategy: "CREATE_AND_UPDATE", mergeMode: "MERGE" })
+        .getData();
+
+    const result = await api.system.waitFor(response.jobType, response.id).getData();
+
+    const messages =
+        result?.typeReports?.flatMap(({ klass, objectReports }) =>
+            objectReports.flatMap(({ errorReports }) =>
+                errorReports.flatMap(({ message, errorProperty }) => `${klass} ${errorProperty} ${message}`)
+            )
+        ) ?? [];
+
+    console.log([result?.status, ...messages].join("\n"));
+}
+
+function mapValueType(type: string): string {
+    const dictionary: Record<string, string> = {
+        Text: "TEXT",
+        "Long text": "LONG_TEXT",
+        Letter: "LETTER",
+        "Phone number": "PHONE_NUMBER",
+        Email: "EMAIL",
+        "Yes/No": "BOOLEAN",
+        "Yes Only": "TRUE_ONLY",
+        Date: "DATE",
+        "Date & Time": "DATETIME",
+        Time: "TIME",
+        Number: "NUMBER",
+        "Unit interval": "UNIT_INTERVAL",
+        Percentage: "PERCENTAGE",
+        Integer: "INTEGER",
+        "Positive Integer": "INTEGER_POSITIVE",
+        "Negative Integer": "INTEGER_NEGATIVE",
+        "Positive or Zero Integer": "INTEGER_ZERO_OR_POSITIVE",
+        "Tracker Associate": "TRACKER_ASSOCIATE",
+        Username: "USERNAME",
+        Coordinate: "COORDINATE",
+        "Organisation unit": "ORGANISATION_UNIT",
+        Age: "AGE",
+        URL: "URL",
+        File: "FILE_RESOURCE",
+        Image: "IMAGE",
+    };
+
+    return dictionary[type] ?? "TEXT";
+}
+
+function mapAggregationType(type: string): string {
+    const dictionary: Record<string, string> = {
+        Sum: "SUM",
+        Average: "AVERAGE",
+        "Average (sum in org unit hierarchy)": "AVERAGE_SUM_ORG_UNIT",
+        "Last value (sum in org unit hierarchy)": "LAST",
+        "Last value (average in org unit hierarchy)": "LAST_AVERAGE_ORG_UNIT",
+        "Last value in period (sum in org unit hierarchy)": "LAST_IN_PERIOD",
+        "Last value in period (average in org unit hierarchy)": "LAST_IN_PERIOD_AVERAGE_ORG_UNIT",
+        "First value (sum in org unit hierarchy)": "FIRST",
+        "First value (averge in org unit hierarchy)": "FIRST_AVERAGE_ORG_UNIT",
+        Count: "COUNT",
+        "Standard deviation": "STDDEV",
+        Variance: "VARIANCE",
+        Min: "MIN",
+        Max: "MAX",
+        None: "NONE",
+        Custom: "CUSTOM",
+        Default: "DEFAULT",
+    };
+
+    return dictionary[type] ?? "NONE";
 }
 
 async function main() {
