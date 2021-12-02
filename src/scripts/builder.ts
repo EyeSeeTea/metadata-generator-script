@@ -91,6 +91,7 @@ async function buildDataSets(sheets: Sheet[]) {
         .flatten()
         .value();
 
+
     const dataElements = sheetDataElements.map(dataElement => {
         const categoryCombo =
             sheetCategoryCombos.find(({ name }) => name === dataElement.categoryCombo)?.id ??
@@ -131,6 +132,16 @@ async function buildDataSets(sheets: Sheet[]) {
             process.env.DEFAULT_CATEGORY_COMBO_ID;
 
         return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
+    });
+
+    const programs = sheetDataSets.map(program => {
+        const programStages = sheetProgramStages
+            .filter(({ programStages }) => {
+                const programStage = sheetProgramStages.find(({ name }) => name === programStages);
+                return programStage?.program === program.name;
+            })
+
+        return { ...program, programStages };
     });
 
     const categories = sheetCategories.map(category => {
@@ -209,6 +220,7 @@ async function buildDataSets(sheets: Sheet[]) {
         optionSets,
         trackedEntityAttributes,
         trackedEntityTypes,
+        programs,
     };
 }
 
