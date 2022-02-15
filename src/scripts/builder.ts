@@ -249,6 +249,11 @@ async function getSheet() {
         ) ?? [];
 
     console.log([result?.status, ...messages].join("\n"));
+
+    if (process.env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
+        await api.maintenance.categoryOptionComboUpdate().getData();
+        console.log("Updating category option combos");
+    }
 }
 
 function mapValueType(type: string): string {
