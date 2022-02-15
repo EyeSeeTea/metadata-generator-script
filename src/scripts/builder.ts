@@ -91,7 +91,6 @@ async function buildDataSets(sheets: Sheet[]) {
         .flatten()
         .value();
 
-
     const dataElements = sheetDataElements.map(dataElement => {
         const categoryCombo =
             sheetCategoryCombos.find(({ name }) => name === dataElement.categoryCombo)?.id ??
@@ -134,7 +133,7 @@ async function buildDataSets(sheets: Sheet[]) {
         return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
     });
 
-    const programs = sheetDataSets.map(program => {
+    /** const programs = sheetDataSets.map(program => {
         const programStages = sheetProgramStages
             .filter(({ programStages }) => {
                 const programStage = sheetProgramStages.find(({ name }) => name === programStages);
@@ -142,7 +141,7 @@ async function buildDataSets(sheets: Sheet[]) {
             })
 
         return { ...program, programStages };
-    });
+    }); */
 
     const categories = sheetCategories.map(category => {
         const categoryOptions = sheetCategoryOptions
@@ -220,7 +219,7 @@ async function buildDataSets(sheets: Sheet[]) {
         optionSets,
         trackedEntityAttributes,
         trackedEntityTypes,
-        programs,
+        //programs,
     };
 }
 
