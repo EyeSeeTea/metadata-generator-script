@@ -13,7 +13,8 @@
         "@types/dotenv-flow": "3.2.0",
         "@types/lodash": "4.14.175",
         "@types/node": "16.11.1",
-        "dotenv-flow": "3.2.0"
+        "dotenv-flow": "3.2.0",
+        "ts-node": "10.5.0"
     },
     "dependencies": {
         "@eyeseetea/d2-api": "1.9.2",
