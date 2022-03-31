@@ -40,12 +40,24 @@ function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
     const { data = [] } = sheets.find(s => s.name === key) ?? {};
     const [header, ...rows] = data;
 
-    return rows
-        .map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
-        .map(object => {
+    let sheetData = rows.map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])));
+    if (key === "options") {
+        sheetData = sheetData.map(object => {
+            return { ...object, id: object.id ?? getUid(`${key}-${object.name}-${object.optionSet}`) } as MetadataItem;
+        });
+        console.log(sheetData);
+    } else {
+        sheetData = sheetData.map(object => {
             return { ...object, id: object.id ?? getUid(`${key}-${object.name}`) } as MetadataItem;
-        })
-        .filter(({ name }) => name !== undefined);
+        });
+    }
+    return sheetData.filter(({ name }) => name !== undefined);
+    // return rows
+    //     .map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
+    //     .map(object => {
+    //         return { ...object, id: object.id ?? getUid(`${key}-${object.name}`) } as MetadataItem;
+    //     })
+    //     .filter(({ name }) => name !== undefined);
 }
 
 async function buildDataSets(sheets: Sheet[]) {
