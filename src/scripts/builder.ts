@@ -40,23 +40,12 @@ function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
     const { data = [] } = sheets.find(s => s.name === key) ?? {};
     const [header, ...rows] = data;
 
-    // Original code
-    // return rows
-    //     .map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
-    //     .map(object => {
-    //         return { ...object, id: object.id ?? getUid(`${key}-${object.name}`) } as MetadataItem;
-    //     })
-    //     .filter(({ name }) => name !== undefined);
-
-    // TODO: remove this trace code
-    let rows2 = rows.map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
+    return rows
+        .map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
         .map(object => {
             return { ...object, id: object.id ?? getUid(`${key}-${object.name}`) } as MetadataItem;
         })
-    if (key === "programs") {
-        console.log("\u001b[1;31m function extractObjects \u001b[0m\n", rows2);
-    }
-    return rows2.filter(({ name }) => name !== undefined);
+        .filter(({ name }) => name !== undefined);
 }
 
 async function buildDataSets(sheets: Sheet[]) {
@@ -144,27 +133,47 @@ async function buildDataSets(sheets: Sheet[]) {
         return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
     });
 
-    // Check that programs populates with 'trackedEntityType' id
-    const programs = sheetPrograms.map(program => {
-        const trackedEntityType = sheetTrackedEntityTypes
-            .find(trackedEntityType => trackedEntityType.name === program.trackedEntityType)?.id;
-        // TODO: remove this trace
-        console.log("programs.trackedEntityTypes\n", trackedEntityType);
-        return { ...program, trackedEntityType };
+    // TODO: Add ProgramStageSections required fields, then all fields
+    const programStageSections = sheetProgramStageSections.map(programStageSection => {
+        const programStage = {
+            id: sheetProgramStages
+                .find(programStage => programStage.name === programStageSection.programStage)?.id
+        };
+        return { ...programStageSection, programStage }
     });
-    // TODO: remove this trace
-    console.log("\u001b[1;31m const programs \u001b[0m\n", programs);
 
-    // Original code
-    /* const programs = sheetDataSets.map(program => {
+    // TODO: Add ProgramStages all fields
+    const programStages = sheetProgramStages.map(programStage => {
+        const program = {
+            id: sheetPrograms
+                .find(program => program.name === programStage.program)?.id
+        };
+        const programStageSections = sheetProgramStageSections
+            .filter((programStageSections) => {
+                return programStageSections?.programStage === programStage.name;
+            }).map(({ id }) => ({ id }));
+        return { ...programStage, program, programStageSections }
+    });
+
+    // TODO: Add Programs required fields, then all fields
+    const programs = sheetPrograms.map(program => {
+        const trackedEntityType = {
+            id: sheetTrackedEntityTypes
+                .find(trackedEntityType => trackedEntityType.name === program.trackedEntityType)?.id
+        };
+
         const programStages = sheetProgramStages
-            .filter(({ programStages }) => {
-                const programStage = sheetProgramStages.find(({ name }) => name === programStages);
-                return programStage?.program === program.name;
-            })
+            .filter((programStages) => {
+                return programStages?.program === program.name;
+            }).map(({ id }) => ({ id }));
 
-        return { ...program, programStages };
-    }); */
+        // Tracked or Event Program
+        if (trackedEntityType.id) {
+            return { ...program, trackedEntityType, programStages };
+        } else {
+            return { ...program, programStages };
+        }
+    });
 
     const categories = sheetCategories.map(category => {
         const categoryOptions = sheetCategoryOptions
@@ -242,7 +251,9 @@ async function buildDataSets(sheets: Sheet[]) {
         optionSets,
         trackedEntityAttributes,
         trackedEntityTypes,
-        // programs,
+        programs,
+        programStages,
+        programStageSections
     };
 }
 
