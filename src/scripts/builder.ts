@@ -133,13 +133,16 @@ async function buildDataSets(sheets: Sheet[]) {
         return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
     });
 
-    // TODO: Add ProgramStageSections required fields, then all fields
+    // TODO: Add all ProgramStageSections fields
     const programStageSections = sheetProgramStageSections.map(programStageSection => {
         const programStage = {
             id: sheetProgramStages
                 .find(programStage => programStage.name === programStageSection.programStage)?.id
         };
-        return { ...programStageSection, programStage }
+
+        const sortOrder: number = +programStageSection.sortOrder;
+
+        return { ...programStageSection, programStage, sortOrder }
     });
 
     // TODO: Add ProgramStages all fields
@@ -155,7 +158,7 @@ async function buildDataSets(sheets: Sheet[]) {
         return { ...programStage, program, programStageSections }
     });
 
-    // TODO: Add Programs required fields, then all fields
+    // TODO: Add all Programs fields
     const programs = sheetPrograms.map(program => {
         const trackedEntityType = {
             id: sheetTrackedEntityTypes
@@ -167,11 +170,18 @@ async function buildDataSets(sheets: Sheet[]) {
                 return programStages?.program === program.name;
             }).map(({ id }) => ({ id }));
 
+        const categoryCombo = {
+            id: sheetCategoryCombos
+                .find(categoryCombo => categoryCombo.name === program.categoryCombo)?.id ?? process.env.DEFAULT_CATEGORY_COMBO_ID
+        };
+
         // Tracked or Event Program
         if (trackedEntityType.id) {
-            return { ...program, trackedEntityType, programStages };
+            const programType = "WITH_REGISTRATION";
+            return { ...program, programType, trackedEntityType, categoryCombo, programStages };
         } else {
-            return { ...program, programStages };
+            const programType = "WITHOUT_REGISTRATION";
+            return { ...program, programType, categoryCombo, programStages };
         }
     });
 
