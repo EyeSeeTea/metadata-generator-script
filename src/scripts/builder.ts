@@ -40,10 +40,21 @@ function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
     const { data = [] } = sheets.find(s => s.name === key) ?? {};
     const [header, ...rows] = data;
 
-    return rows
-        .map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
+    return rows.map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
         .map(object => {
-            return { ...object, id: object.id ?? getUid(`${key}-${object.name}`) } as MetadataItem;
+            let seed: string;
+            switch (key) {
+                case "options":
+                    seed = `${key}-${object.name}-${object.optionSet}`
+                    break;
+                case "programStageSections":
+                    seed = `${key}-${object.name}-${object.programStage}-${object.sortOrder}`
+                    break;
+                default:
+                    seed = `${key}-${object.name}`
+                    break;
+            }
+            return { ...object, id: object.id ?? getUid(seed) } as MetadataItem;
         })
         .filter(({ name }) => name !== undefined);
 }
