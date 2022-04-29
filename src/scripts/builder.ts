@@ -45,13 +45,16 @@ function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
             let seed: string;
             switch (key) {
                 case "options":
-                    seed = `${key}-${object.name}-${object.optionSet}`
+                    seed = `${key}-${object.name}-${object.optionSet}`;
                     break;
                 case "programStageSections":
-                    seed = `${key}-${object.name}-${object.programStage}-${object.sortOrder}`
+                    seed = `${key}-${object.name}-${object.programStage}-${object.sortOrder}`;
+                    break;
+                case "programStageDataElements":
+                    seed = `${key}-${object.name}-${object.program}-${object.programStage}`;
                     break;
                 default:
-                    seed = `${key}-${object.name}`
+                    seed = `${key}-${object.name}`;
                     break;
             }
             return { ...object, id: object.id ?? getUid(seed) } as MetadataItem;
@@ -73,6 +76,7 @@ async function buildDataSets(sheets: Sheet[]) {
     const sheetProgramDataElements = extractObjects(sheets, "programDataElements");
     const sheetPrograms = extractObjects(sheets, "programs");
     const sheetProgramStages = extractObjects(sheets, "programStages");
+    const sheetProgramStageDataElements = extractObjects(sheets, "programStageDataElements");
     const sheetProgramStageSections = extractObjects(sheets, "programStageSections");
 
     const options = _(sheetOptions)
@@ -115,7 +119,7 @@ async function buildDataSets(sheets: Sheet[]) {
             aggregationType: mapAggregationType(dataElement.aggregationType),
             valueType: mapValueType(dataElement.valueType),
             optionSet: optionSet ? { id: optionSet } : undefined,
-            domainType: "AGGREGATE",
+            domainType: dataElement.domainType,
         };
     });
 
@@ -153,20 +157,62 @@ async function buildDataSets(sheets: Sheet[]) {
 
         const sortOrder: number = +programStageSection.sortOrder;
 
-        return { ...programStageSection, programStage, sortOrder }
+        // Keep "LISTING" default?
+        const renderType = {
+            DESKTOP: { type: programStageSection.renderTypeDesktop ?? "LISTING" },
+            MOBILE: { type: programStageSection.renderTypeMobile ?? "LISTING" }
+        };
+        delete programStageSection.renderTypeDesktop;
+        delete programStageSection.renderTypeMobile;
+
+        return { ...programStageSection, programStage, sortOrder, renderType }
     });
 
     // TODO: Add ProgramStages all fields
     const programStages = sheetProgramStages.map(programStage => {
+        const programObj = sheetPrograms.find(program => program.name === programStage.program);
+
         const program = {
-            id: sheetPrograms
-                .find(program => program.name === programStage.program)?.id
+            id: programObj?.id
         };
-        const programStageSections = sheetProgramStageSections
-            .filter((programStageSections) => {
-                return programStageSections?.programStage === programStage.name;
-            }).map(({ id }) => ({ id }));
-        return { ...programStage, program, programStageSections }
+
+        const enableUserAssignment: boolean = programStage.enableUserAssignment.toLowerCase() === 'true';
+
+        const programStageSections = sheetProgramStageSections.filter((programStageSections) => {
+            return programStageSections?.programStage === programStage.name;
+        }).map(({ id }) => ({ id }));
+
+        const repeatable: boolean = programStage.repeatable.toLowerCase() === 'true';
+
+        // TODO?: Process sheetProgramStageDataElements to programStageDataElements and filter that
+        const programStageDataElements = sheetProgramStageDataElements.filter((programStageDataElements) => {
+            return programStageDataElements?.program === programObj?.name &&
+                programStageDataElements?.programStage === programStage.name;
+        }).map(({ id, name, sortOrder, compulsory, allowProvidedElsewhere, displayInReports, allowFutureDate,
+            skipSynchronization, renderTypeDesktop, renderTypeMobile }) => ({
+                id,
+                programStage: {
+                    id: programStage.id
+                },
+                sortOrder,
+                compulsory,
+                allowProvidedElsewhere,
+                displayInReports,
+                allowFutureDate,
+                skipSynchronization,
+                renderType: {
+                    DESKTOP: { type: renderTypeDesktop },
+                    MOBILE: { type: renderTypeMobile }
+                },
+                dataElement: {
+                    id: sheetDataElements.find(dataElement => dataElement.name === name)?.id
+                },
+            }));
+
+        return {
+            ...programStage, enableUserAssignment, repeatable, program,
+            programStageDataElements, programStageSections
+        }
     });
 
     // TODO: Add all Programs fields
