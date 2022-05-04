@@ -1,5 +1,6 @@
 import fs from "fs";
 import { D2Api } from "@eyeseetea/d2-api/2.34";
+import { D2ApiOptions } from "@eyeseetea/d2-api/api/types";
 import { config as dotenvConfig } from "dotenv-flow";
 import { google, sheets_v4 } from "googleapis";
 import _ from "lodash";
@@ -39,20 +40,22 @@ function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
 }
 
 async function buildMetadata(sheets: Sheet[]) {
-    const sheetDataSets = extractObjects(sheets, "dataSets");
-    const sheetDataElements = extractObjects(sheets, "dataElements");
-    const sheetDataSetSections = extractObjects(sheets, "sections");
-    const sheetCategoryCombos = extractObjects(sheets, "categoryCombos");
-    const sheetCategoryOptions = extractObjects(sheets, "categoryOptions");
-    const sheetCategories = extractObjects(sheets, "categories");
-    const sheetOptionSets = extractObjects(sheets, "optionSets");
-    const sheetOptions = extractObjects(sheets, "options");
-    const sheetTrackedEntityAttributes = extractObjects(sheets, "trackedEntityAttributes");
-    const sheetTrackedEntityTypes = extractObjects(sheets, "trackedEntityTypes");
-    const sheetProgramDataElements = extractObjects(sheets, "programDataElements");
-    const sheetPrograms = extractObjects(sheets, "programs");
-    const sheetProgramStages = extractObjects(sheets, "programStages");
-    const sheetProgramStageSections = extractObjects(sheets, "programStageSections");
+    const get = (key: string) => extractObjects(sheets, key); // shortcut
+
+    const sheetDataSets = get("dataSets"),
+        sheetDataElements = get("dataElements"),
+        sheetDataSetSections = get("sections"),
+        sheetCategoryCombos = get("categoryCombos"),
+        sheetCategoryOptions = get("categoryOptions"),
+        sheetCategories = get("categories"),
+        sheetOptionSets = get("optionSets"),
+        sheetOptions = get("options"),
+        sheetTrackedEntityAttributes = get("trackedEntityAttributes"),
+        sheetTrackedEntityTypes = get("trackedEntityTypes"),
+        sheetProgramDataElements = get("programDataElements"),
+        sheetPrograms = get("programs"),
+        sheetProgramStages = get("programStages"),
+        sheetProgramStageSections = get("programStageSections");
 
     const options = _(sheetOptions)
         .map(option => {
@@ -214,7 +217,7 @@ async function buildMetadata(sheets: Sheet[]) {
 }
 
 async function main() {
-    console.log("Initializing....");
+    console.log("Initializing...");
     dotenvConfig(); // fill variable process.env
     const env = process.env; // shortcut
 
@@ -224,20 +227,25 @@ async function main() {
     const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
     const sheets = data.sheets?.map(getSheet) ?? [];
 
-    console.log("Converting to metadata ...");
+    console.log("Converting to metadata...");
     const metadata = await buildMetadata(sheets);
 
     console.log("Writing it to out.json ...");
     fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
 
     console.log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
-    const api = new D2Api({
+    const d2ApiOptions = {
         baseUrl: env.DHIS2_BASE_URL,
         auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
-    });
+    };
+    await updateServer(metadata, d2ApiOptions, env.UPDATE_CATEGORY_OPTION_COMBOS === "true");
+}
+
+async function updateServer(metadata: any, d2ApiOptions: D2ApiOptions, updateCombos: Boolean) {
+    const api = new D2Api(d2ApiOptions);
 
     const { response } = await api.metadata
-        .postAsync(metadata as any, { importStrategy: "CREATE_AND_UPDATE", mergeMode: "MERGE" })
+        .postAsync(metadata, { importStrategy: "CREATE_AND_UPDATE", mergeMode: "MERGE" })
         .getData();
 
     const result = await api.system.waitFor(response.jobType, response.id).getData();
@@ -251,7 +259,7 @@ async function main() {
 
     console.log([result?.status, ...messages].join("\n"));
 
-    if (env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
+    if (updateCombos) {
         console.log("Updating category option combos ...");
         await api.maintenance.categoryOptionComboUpdate().getData();
     }
