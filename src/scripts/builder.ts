@@ -1,39 +1,29 @@
+import fs from "fs";
 import { D2Api } from "@eyeseetea/d2-api/2.34";
-import { command, run } from "cmd-ts";
-import { config } from "dotenv-flow";
+import { config as dotenvConfig } from "dotenv-flow";
 import { google, sheets_v4 } from "googleapis";
 import _ from "lodash";
-import path from "path";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
-import { writeFile } from "../utils/fs";
-import { generateUid, getUid } from "../utils/uid";
+import { getUid } from "../utils/uid";
 
-config();
-
-const { spreadsheets } = google.sheets({ version: "v4", auth: process.env.GOOGLE_API_KEY });
-
-function getSheets(data: sheets_v4.Schema$Spreadsheet): Sheet[] {
-    return (
-        data.sheets?.map(sheet => {
-            return {
-                name: sheet.properties?.title ?? "Unknown",
-                data: _.flatMap(sheet.data, data =>
-                    _.map(data.rowData, row =>
-                        _.flatMap(row.values, cell => {
-                            return {
-                                value: cell.formattedValue ?? undefined,
-                                hyperlink: cell.hyperlink ?? undefined,
-                                note: cell.note ?? undefined,
-                                userEnteredValue: cell.userEnteredValue ?? undefined,
-                                effectiveValue: cell.effectiveValue ?? undefined,
-                            };
-                        })
-                    )
-                ),
-            };
-        }) ?? []
-    );
+function getSheet(sheet: any): Sheet {
+    return {
+        name: sheet.properties?.title ?? "Unknown",
+        data: _.flatMap(sheet.data, data =>
+            _.map(data.rowData, row =>
+                _.flatMap(row.values, cell => {
+                    return {
+                        value: cell.formattedValue ?? undefined,
+                        hyperlink: cell.hyperlink ?? undefined,
+                        note: cell.note ?? undefined,
+                        userEnteredValue: cell.userEnteredValue ?? undefined,
+                        effectiveValue: cell.effectiveValue ?? undefined,
+                    };
+                })
+            )
+        ),
+    };
 }
 
 function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
@@ -48,7 +38,7 @@ function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
         .filter(({ name }) => name !== undefined);
 }
 
-async function buildDataSets(sheets: Sheet[]) {
+async function buildMetadata(sheets: Sheet[]) {
     const sheetDataSets = extractObjects(sheets, "dataSets");
     const sheetDataElements = extractObjects(sheets, "dataElements");
     const sheetDataSetSections = extractObjects(sheets, "sections");
@@ -223,19 +213,31 @@ async function buildDataSets(sheets: Sheet[]) {
     };
 }
 
-async function getSheet() {
+async function main() {
+    console.log("Initializing....");
+    dotenvConfig(); // fill variable process.env
+    const env = process.env; // shortcut
+
+    console.log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
+    const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
+
+    const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
+    const sheets = data.sheets?.map(getSheet) ?? [];
+
+    console.log("Converting to metadata ...");
+    const metadata = await buildMetadata(sheets);
+
+    console.log("Writing it to out.json ...");
+    fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
+
+    console.log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
     const api = new D2Api({
-        baseUrl: process.env.DHIS2_BASE_URL,
-        auth: { username: process.env.DHIS2_USERNAME ?? "", password: process.env.DHIS2_PASSWORD ?? "" },
+        baseUrl: env.DHIS2_BASE_URL,
+        auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
     });
 
-    const { data } = await spreadsheets.get({ spreadsheetId: process.env.GOOGLE_SHEET_ID, includeGridData: true });
-    const sheets = getSheets(data);
-    const results = await buildDataSets(sheets);
-    await writeFile("out.json", results).toPromise();
-
     const { response } = await api.metadata
-        .postAsync(results as any, { importStrategy: "CREATE_AND_UPDATE", mergeMode: "MERGE" })
+        .postAsync(metadata as any, { importStrategy: "CREATE_AND_UPDATE", mergeMode: "MERGE" })
         .getData();
 
     const result = await api.system.waitFor(response.jobType, response.id).getData();
@@ -249,9 +251,9 @@ async function getSheet() {
 
     console.log([result?.status, ...messages].join("\n"));
 
-    if (process.env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
+    if (env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
+        console.log("Updating category option combos ...");
         await api.maintenance.categoryOptionComboUpdate().getData();
-        console.log("Updating category option combos");
     }
 }
 
@@ -309,24 +311,6 @@ function mapAggregationType(type: string): string {
     };
 
     return dictionary[type] ?? "NONE";
-}
-
-async function main() {
-    const cmd = command({
-        name: path.basename(__filename),
-        description: "Scheduler to execute predictors on multiple DHIS2 instances",
-        args: {},
-        handler: async () => {
-            try {
-                await getSheet();
-            } catch (err) {
-                console.error(err);
-                process.exit(1);
-            }
-        },
-    });
-
-    run(cmd, process.argv.slice(2));
 }
 
 main();
