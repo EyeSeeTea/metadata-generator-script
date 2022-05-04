@@ -27,20 +27,28 @@ function getSheet(sheet: any): Sheet {
     };
 }
 
-function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
-    const { data = [] } = sheets.find(s => s.name === key) ?? {};
+function extractObjects(sheets: Sheet[], page: string): MetadataItem[] {
+    const { data = [] } = sheets.find(s => s.name === page) ?? {};
     const [header, ...rows] = data;
 
     return rows
         .map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
-        .map(object => {
-            return { ...object, id: object.id ?? getUid(`${key}-${object.name}`) } as MetadataItem;
-        })
+        .map(item => ({ ...item, id: item.id ?? getUid(makeSeed(item, page)) } as MetadataItem))
         .filter(({ name }) => name !== undefined);
 }
 
+// Return a string that can be used as a seed to generate a uid, corresponding
+// to the given item at the given page in the spreadsheet.
+function makeSeed(item: MetadataItem, page: string) {
+    const seed0 = item.name + page; // the seed will be at least the item's name and its page
+    if (page === "options") return seed0 + item.optionSet;
+    if (page === "programStageSections") return seed0 + item.programStage + item.sortOrder;
+    if (page === "programStageDataElements") return seed0 + item.program + item.programStage;
+    return seed0;
+}
+
 async function buildMetadata(sheets: Sheet[]) {
-    const get = (key: string) => extractObjects(sheets, key); // shortcut
+    const get = (page: string) => extractObjects(sheets, page); // shortcut
 
     const sheetDataSets = get("dataSets"),
         sheetDataElements = get("dataElements"),
