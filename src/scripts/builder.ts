@@ -8,47 +8,70 @@ import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { getUid } from "../utils/uid";
 
-function getSheet(sheet: any): Sheet {
-    return {
-        name: sheet.properties?.title ?? "Unknown",
-        data: _.flatMap(sheet.data, data =>
-            _.map(data.rowData, row =>
-                _.flatMap(row.values, cell => {
-                    return {
-                        value: cell.formattedValue ?? undefined,
-                        hyperlink: cell.hyperlink ?? undefined,
-                        note: cell.note ?? undefined,
-                        userEnteredValue: cell.userEnteredValue ?? undefined,
-                        effectiveValue: cell.effectiveValue ?? undefined,
-                    };
-                })
-            )
-        ),
+async function main() {
+    console.log("Initializing...");
+    dotenvConfig(); // fill variable process.env from .env.* files
+    const env = process.env; // shortcut
+
+    console.log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
+    const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
+
+    const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
+    const sheets = data.sheets?.map(getSheet) ?? [];
+
+    console.log("Converting to metadata...");
+    const metadata = await buildMetadata(sheets);
+
+    console.log("Writing it to out.json ...");
+    fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
+
+    console.log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
+    const d2ApiOptions = {
+        baseUrl: env.DHIS2_BASE_URL,
+        auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
     };
+    await updateServer(d2ApiOptions, metadata, env.UPDATE_CATEGORY_OPTION_COMBOS === "true");
 }
 
-function extractObjects(sheets: Sheet[], page: string): MetadataItem[] {
-    const { data = [] } = sheets.find(s => s.name === page) ?? {};
-    const [header, ...rows] = data;
+// Return an object with the title of the sheet and a list of items that
+// correspond to each row of the data in the given sheet.
+//
+// The items are objects with a key per column in the sheet, and a generated id
+// if they don't contain one already.
+//
+// Output example: { page: ..., items: [ { id: ..., name: ..., ... }, { ... }, ... ] }
+function getSheet(sheet: any): { page: string; items: MetadataItem[] } {
+    const page = sheet.properties.title;
+    const data = _.flatMap(sheet.data, data =>
+        _.map(data.rowData, row => _.flatMap(row.values, cell => cell.formattedValue ?? undefined))
+    );
 
-    return rows
-        .map(row => _.fromPairs(row.map((cell, index) => [header[index].value, cell.value])))
-        .map(item => ({ ...item, id: item.id ?? getUid(makeSeed(item, page)) } as MetadataItem))
-        .filter(({ name }) => name !== undefined);
+    const header = data[0];
+    const rows = data.slice(1);
+
+    return {
+        page,
+        items: rows
+            .map(row => _.fromPairs(row.map((value, index) => [header[index], value])))
+            .map(item => ({ ...item, id: item.id ?? getUid(makeSeed(item, page)) } as MetadataItem))
+            .filter(({ name }) => name !== undefined),
+    };
 }
 
 // Return a string that can be used as a seed to generate a uid, corresponding
 // to the given item at the given page in the spreadsheet.
 function makeSeed(item: MetadataItem, page: string) {
-    const seed0 = item.name + page; // the seed will be at least the item's name and its page
-    if (page === "options") return seed0 + item.optionSet;
-    if (page === "programStageSections") return seed0 + item.programStage + item.sortOrder;
-    if (page === "programStageDataElements") return seed0 + item.program + item.programStage;
+    const seed0 = `${page}-${item.name}`; // the seed will be at least the page and the item's name
+    if (page === "options") return `${seed0}-${item.optionSet}`;
+    if (page === "programStageSections") return `${seed0}-${item.programStage}-${item.sortOrder}`;
+    if (page === "programStageDataElements") return `${seed0}-${item.program}-${item.programStage}`;
     return seed0;
 }
 
-async function buildMetadata(sheets: Sheet[]) {
-    const get = (page: string) => extractObjects(sheets, page); // shortcut
+// Return an object containing the metadata representation of all the sheets
+// that are included in the spreadsheet.
+async function buildMetadata(sheets: { page: string; items: MetadataItem[] }[]) {
+    const get = (page: string) => sheets.find(s => s.page === page)?.items ?? []; // shortcut
 
     const sheetDataSets = get("dataSets"),
         sheetDataElements = get("dataElements"),
@@ -218,32 +241,9 @@ async function buildMetadata(sheets: Sheet[]) {
     };
 }
 
-async function main() {
-    console.log("Initializing...");
-    dotenvConfig(); // fill variable process.env from .env.* files
-    const env = process.env; // shortcut
-
-    console.log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
-    const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
-
-    const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
-    const sheets = data.sheets?.map(getSheet) ?? [];
-
-    console.log("Converting to metadata...");
-    const metadata = await buildMetadata(sheets);
-
-    console.log("Writing it to out.json ...");
-    fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
-
-    console.log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
-    const d2ApiOptions = {
-        baseUrl: env.DHIS2_BASE_URL,
-        auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
-    };
-    await updateServer(d2ApiOptions, metadata, env.UPDATE_CATEGORY_OPTION_COMBOS === "true");
-}
-
-async function updateServer(d2ApiOptions: D2ApiOptions, metadata: any, updateCombos: Boolean) {
+// Connect to a server using D2Api with the given options, upload the given
+// metadata, and force an update of the category option combos if requested.
+async function updateServer(d2ApiOptions: D2ApiOptions, metadata: any, updateCombos: boolean) {
     const api = new D2Api(d2ApiOptions);
 
     const { response } = await api.metadata
