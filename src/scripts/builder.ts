@@ -94,8 +94,6 @@ async function buildMetadata(sheets: Sheet[]) {
         return {
             ...dataElement,
             categoryCombo: { id: categoryCombo },
-            aggregationType: mapAggregationType(dataElement.aggregationType),
-            valueType: mapValueType(dataElement.valueType),
             optionSet: optionSet ? { id: optionSet } : undefined,
             domainType: "AGGREGATE",
         };
@@ -155,7 +153,7 @@ async function buildMetadata(sheets: Sheet[]) {
     const optionSets = sheetOptionSets.map(optionSet => {
         const options = sheetOptions.filter(option => option.optionSet === optionSet.name).map(({ id }) => ({ id }));
 
-        return { ...optionSet, options, valueType: mapValueType(optionSet.valueType) };
+        return { ...optionSet, options };
     });
 
     const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id);
@@ -165,8 +163,6 @@ async function buildMetadata(sheets: Sheet[]) {
 
         return {
             ...attribute,
-            aggregationType: mapAggregationType(attribute.aggregationType),
-            valueType: mapValueType(attribute.valueType),
             optionSet: optionSet ? { id: optionSet } : undefined,
         };
     });
@@ -195,8 +191,6 @@ async function buildMetadata(sheets: Sheet[]) {
         return {
             ...dataElement,
             domainType: "TRACKER",
-            aggregationType: mapAggregationType(dataElement.aggregationType),
-            valueType: mapValueType(dataElement.valueType),
             optionSet: optionSet ? { id: optionSet } : undefined,
         };
     });
@@ -218,7 +212,7 @@ async function buildMetadata(sheets: Sheet[]) {
 
 async function main() {
     console.log("Initializing...");
-    dotenvConfig(); // fill variable process.env
+    dotenvConfig(); // fill variable process.env from .env.* files
     const env = process.env; // shortcut
 
     console.log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
@@ -238,10 +232,10 @@ async function main() {
         baseUrl: env.DHIS2_BASE_URL,
         auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
     };
-    await updateServer(metadata, d2ApiOptions, env.UPDATE_CATEGORY_OPTION_COMBOS === "true");
+    await updateServer(d2ApiOptions, metadata, env.UPDATE_CATEGORY_OPTION_COMBOS === "true");
 }
 
-async function updateServer(metadata: any, d2ApiOptions: D2ApiOptions, updateCombos: Boolean) {
+async function updateServer(d2ApiOptions: D2ApiOptions, metadata: any, updateCombos: Boolean) {
     const api = new D2Api(d2ApiOptions);
 
     const { response } = await api.metadata
@@ -263,62 +257,6 @@ async function updateServer(metadata: any, d2ApiOptions: D2ApiOptions, updateCom
         console.log("Updating category option combos ...");
         await api.maintenance.categoryOptionComboUpdate().getData();
     }
-}
-
-function mapValueType(type: string): string {
-    const dictionary: Record<string, string> = {
-        Text: "TEXT",
-        "Long text": "LONG_TEXT",
-        Letter: "LETTER",
-        "Phone number": "PHONE_NUMBER",
-        Email: "EMAIL",
-        "Yes/No": "BOOLEAN",
-        "Yes Only": "TRUE_ONLY",
-        Date: "DATE",
-        "Date & Time": "DATETIME",
-        Time: "TIME",
-        Number: "NUMBER",
-        "Unit interval": "UNIT_INTERVAL",
-        Percentage: "PERCENTAGE",
-        Integer: "INTEGER",
-        "Positive Integer": "INTEGER_POSITIVE",
-        "Negative Integer": "INTEGER_NEGATIVE",
-        "Positive or Zero Integer": "INTEGER_ZERO_OR_POSITIVE",
-        "Tracker Associate": "TRACKER_ASSOCIATE",
-        Username: "USERNAME",
-        Coordinate: "COORDINATE",
-        "Organisation unit": "ORGANISATION_UNIT",
-        Age: "AGE",
-        URL: "URL",
-        File: "FILE_RESOURCE",
-        Image: "IMAGE",
-    };
-
-    return dictionary[type] ?? "TEXT";
-}
-
-function mapAggregationType(type: string): string {
-    const dictionary: Record<string, string> = {
-        Sum: "SUM",
-        Average: "AVERAGE",
-        "Average (sum in org unit hierarchy)": "AVERAGE_SUM_ORG_UNIT",
-        "Last value (sum in org unit hierarchy)": "LAST",
-        "Last value (average in org unit hierarchy)": "LAST_AVERAGE_ORG_UNIT",
-        "Last value in period (sum in org unit hierarchy)": "LAST_IN_PERIOD",
-        "Last value in period (average in org unit hierarchy)": "LAST_IN_PERIOD_AVERAGE_ORG_UNIT",
-        "First value (sum in org unit hierarchy)": "FIRST",
-        "First value (averge in org unit hierarchy)": "FIRST_AVERAGE_ORG_UNIT",
-        Count: "COUNT",
-        "Standard deviation": "STDDEV",
-        Variance: "VARIANCE",
-        Min: "MIN",
-        Max: "MAX",
-        None: "NONE",
-        Custom: "CUSTOM",
-        Default: "DEFAULT",
-    };
-
-    return dictionary[type] ?? "NONE";
 }
 
 main();
