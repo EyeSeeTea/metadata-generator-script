@@ -160,7 +160,7 @@ async function buildDataSets(sheets: Sheet[]) {
     });
 
     const optionSets = sheetOptionSets.map(optionSet => {
-        const options = sheetOptions.filter(({ optionSet }) => optionSet === optionSet.name).map(({ id }) => ({ id }));
+        const options = sheetOptions.filter(option => option.optionSet === optionSet.name).map(({ id }) => ({ id }));
 
         return { ...optionSet, options, valueType: mapValueType(optionSet.valueType) };
     });
