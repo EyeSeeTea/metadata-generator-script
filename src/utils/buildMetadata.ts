@@ -1,10 +1,11 @@
 import _ from "lodash";
+import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 
 // Return an object containing the metadata representation of all the sheets
 // that are included in the spreadsheet.
-export async function buildMetadata(sheets: Sheet[], defaultCC: string) {
-    const get = (name: string) => sheets.find(s => s.name === name)?.items ?? []; // shortcut
+export function buildMetadata(sheets: Sheet[], defaultCC: string) {
+    const get = (name: string) => getItems(sheets, name); // shortcut
 
     const sheetDataSets = get("dataSets"),
         sheetDataElements = get("dataElements"),
@@ -166,5 +167,90 @@ export async function buildMetadata(sheets: Sheet[], defaultCC: string) {
         trackedEntityAttributes,
         trackedEntityTypes,
         //programs,
+        programRules: buildProgramRules(sheets),
+        programRuleActions: buildProgramRuleActions(sheets),
+        programRuleVariables: buildProgramRuleVariables(sheets),
     };
+}
+
+function buildProgramRules(sheets: Sheet[]) {
+    const rules = getItems(sheets, "programRules");
+    const programs = getItems(sheets, "programs");
+    const actions = getItems(sheets, "programRuleActions");
+
+    return rules.map(rule => {
+        const program = getByName(programs, rule.program);
+
+        const programRuleActions = actions
+            .filter(action => action.programRule === rule.name)
+            .map(action => ({ id: action.id }));
+
+        return { ...rule, program: { id: program.id }, programRuleActions };
+    });
+}
+
+function buildProgramRuleActions(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name); // shortcut
+
+    const actions = get("programRuleActions"),
+        rules = get("programRules"),
+        elements = get("programDataElements"),
+        attrs = get("trackedEntityAttributes"),
+        stages = get("programStages"),
+        sections = get("programStageSections");
+
+    return actions.map(action => {
+        const rule = getByName(rules, action.rule);
+
+        let metadata = { ...action, programRule: { id: rule.id } } as MetadataItem;
+
+        // TODO: check if this part can be done more elegantly.
+        if (metadata.dataElement) {
+            const element = getByName(elements, action.dataElement);
+            metadata = { ...metadata, dataElement: { id: element.id } };
+        }
+        if (metadata.trackedEntityAttribute) {
+            const attr = getByName(attrs, action.trackedEntityAttribute);
+            metadata = { ...metadata, trackedEntityAttribute: { id: attr.id } };
+        }
+        if (metadata.programStage) {
+            const stage = getByName(stages, action.programStage);
+            metadata = { ...metadata, programStage: { id: stage.id } };
+        }
+        if (metadata.programStageSection) {
+            const section = getByName(sections, action.programStageSection);
+            metadata = { ...metadata, programStageSection: { id: section.id } };
+        }
+
+        return metadata;
+    });
+}
+
+function buildProgramRuleVariables(sheets: Sheet[]) {
+    const vars = getItems(sheets, "programRuleVariables");
+    const programs = getItems(sheets, "programs");
+    const elements = getItems(sheets, "programDataElements");
+
+    return vars.map(variable => {
+        const program = getByName(programs, variable.program);
+
+        let metadata = { ...variable, program: { id: program.id } } as MetadataItem;
+
+        if (metadata.dataElement) {
+            const element = getByName(elements, variable.dataElement);
+            metadata = { ...metadata, dataElement: { id: element.id } };
+        }
+
+        return metadata;
+    });
+}
+
+// Return all the items (rows) from the sheet with the given name.
+function getItems(sheets: Sheet[], name: string) {
+    return sheets.find(s => s.name === name)?.items ?? [];
+}
+
+// Return the item from the list that has the given name.
+function getByName(items: MetadataItem[], name: string): MetadataItem {
+    return items.find(item => item.name === name) ?? {};
 }

@@ -19,10 +19,10 @@ async function main() {
     const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
 
     const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
-    const sheets = data.sheets?.map(getSheet) ?? [];
+    const sheets = data.sheets?.map(loadSheet) ?? [];
 
     log("Converting to metadata...");
-    const metadata = await buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "");
+    const metadata = buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "");
 
     log("Writing it to out.json ...");
     fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
@@ -43,7 +43,7 @@ async function main() {
 // Return an object with the name of the sheet and a list of items that
 // correspond to each row. The items are objects like { col1: v1, col2: v2, ... }
 // and a generated id if they don't contain one already.
-function getSheet(sheet: any): Sheet {
+function loadSheet(sheet: any): Sheet {
     const sheetName = sheet.properties.title;
 
     const data = _.flatMap(sheet.data, data =>
