@@ -1,13 +1,13 @@
 {
     "name": "metadata-sheets",
-    "description": "Script to generate DHIS2 metadata from a google sheets",
-    "version": "0.0.1",
+    "description": "Script to generate DHIS2 metadata from google sheets",
+    "version": "0.1.0",
     "license": "GPL-3.0",
     "author": "EyeSeeTea team",
     "scripts": {
         "prettify": "prettier \"./**/*.{js,jsx,json,css,ts,tsx}\" --write",
-        "build": "ncc build src/scripts/builder.ts -m && cp dist/index.js $npm_package_name.js",
-        "start": "ts-node -P tsconfig.json src/scripts/builder.ts"
+        "build": "ncc build src/scripts/main.ts -m && cp dist/index.js $npm_package_name.js",
+        "start": "ts-node -P tsconfig.json src/scripts/main.ts"
     },
     "devDependencies": {
         "@types/dotenv-flow": "3.2.0",
