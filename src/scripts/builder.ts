@@ -232,13 +232,15 @@ async function buildDataSets(sheets: Sheet[]) {
                 .find(categoryCombo => categoryCombo.name === program.categoryCombo)?.id ?? process.env.DEFAULT_CATEGORY_COMBO_ID
         };
 
+        const expiryPeriodType = mapPeriodType(program.expiryPeriodType);
+
         // Tracked or Event Program
         if (trackedEntityType.id) {
             const programType = "WITH_REGISTRATION";
-            return { ...program, programType, trackedEntityType, categoryCombo, programStages };
+            return { ...program, expiryPeriodType, programType, trackedEntityType, categoryCombo, programStages };
         } else {
             const programType = "WITHOUT_REGISTRATION";
-            return { ...program, programType, categoryCombo, programStages };
+            return { ...program, expiryPeriodType, programType, categoryCombo, programStages };
         }
     });
 
@@ -407,6 +409,31 @@ function mapAggregationType(type: string): string {
         None: "NONE",
         Custom: "CUSTOM",
         Default: "DEFAULT",
+    };
+
+    return dictionary[type] ?? "NONE";
+}
+
+function mapPeriodType(type: string): string {
+    const dictionary: Record<string, string> = {
+        Daily: "Daily",
+        Weekly: "Weekly",
+        "Weekly starting Wednesday": "WeeklyWednesday",
+        "Weekly starting Thursday": "WeeklyThursday",
+        "Weekly starting Saturday": "WeeklySaturday",
+        "Weekly starting Sunday": "WeeklySunday",
+        Biweekly: "Biweekly",
+        Monthly: "Monthly",
+        "Bi-monthly": "BiMonthly",
+        Quarterly: "Quarterly",
+        "Six-monthly": "SixMonthly",
+        "Six-monthly starting April": "SixMonthlyApril",
+        "Six-monthly starting November": "SixMonthlyNovember",
+        Yearly: "Yearly",
+        "Financial year starting April": "FinancialApril",
+        "Financial year starting July": "FinancialJuly",
+        "Financial year starting October": "FinancialOctober",
+        "Financial year starting November": "FinancialNovember",
     };
 
     return dictionary[type] ?? "NONE";
