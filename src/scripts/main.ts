@@ -2,8 +2,7 @@
 
 import fs from "fs";
 import { D2Api } from "@eyeseetea/d2-api/2.34";
-import { D2ApiOptions } from "@eyeseetea/d2-api/api/types";
-import { config as dotenvConfig } from "dotenv-flow";
+import { config } from "dotenv-flow";
 import { google, sheets_v4 } from "googleapis";
 import _ from "lodash";
 import { MetadataItem } from "../domain/entities/MetadataItem";
@@ -12,7 +11,7 @@ import { getUid } from "../utils/uid";
 import { buildMetadata } from "../utils/buildMetadata";
 
 async function main() {
-    dotenvConfig(); // fill variable process.env from .env.* files
+    config(); // fill variable process.env from ".env.*" files
     const log = console.log,
         env = process.env; // shortcuts
 
@@ -29,11 +28,16 @@ async function main() {
     fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
 
     log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
-    const d2ApiOptions = {
+    const api = new D2Api({
         baseUrl: env.DHIS2_BASE_URL,
         auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
-    };
-    await updateServer(d2ApiOptions, metadata, env.UPDATE_CATEGORY_OPTION_COMBOS === "true");
+    });
+    await uploadMetadata(api, metadata);
+
+    if (env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
+        log("Updating category option combos...");
+        await api.maintenance.categoryOptionComboUpdate().getData();
+    }
 }
 
 // Return an object with the name of the sheet and a list of items that
@@ -68,11 +72,8 @@ function makeSeed(item: MetadataItem, sheetName: string) {
     return seed0;
 }
 
-// Connect to a server using D2Api with the given options, upload the given
-// metadata, and force an update of the category option combos if requested.
-async function updateServer(d2ApiOptions: D2ApiOptions, metadata: any, updateCombos: boolean) {
-    const api = new D2Api(d2ApiOptions);
-
+// Connect to a server using the given D2Api and upload the given metadata.
+async function uploadMetadata(api: D2Api, metadata: any) {
     const { response } = await api.metadata
         .postAsync(metadata, { importStrategy: "CREATE_AND_UPDATE", mergeMode: "MERGE" })
         .getData();
@@ -87,11 +88,6 @@ async function updateServer(d2ApiOptions: D2ApiOptions, metadata: any, updateCom
         ) ?? [];
 
     console.log([result?.status, ...messages].join("\n"));
-
-    if (updateCombos) {
-        console.log("Updating category option combos ...");
-        await api.maintenance.categoryOptionComboUpdate().getData();
-    }
 }
 
 main();
