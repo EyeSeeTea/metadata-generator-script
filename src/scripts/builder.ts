@@ -9,23 +9,23 @@ import { Sheet } from "../domain/entities/Sheet";
 import { getUid } from "../utils/uid";
 
 async function main() {
-    console.log("Initializing...");
     dotenvConfig(); // fill variable process.env from .env.* files
-    const env = process.env; // shortcut
+    const log = console.log,
+        env = process.env; // shortcuts
 
-    console.log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
+    log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
     const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
 
     const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
     const sheets = data.sheets?.map(getSheet) ?? [];
 
-    console.log("Converting to metadata...");
+    log("Converting to metadata...");
     const metadata = await buildMetadata(sheets);
 
-    console.log("Writing it to out.json ...");
+    log("Writing it to out.json ...");
     fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
 
-    console.log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
+    log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
     const d2ApiOptions = {
         baseUrl: env.DHIS2_BASE_URL,
         auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
@@ -33,15 +33,12 @@ async function main() {
     await updateServer(d2ApiOptions, metadata, env.UPDATE_CATEGORY_OPTION_COMBOS === "true");
 }
 
-// Return an object with the title of the sheet and a list of items that
-// correspond to each row of the data in the given sheet.
-//
-// The items are objects with a key per column in the sheet, and a generated id
-// if they don't contain one already.
-//
-// Output example: { page: ..., items: [ { id: ..., name: ..., ... }, { ... }, ... ] }
-function getSheet(sheet: any): { page: string; items: MetadataItem[] } {
-    const page = sheet.properties.title;
+// Return an object with the name of the sheet and a list of items that
+// correspond to each row. The items are objects like { col1: v1, col2: v2, ... }
+// and a generated id if they don't contain one already.
+function getSheet(sheet: any): Sheet {
+    const sheetName = sheet.properties.title;
+
     const data = _.flatMap(sheet.data, data =>
         _.map(data.rowData, row => _.flatMap(row.values, cell => cell.formattedValue ?? undefined))
     );
@@ -50,28 +47,28 @@ function getSheet(sheet: any): { page: string; items: MetadataItem[] } {
     const rows = data.slice(1);
 
     return {
-        page,
+        name: sheetName,
         items: rows
             .map(row => _.fromPairs(row.map((value, index) => [header[index], value])))
-            .map(item => ({ ...item, id: item.id ?? getUid(makeSeed(item, page)) } as MetadataItem))
+            .map(item => ({ ...item, id: item.id ?? getUid(makeSeed(item, sheetName)) } as MetadataItem))
             .filter(({ name }) => name !== undefined),
     };
 }
 
 // Return a string that can be used as a seed to generate a uid, corresponding
 // to the given item at the given page in the spreadsheet.
-function makeSeed(item: MetadataItem, page: string) {
-    const seed0 = `${page}-${item.name}`; // the seed will be at least the page and the item's name
-    if (page === "options") return `${seed0}-${item.optionSet}`;
-    if (page === "programStageSections") return `${seed0}-${item.programStage}-${item.sortOrder}`;
-    if (page === "programStageDataElements") return `${seed0}-${item.program}-${item.programStage}`;
+function makeSeed(item: MetadataItem, sheetName: string) {
+    const seed0 = `${sheetName}-${item.name}`; // the seed will be at least the page and the item's name
+    if (sheetName === "options") return `${seed0}-${item.optionSet}`;
+    if (sheetName === "programStageSections") return `${seed0}-${item.programStage}-${item.sortOrder}`;
+    if (sheetName === "programStageDataElements") return `${seed0}-${item.program}-${item.programStage}`;
     return seed0;
 }
 
 // Return an object containing the metadata representation of all the sheets
 // that are included in the spreadsheet.
-async function buildMetadata(sheets: { page: string; items: MetadataItem[] }[]) {
-    const get = (page: string) => sheets.find(s => s.page === page)?.items ?? []; // shortcut
+async function buildMetadata(sheets: Sheet[]) {
+    const get = (name: string) => sheets.find(s => s.name === name)?.items ?? []; // shortcut
 
     const sheetDataSets = get("dataSets"),
         sheetDataElements = get("dataElements"),

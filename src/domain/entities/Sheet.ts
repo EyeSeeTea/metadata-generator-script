@@ -1,4 +1,11 @@
+import { MetadataItem } from "./MetadataItem";
+
 export interface Sheet {
+    name: string;
+    items: MetadataItem[];
+}
+
+export interface GoogleSheet {
     name: string;
     data: Array<Array<Cell>>;
 }
