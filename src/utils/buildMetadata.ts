@@ -200,57 +200,55 @@ function buildProgramRuleActions(sheets: Sheet[]) {
         sections = get("programStageSections");
 
     return actions.map(action => {
-        const rule = getByName(rules, action.rule);
+        let data = { ...action } as MetadataItem; // copy that we will modify
 
-        let metadata = { ...action, programRule: { id: rule.id } } as MetadataItem;
+        replaceById(data, "programRule", rules);
+        replaceById(data, "dataElement", elements);
+        replaceById(data, "trackedEntityAttribute", attrs);
+        replaceById(data, "programStage", stages);
+        replaceById(data, "programStageSection", sections);
 
-        // TODO: check if this part can be done more elegantly.
-        if (metadata.dataElement) {
-            const element = getByName(elements, action.dataElement);
-            metadata = { ...metadata, dataElement: { id: element.id } };
-        }
-        if (metadata.trackedEntityAttribute) {
-            const attr = getByName(attrs, action.trackedEntityAttribute);
-            metadata = { ...metadata, trackedEntityAttribute: { id: attr.id } };
-        }
-        if (metadata.programStage) {
-            const stage = getByName(stages, action.programStage);
-            metadata = { ...metadata, programStage: { id: stage.id } };
-        }
-        if (metadata.programStageSection) {
-            const section = getByName(sections, action.programStageSection);
-            metadata = { ...metadata, programStageSection: { id: section.id } };
-        }
-
-        return metadata;
+        return data;
     });
 }
 
 function buildProgramRuleVariables(sheets: Sheet[]) {
-    const vars = getItems(sheets, "programRuleVariables");
-    const programs = getItems(sheets, "programs");
-    const elements = getItems(sheets, "programDataElements");
+    const get = (name: string) => getItems(sheets, name); // shortcut
+
+    const vars = get("programRuleVariables"),
+        programs = get("programs"),
+        elements = get("programDataElements"),
+        attrs = get("trackedEntityAttributes"),
+        stages = get("programStages");
 
     return vars.map(variable => {
-        const program = getByName(programs, variable.program);
+        let data = { ...variable } as MetadataItem; // copy that we will modify
 
-        let metadata = { ...variable, program: { id: program.id } } as MetadataItem;
+        replaceById(data, "program", programs);
+        replaceById(data, "dataElement", elements);
+        replaceById(data, "trackedEntityAttribute", attrs);
+        replaceById(data, "programStage", stages);
 
-        if (metadata.dataElement) {
-            const element = getByName(elements, variable.dataElement);
-            metadata = { ...metadata, dataElement: { id: element.id } };
-        }
-
-        return metadata;
+        return data;
     });
 }
 
 // Return all the items (rows) from the sheet with the given name.
 function getItems(sheets: Sheet[], name: string) {
-    return sheets.find(s => s.name === name)?.items ?? [];
+    return sheets.find(sheet => sheet.name === name)?.items ?? [];
 }
 
 // Return the item from the list that has the given name.
 function getByName(items: MetadataItem[], name: string): MetadataItem {
     return items.find(item => item.name === name) ?? {};
+}
+
+// Modify data[key], so instead of data[key]=name, it becomes data[key]={id: id}
+// with the id of the item in items that had that name.
+function replaceById(data: MetadataItem, key: string, items: MetadataItem[]) {
+    if (key in data) {
+        const name = data[key];
+        const item = getByName(items, name);
+        data[key] = { id: item.id };
+    }
 }
