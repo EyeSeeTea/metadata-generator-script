@@ -60,13 +60,7 @@ combination and how it works in dhis2, you can check [this talk by Jim
 Grace](https://youtu.be/EcR9QwJvc7c?t=314) (and maybe [these
 slides](https://drive.google.com/file/d/1MWq-Nx-AcSSuTfF9z7VPq0W9PXyl9IAn/view)).
 
-Where is it used? Looking at exported metadata from the
-[play.dhis2.org server](https://play.dhis2.org/), it seems to be used
-at least in:
-
--   `dataElements`
--   `dataSets`
--   `programs`
+It is used at least in `dataElements`, `dataSets`, and `programs`.
 
 ## Accessing google spreadsheets
 
@@ -88,29 +82,8 @@ You can find an example spreadsheet to use as a template for
 introducing metadata at [Metadata
 template](https://docs.google.com/spreadsheets/d/1Ij0X85_Q0wQQoxelB0VAWl5D0PjtGY_CbjYxQYGN4GE/).
 
-It has at least these sheets with these columns on them:
-
-```
-dataSets                id, name, code, periodType, categoryCombo, description
-sections                id, name, code, dataSet, showRowTotals, showColumnTotals, description
-dataElements            id, name, shortName, dataSetSection, code, categoryCombo, valueType, aggregationType
-programs                id, name, code, trackedEntityType, description
-programStages           id, name, program, repeatable, description
-programSections         id, name, programStage, description
-trackedEntityTypes      id, name, description
-trackedEntityAttributes id, name, shortName, formName, code, trackedEntityType, mandatory, displayInList
-programDataElements     id, name, shortName, formName, programStageSections, code, valueType, aggregationType
-categoryCombos          id, name, code, dataDimensionType, description
-categories              id, name, shortName, code, categoryCombo, dataDimensionType, description
-categoryOptions         id, name, code, category, shortName, description
-optionSets              id, name, code, valueType, description
-options                 id, name, code, optionSet, shortName, description
-
-DHIS2                   Data element type, Data element aggregation, Data set period type
-```
-
-The last one is used to created named ranges to use as data validation
-(and thus also get drop-down menus in google spreadsheets).
+The last sheet it has, called `DHIS2`, is used to created named ranges to use
+as data validation (and thus also get drop-down menus in google spreadsheets).
 
 ## Extending the script
 
@@ -148,6 +121,15 @@ existing field:
 
 ```sh
 cat metadata.json | jq -c 'paths | select(.[-1] == "programRuleActions")'
+```
+
+To see in the programRuleActions for which programRuleActionTypes we can have
+a key named "dataElement":
+
+```sh
+cat metadata.json \
+    | jq -r '.programRuleActions[] | select(.dataElement != null) | .programRuleActionType' \
+    | sort | uniq
 ```
 
 ### Comparing metadata files
