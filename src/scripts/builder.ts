@@ -337,20 +337,22 @@ async function getSheet() {
     const results = await buildDataSets(sheets);
     await writeFile("out.json", results).toPromise();
 
-    const { response } = await api.metadata
-        .postAsync(results as any, { importStrategy: "CREATE_AND_UPDATE", mergeMode: "MERGE" })
-        .getData();
+    if (process.env.TEST_RUN !== "true") {
+        const { response } = await api.metadata
+            .postAsync(results as any, { importStrategy: "CREATE_AND_UPDATE", mergeMode: "MERGE" })
+            .getData();
 
-    const result = await api.system.waitFor(response.jobType, response.id).getData();
+        const result = await api.system.waitFor(response.jobType, response.id).getData();
 
-    const messages =
-        result?.typeReports?.flatMap(({ klass, objectReports }) =>
-            objectReports.flatMap(({ errorReports }) =>
-                errorReports.flatMap(({ message, errorProperty }) => `${klass} ${errorProperty} ${message}`)
-            )
-        ) ?? [];
+        const messages =
+            result?.typeReports?.flatMap(({ klass, objectReports }) =>
+                objectReports.flatMap(({ errorReports }) =>
+                    errorReports.flatMap(({ message, errorProperty }) => `${klass} ${errorProperty} ${message}`)
+                )
+            ) ?? [];
 
-    console.log([result?.status, ...messages].join("\n"));
+        console.log([result?.status, ...messages].join("\n"));
+    }
 
     if (process.env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
         await api.maintenance.categoryOptionComboUpdate().getData();
