@@ -47,11 +47,17 @@ function extractObjects(sheets: Sheet[], key: string): MetadataItem[] {
                 case "options":
                     seed = `${key}-${object.name}-${object.optionSet}`;
                     break;
-                case "programStageSections":
-                    seed = `${key}-${object.name}-${object.programStage}-${object.sortOrder}`;
+                case "programSections":
+                    seed = `${key}-${object.name}-${object.program}-${object.sortOrder}`;
+                    break;
+                case "programStages":
+                    seed = `${key}-${object.name}-${object.program}`;
                     break;
                 case "programStageDataElements":
                     seed = `${key}-${object.name}-${object.program}-${object.programStage}`;
+                    break;
+                case "programStageSections":
+                    seed = `${key}-${object.name}-${object.programStage}-${object.sortOrder}`;
                     break;
                 default:
                     seed = `${key}-${object.name}`;
@@ -75,9 +81,12 @@ async function buildDataSets(sheets: Sheet[]) {
     const sheetTrackedEntityTypes = extractObjects(sheets, "trackedEntityTypes");
     const sheetProgramDataElements = extractObjects(sheets, "programDataElements");
     const sheetPrograms = extractObjects(sheets, "programs");
+    const sheetProgramSections = extractObjects(sheets, "programSections");
+    const sheetProgramSectionsTrackedEntityAttributes = extractObjects(sheets, "programSectionsTrackedEntityAttributes");
     const sheetProgramStages = extractObjects(sheets, "programStages");
     const sheetProgramStageDataElements = extractObjects(sheets, "programStageDataElements");
     const sheetProgramStageSections = extractObjects(sheets, "programStageSections");
+    const sheetProgramStageSectionsDataElements = extractObjects(sheets, "programStageSectionsDataElements");
 
     const options = _(sheetOptions)
         .map(option => {
@@ -148,7 +157,23 @@ async function buildDataSets(sheets: Sheet[]) {
         return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
     });
 
-    // TODO: Add all ProgramStageSections fields
+    const programStageSectionsDataElements = sheetProgramStageSectionsDataElements
+        .map(programStageSectionsDataElements => {
+            const programStageSection = sheetProgramStageSections.find(
+                programStageSection => {
+                    return programStageSection.name === programStageSectionsDataElements.programStageSection &&
+                        programStageSection.programStage === programStageSectionsDataElements.programStage &&
+                        programStageSection.program === programStageSectionsDataElements.program
+                }
+            )?.id;
+
+            const dataElement = sheetDataElements.find(
+                dataElement => dataElement.name === programStageSectionsDataElements.name
+            )?.id;
+
+            return { programStageSection, dataElement }
+        });
+
     const programStageSections = sheetProgramStageSections.map(programStageSection => {
         const programStage = {
             id: sheetProgramStages
@@ -157,7 +182,6 @@ async function buildDataSets(sheets: Sheet[]) {
 
         const sortOrder: number = +programStageSection.sortOrder;
 
-        // Keep "LISTING" default?
         const renderType = {
             DESKTOP: { type: programStageSection.renderTypeDesktop ?? "LISTING" },
             MOBILE: { type: programStageSection.renderTypeMobile ?? "LISTING" }
@@ -165,10 +189,13 @@ async function buildDataSets(sheets: Sheet[]) {
         delete programStageSection.renderTypeDesktop;
         delete programStageSection.renderTypeMobile;
 
-        return { ...programStageSection, programStage, sortOrder, renderType }
+        const dataElements = programStageSectionsDataElements.filter((dataElements) => {
+            return dataElements?.programStageSection === programStageSection?.id;
+        }).map(({ dataElement }) => ({ id: dataElement }));
+
+        return { ...programStageSection, programStage, sortOrder, renderType, dataElements }
     });
 
-    // TODO: Add ProgramStages all fields
     const programStages = sheetProgramStages.map(programStage => {
         const programObj = sheetPrograms.find(program => program.name === programStage.program);
 
@@ -184,7 +211,6 @@ async function buildDataSets(sheets: Sheet[]) {
 
         const repeatable: boolean = programStage.repeatable.toLowerCase() === 'true';
 
-        // TODO?: Process sheetProgramStageDataElements to programStageDataElements and filter that
         const programStageDataElements = sheetProgramStageDataElements.filter((programStageDataElements) => {
             return programStageDataElements?.program === programObj?.name &&
                 programStageDataElements?.programStage === programStage.name;
@@ -215,7 +241,44 @@ async function buildDataSets(sheets: Sheet[]) {
         }
     });
 
-    // TODO: Add all Programs fields
+    const programSectionsTrackedEntityAttributes = sheetProgramSectionsTrackedEntityAttributes
+        .map(programSectionsTrackedEntityAttributes => {
+            const programSection = sheetProgramSections.find(
+                programSection => {
+                    return programSection.programStage === programSectionsTrackedEntityAttributes.programSection &&
+                        programSection.program === programSectionsTrackedEntityAttributes.program
+                }
+            )?.id;
+
+            const trackedEntityAttribute = sheetTrackedEntityAttributes.find(
+                trackedEntityAttribute => trackedEntityAttribute.name === programSectionsTrackedEntityAttributes.name
+            )?.id;
+
+            return { programSection, trackedEntityAttribute }
+        });
+
+    const programSections = sheetProgramSections.map(programSection => {
+        const program = {
+            id: sheetPrograms
+                .find(program => program.name === programSection.program)?.id
+        };
+
+        const sortOrder: number = +programSection.sortOrder;
+
+        const renderType = {
+            DESKTOP: { type: programSection.renderTypeDesktop ?? "LISTING" },
+            MOBILE: { type: programSection.renderTypeMobile ?? "LISTING" }
+        };
+        delete programSection.renderTypeDesktop;
+        delete programSection.renderTypeMobile;
+
+        const trackedEntityAttributes = programSectionsTrackedEntityAttributes.filter((trackedEntityAttributes) => {
+            return trackedEntityAttributes?.programSection === programSection?.id;
+        }).map(({ trackedEntityAttribute }) => ({ id: trackedEntityAttribute }));
+
+        return { ...programSection, program, sortOrder, renderType, trackedEntityAttributes }
+    });
+
     const programs = sheetPrograms.map(program => {
         const trackedEntityType = {
             id: sheetTrackedEntityTypes
@@ -232,15 +295,16 @@ async function buildDataSets(sheets: Sheet[]) {
                 .find(categoryCombo => categoryCombo.name === program.categoryCombo)?.id ?? process.env.DEFAULT_CATEGORY_COMBO_ID
         };
 
-        const expiryPeriodType = mapPeriodType(program.expiryPeriodType);
+        const programSections = sheetProgramSections.filter((programSections) => {
+            return programSections?.programe === program.name;
+        }).map(({ id }) => ({ id }));
 
-        // Tracked or Event Program
         if (trackedEntityType.id) {
             const programType = "WITH_REGISTRATION";
-            return { ...program, expiryPeriodType, programType, trackedEntityType, categoryCombo, programStages };
+            return { ...program, programType, trackedEntityType, categoryCombo, programStages, programSections };
         } else {
             const programType = "WITHOUT_REGISTRATION";
-            return { ...program, expiryPeriodType, programType, categoryCombo, programStages };
+            return { ...program, programType, categoryCombo, programStages };
         }
     });
 
@@ -320,6 +384,7 @@ async function buildDataSets(sheets: Sheet[]) {
         optionSets,
         trackedEntityAttributes,
         trackedEntityTypes,
+        programSections,
         programs,
         programStages,
         programStageSections
@@ -411,31 +476,6 @@ function mapAggregationType(type: string): string {
         None: "NONE",
         Custom: "CUSTOM",
         Default: "DEFAULT",
-    };
-
-    return dictionary[type] ?? "NONE";
-}
-
-function mapPeriodType(type: string): string {
-    const dictionary: Record<string, string> = {
-        Daily: "Daily",
-        Weekly: "Weekly",
-        "Weekly starting Wednesday": "WeeklyWednesday",
-        "Weekly starting Thursday": "WeeklyThursday",
-        "Weekly starting Saturday": "WeeklySaturday",
-        "Weekly starting Sunday": "WeeklySunday",
-        Biweekly: "Biweekly",
-        Monthly: "Monthly",
-        "Bi-monthly": "BiMonthly",
-        Quarterly: "Quarterly",
-        "Six-monthly": "SixMonthly",
-        "Six-monthly starting April": "SixMonthlyApril",
-        "Six-monthly starting November": "SixMonthlyNovember",
-        Yearly: "Yearly",
-        "Financial year starting April": "FinancialApril",
-        "Financial year starting July": "FinancialJuly",
-        "Financial year starting October": "FinancialOctober",
-        "Financial year starting November": "FinancialNovember",
     };
 
     return dictionary[type] ?? "NONE";
