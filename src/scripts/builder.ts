@@ -245,7 +245,7 @@ async function buildDataSets(sheets: Sheet[]) {
         .map(programSectionsTrackedEntityAttributes => {
             const programSection = sheetProgramSections.find(
                 programSection => {
-                    return programSection.programStage === programSectionsTrackedEntityAttributes.programSection &&
+                    return programSection.name === programSectionsTrackedEntityAttributes.programSection &&
                         programSection.program === programSectionsTrackedEntityAttributes.program
                 }
             )?.id;
@@ -296,7 +296,7 @@ async function buildDataSets(sheets: Sheet[]) {
         };
 
         const programSections = sheetProgramSections.filter((programSections) => {
-            return programSections?.programe === program.name;
+            return programSections?.program === program.name;
         }).map(({ id }) => ({ id }));
 
         if (trackedEntityType.id) {
