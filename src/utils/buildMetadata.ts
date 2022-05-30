@@ -17,10 +17,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         sheetOptions = get("options"),
         sheetTrackedEntityAttributes = get("trackedEntityAttributes"),
         sheetTrackedEntityTypes = get("trackedEntityTypes"),
-        sheetProgramDataElements = get("programDataElements"),
-        sheetPrograms = get("programs"),
-        sheetProgramStages = get("programStages"),
-        sheetProgramStageSections = get("programStageSections");
+        sheetProgramDataElements = get("programDataElements")
 
     const options = _(sheetOptions)
         .map(option => {
@@ -83,16 +80,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
 
         return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
     });
-
-    /** const programs = sheetDataSets.map(program => {
-        const programStages = sheetProgramStages
-            .filter(({ programStages }) => {
-                const programStage = sheetProgramStages.find(({ name }) => name === programStages);
-                return programStage?.program === program.name;
-            })
-
-        return { ...program, programStages };
-    }); */
 
     const categories = sheetCategories.map(category => {
         const categoryOptions = sheetCategoryOptions
@@ -166,7 +153,10 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         optionSets,
         trackedEntityAttributes,
         trackedEntityTypes,
-        //programs,
+        programs: buildPrograms(sheets),
+        programSections: buildprogramSections(sheets),
+        programStages: buildProgramStages(sheets),
+        programStageSections: buildProgramStageSections(sheets),
         programRules: buildProgramRules(sheets),
         programRuleActions: buildProgramRuleActions(sheets),
         programRuleVariables: buildProgramRuleVariables(sheets),
@@ -266,10 +256,10 @@ function buildProgramStages(sheets: Sheet[]) {
     const dataElements = get("dataElements");
 
     return programStages.map(programStage => {
-        const program = getByName(programs, programStage.program)
+        const programData = getByName(programs, programStage.program)
 
-        const trackedEntityType = {
-            id: program?.id
+        const program = {
+            id: programData?.id
         };
 
         const enableUserAssignment: boolean = programStage.enableUserAssignment.toLowerCase() === 'true';
@@ -281,7 +271,7 @@ function buildProgramStages(sheets: Sheet[]) {
         const repeatable: boolean = programStage.repeatable.toLowerCase() === 'true';
 
         const programStageDataElements = programStageDataElementsData.filter((programStageDataElements) => {
-            return programStageDataElements?.program === program?.name &&
+            return programStageDataElements?.program === programData?.name &&
                 programStageDataElements?.programStage === programStage.name;
         }).map(({ id, name, sortOrder, compulsory, allowProvidedElsewhere, displayInReports, allowFutureDate,
             skipSynchronization, renderTypeDesktop, renderTypeMobile }) => ({
