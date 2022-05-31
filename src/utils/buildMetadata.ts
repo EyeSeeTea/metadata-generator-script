@@ -309,6 +309,23 @@ function buildProgramStageSections(sheets: Sheet[]) {
     const programStageSectionsDataElementsData = get("programStageSectionsDataElements");
     const dataElementsData = get("programDataElements");
 
+    const programStageSectionsDataElements = programStageSectionsDataElementsData
+        .map(PSSDataElements => {
+            const programStageSection = programStageSections.find(
+                programStageSection => {
+                    return programStageSection.name === PSSDataElements.programStageSection &&
+                        programStageSection.programStage === PSSDataElements.programStage &&
+                        programStageSection.program === PSSDataElements.program
+                }
+            )?.id;
+
+            const dataElement = dataElementsData.find(
+                dataElement => dataElement.name === PSSDataElements.name
+            )?.id;
+
+            return { programStageSection, dataElement }
+        });
+
     return programStageSections.map(programStageSection => {
         const programStage = {
             id: getByName(programStages, programStageSection.programStage)?.id
@@ -330,23 +347,6 @@ function buildProgramStageSections(sheets: Sheet[]) {
         };
         delete programStageSection.renderTypeDesktop;
         delete programStageSection.renderTypeMobile;
-
-        const programStageSectionsDataElements = programStageSectionsDataElementsData
-            .map(PSSDataElements => {
-                const programStageSection = programStageSections.find(
-                    programStageSection => {
-                        return programStageSection.name === PSSDataElements.programStageSection &&
-                            programStageSection.programStage === PSSDataElements.programStage &&
-                            programStageSection.program === PSSDataElements.program
-                    }
-                )?.id;
-
-                const dataElement = dataElementsData.find(
-                    dataElement => dataElement.name === PSSDataElements.name
-                )?.id;
-
-                return { programStageSection, dataElement }
-            });
 
         const dataElements = programStageSectionsDataElements.filter((dataElements) => {
             return dataElements?.programStageSection === programStageSection?.id;
