@@ -314,7 +314,15 @@ function buildProgramStageSections(sheets: Sheet[]) {
             id: getByName(programStages, programStageSection.programStage)?.id
         };
 
-        const sortOrder: number = +programStageSection.sortOrder;
+        // Add sortOrder to each section of the same program and stage
+        if (typeof programStageSection.sortOrder === 'undefined') {
+            programStageSections.filter((programStageSections) => {
+                return programStageSections.program === programStageSection.program &&
+                    programStageSection.programStage === programStageSection.programStage
+            }).forEach((programStageSection, index) => {
+                programStageSection.sortOrder = index;
+            });
+        }
 
         const renderType = {
             DESKTOP: { type: programStageSection.renderTypeDesktop ?? "LISTING" },
@@ -344,7 +352,9 @@ function buildProgramStageSections(sheets: Sheet[]) {
             return dataElements?.programStageSection === programStageSection?.id;
         }).map(({ dataElement }) => ({ id: dataElement }));
 
-        return { ...programStageSection, programStage, sortOrder, renderType, dataElements }
+        delete programStageSection.program;
+
+        return { ...programStageSection, programStage, renderType, dataElements }
     });
 }
 
