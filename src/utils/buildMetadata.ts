@@ -253,7 +253,7 @@ function buildProgramStages(sheets: Sheet[]) {
     const programs = get("programs");
     const programStageSectionsData = get("programStageSections");
     const programStageDataElementsData = get("programStageDataElements");
-    const dataElements = get("dataElements");
+    const dataElements = get("programDataElements");
 
     return programStages.map(programStage => {
         const programData = getByName(programs, programStage.program)
@@ -307,7 +307,7 @@ function buildProgramStageSections(sheets: Sheet[]) {
     const programStageSections = get("programStageSections");
     const programStages = get("programStages");
     const programStageSectionsDataElementsData = get("programStageSectionsDataElements");
-    const dataElementsData = get("dataElements");
+    const dataElementsData = get("programDataElements");
 
     return programStageSections.map(programStageSection => {
         const programStage = {
