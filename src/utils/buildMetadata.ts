@@ -229,11 +229,9 @@ function buildprogramSections(sheets: Sheet[]) {
         };
 
         if (typeof programSection.sortOrder === 'undefined') {
-            programSections.filter((programSections) => {
+            makeSortOrder(programSections.filter((programSections) => {
                 return programSections.program === programSection.program;
-            }).forEach((programSection, index) => {
-                programSection.sortOrder = index;
-            });
+            }));
         }
 
         const renderType = {
@@ -336,14 +334,11 @@ function buildProgramStageSections(sheets: Sheet[]) {
             id: getByName(programStages, programStageSection.programStage)?.id
         };
 
-        // Add sortOrder to each section of the same program and stage
         if (typeof programStageSection.sortOrder === 'undefined') {
-            programStageSections.filter((programStageSections) => {
+            makeSortOrder(programStageSections.filter((programStageSections) => {
                 return programStageSections.program === programStageSection.program &&
                     programStageSection.programStage === programStageSection.programStage
-            }).forEach((programStageSection, index) => {
-                programStageSection.sortOrder = index;
-            });
+            }));
         }
 
         const renderType = {
@@ -420,6 +415,14 @@ function buildProgramRuleVariables(sheets: Sheet[]) {
         replaceById(data, "programStage", stages);
 
         return data;
+    });
+}
+
+// Add sortOrder to filteredMetadataItems, these items belong to the same 'group'.
+// The idea is to use metadataItems.filter(filterFunction) as filteredMetadataItems.
+function makeSortOrder(filteredMetadataItems: MetadataItem[]) {
+    filteredMetadataItems.forEach((item, index) => {
+        item.sortOrder = index;
     });
 }
 
