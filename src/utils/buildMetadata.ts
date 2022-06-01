@@ -228,7 +228,13 @@ function buildprogramSections(sheets: Sheet[]) {
             id: getByName(programs, programSection.program)?.id
         };
 
-        const sortOrder: number = +programSection.sortOrder;
+        if (typeof programSection.sortOrder === 'undefined') {
+            programSections.filter((programSections) => {
+                return programSections.program === programSection.program;
+            }).forEach((programSection, index) => {
+                programSection.sortOrder = index;
+            });
+        }
 
         const renderType = {
             DESKTOP: { type: programSection.renderTypeDesktop ?? "LISTING" },
@@ -242,7 +248,7 @@ function buildprogramSections(sheets: Sheet[]) {
                 return trackedEntityAttributes?.programSection === programSection?.id;
             }).map(({ trackedEntityAttribute }) => ({ id: trackedEntityAttribute }));
 
-        return { ...programSection, program, sortOrder, renderType, trackedEntityAttributes }
+        return { ...programSection, program, renderType, trackedEntityAttributes }
     });
 }
 
