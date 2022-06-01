@@ -256,30 +256,29 @@ function buildProgramStages(sheets: Sheet[]) {
     const dataElements = get("programDataElements");
 
     return programStages.map(programStage => {
-        const programData = getByName(programs, programStage.program)
-
         const program = {
-            id: programData?.id
+            id: getByName(programs, programStage.program)?.id
         };
 
         const enableUserAssignment: boolean = programStage.enableUserAssignment.toLowerCase() === 'true';
 
         const programStageSections = programStageSectionsData.filter((programStageSections) => {
-            return programStageSections?.programStage === programStage.name;
+            return programStageSections?.programStage === programStage.name &&
+                programStageSections?.program === programStage.program;
         }).map(({ id }) => ({ id }));
 
         const repeatable: boolean = programStage.repeatable.toLowerCase() === 'true';
 
         const programStageDataElements = programStageDataElementsData.filter((programStageDataElements) => {
-            return programStageDataElements?.program === programData?.name &&
+            return programStageDataElements?.program === programStage.program &&
                 programStageDataElements?.programStage === programStage.name;
-        }).map(({ id, name, sortOrder, compulsory, allowProvidedElsewhere, displayInReports, allowFutureDate,
-            skipSynchronization, renderTypeDesktop, renderTypeMobile }) => ({
+        }).map(({ id, name, compulsory, allowProvidedElsewhere, displayInReports, allowFutureDate,
+            skipSynchronization, renderTypeDesktop, renderTypeMobile }, index) => ({
                 id,
                 programStage: {
                     id: programStage.id
                 },
-                sortOrder,
+                sortOrder: index,
                 compulsory,
                 allowProvidedElsewhere,
                 displayInReports,
