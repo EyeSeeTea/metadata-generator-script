@@ -153,8 +153,8 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         optionSets,
         trackedEntityAttributes,
         trackedEntityTypes,
-        programs: buildPrograms(sheets),
         programSections: buildprogramSections(sheets),
+        programs: buildPrograms(sheets),
         programStages: buildProgramStages(sheets),
         programStageSections: buildProgramStageSections(sheets),
         programRules: buildProgramRules(sheets),
@@ -164,7 +164,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
 }
 
 function buildPrograms(sheets: Sheet[]) {
-    const get = (name: string) => getItems(sheets, name); // shortcut
+    const get = (name: string) => getItems(sheets, name);
 
     const programs = get("programs");
     const programSectionsData = get("programSections");
@@ -186,22 +186,29 @@ function buildPrograms(sheets: Sheet[]) {
             id: getByName(categoryCombos, program.categoryCombo)?.id ?? process.env.DEFAULT_CATEGORY_COMBO_ID
         };
 
+        const style = {
+            color: program.styleColor ?? "",
+            icon: program.styleIcon ?? ""
+        };
+        delete program.styleColor;
+        delete program.styleIcon;
+
         const programSections = programSectionsData.filter((programSections) => {
             return programSections?.program === program.name;
         }).map(({ id }) => ({ id }));
 
         if (trackedEntityType.id) {
             const programType = "WITH_REGISTRATION";
-            return { ...program, programType, trackedEntityType, categoryCombo, programStages, programSections };
+            return { ...program, programType, trackedEntityType, categoryCombo, style, programStages, programSections };
         } else {
             const programType = "WITHOUT_REGISTRATION";
-            return { ...program, programType, categoryCombo, programStages };
+            return { ...program, programType, categoryCombo, style, programStages };
         }
     });
 }
 
 function buildprogramSections(sheets: Sheet[]) {
-    const get = (name: string) => getItems(sheets, name); // shortcut
+    const get = (name: string) => getItems(sheets, name);
 
     const programSections = get("programSections");
     const programs = get("programs");
@@ -251,7 +258,7 @@ function buildprogramSections(sheets: Sheet[]) {
 }
 
 function buildProgramStages(sheets: Sheet[]) {
-    const get = (name: string) => getItems(sheets, name); // shortcut
+    const get = (name: string) => getItems(sheets, name);
 
     const programStages = get("programStages");
     const programs = get("programs");
@@ -272,6 +279,13 @@ function buildProgramStages(sheets: Sheet[]) {
         }).map(({ id }) => ({ id }));
 
         const repeatable: boolean = programStage.repeatable.toLowerCase() === 'true';
+
+        const style = {
+            color: programStage.styleColor ?? "",
+            icon: programStage.styleIcon ?? ""
+        };
+        delete programStage.styleColor;
+        delete programStage.styleIcon;
 
         const programStageDataElements = programStageDataElementsData.filter((programStageDataElements) => {
             return programStageDataElements?.program === programStage.program &&
@@ -298,14 +312,14 @@ function buildProgramStages(sheets: Sheet[]) {
             }));
 
         return {
-            ...programStage, enableUserAssignment, repeatable, program,
+            ...programStage, style, enableUserAssignment, repeatable, program,
             programStageDataElements, programStageSections
         }
     });
 }
 
 function buildProgramStageSections(sheets: Sheet[]) {
-    const get = (name: string) => getItems(sheets, name); // shortcut
+    const get = (name: string) => getItems(sheets, name);
 
     const programStageSections = get("programStageSections");
     const programStages = get("programStages");
