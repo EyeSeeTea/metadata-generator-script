@@ -271,14 +271,10 @@ function buildProgramStages(sheets: Sheet[]) {
             id: getByName(programs, programStage.program)?.id
         };
 
-        const enableUserAssignment: boolean = programStage.enableUserAssignment.toLowerCase() === 'true';
-
         const programStageSections = programStageSectionsData.filter((programStageSections) => {
             return programStageSections?.programStage === programStage.name &&
                 programStageSections?.program === programStage.program;
         }).map(({ id }) => ({ id }));
-
-        const repeatable: boolean = programStage.repeatable.toLowerCase() === 'true';
 
         const style = {
             color: programStage.styleColor ?? "",
@@ -311,10 +307,7 @@ function buildProgramStages(sheets: Sheet[]) {
                 },
             }));
 
-        return {
-            ...programStage, style, enableUserAssignment, repeatable, program,
-            programStageDataElements, programStageSections
-        }
+        return { ...programStage, style, program, programStageDataElements, programStageSections }
     });
 }
 
@@ -440,9 +433,25 @@ function makeSortOrder(filteredMetadataItems: MetadataItem[]) {
     });
 }
 
+// Transforms "TRUE" or "FALSE" strings to booleans
+function metadataItemsStringToBool(items: MetadataItem[]) {
+    items.forEach((item) => {
+        Object.keys(item).forEach(key => {
+            if (typeof item[key] === "string") {
+                const value = item[key].toLowerCase()
+                if (value === "true" || value === "false") {
+                    item[key] = value === "true";
+                }
+            }
+        });
+    });
+}
+
 // Return all the items (rows) from the sheet with the given name.
 function getItems(sheets: Sheet[], name: string) {
-    return sheets.find(sheet => sheet.name === name)?.items ?? [];
+    const items = sheets.find(sheet => sheet.name === name)?.items ?? [];
+    metadataItemsStringToBool(items);
+    return items;
 }
 
 // Return the item from the list that has the given name.
