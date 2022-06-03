@@ -9,11 +9,16 @@ import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { getUid } from "../utils/uid";
 import { buildMetadata } from "../utils/buildMetadata";
+import { getMetadata } from "../utils/getMetadata";
 
 async function main() {
     config(); // fill variable process.env from ".env.*" files
     const log = console.log,
         env = process.env; // shortcuts
+
+    if (env.TEST_RUN === "true") {
+        log("----TEST RUN----");
+    }
 
     log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
     const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
@@ -21,22 +26,46 @@ async function main() {
     const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
     const sheets = data.sheets?.map(loadSheet) ?? [];
 
-    log("Converting to metadata...");
-    const metadata = buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "");
+    // TODO: not finished, subject to getMetadata changes
+    if (env.PULL_UID_ONLY !== "true") {
+        log("Converting to metadata...");
+        const metadata = buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "");
 
-    log("Writing it to out.json ...");
-    fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
+        log("Writing it to out.json ...");
+        fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
 
-    log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
-    const api = new D2Api({
-        baseUrl: env.DHIS2_BASE_URL,
-        auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
-    });
-    await uploadMetadata(api, metadata);
+        if (env.TEST_RUN !== "true") {
+            log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
+            const api = new D2Api({
+                baseUrl: env.DHIS2_BASE_URL,
+                auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
+            });
+            await uploadMetadata(api, metadata);
 
-    if (env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
-        log("Updating category option combos...");
-        await api.maintenance.categoryOptionComboUpdate().getData();
+            if (env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
+                log("Updating category option combos...");
+                await api.maintenance.categoryOptionComboUpdate().getData();
+            }
+
+            if (env.PULL_UID === "true") {
+                log("Pulling UIDs ...");
+            }
+        } else if (env.PULL_UID === "true") {
+            log("Pulling UIDs ...");
+            const api = new D2Api({
+                baseUrl: env.DHIS2_BASE_URL,
+                auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
+            });
+            getMetadata(api);
+        }
+    } else {
+        log("Pulling UIDs only...");
+        // if (env.TEST_RUN === "true") {} else {}
+        const api = new D2Api({
+            baseUrl: env.DHIS2_BASE_URL,
+            auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
+        });
+        getMetadata(api);
     }
 }
 
@@ -67,7 +96,10 @@ function loadSheet(sheet: any): Sheet {
 function makeSeed(item: MetadataItem, sheetName: string) {
     const seed0 = `${sheetName}-${item.name}`; // the seed will be at least the page and the item's name
     if (sheetName === "options") return `${seed0}-${item.optionSet}`;
-    if (sheetName === "programStageSections") return `${seed0}-${item.programStage}-${item.sortOrder}`;
+    if (sheetName === "programs") return `${seed0}-${item.program}`;
+    if (sheetName === "programSections") return `${seed0}-${item.program}`;
+    if (sheetName === "programStages") return `${seed0}-${item.program}`;
+    if (sheetName === "programStageSections") return `${seed0}-${item.programStage}`;
     if (sheetName === "programStageDataElements") return `${seed0}-${item.program}-${item.programStage}`;
     return seed0;
 }
