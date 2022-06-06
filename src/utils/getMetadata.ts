@@ -97,6 +97,27 @@ const programstagesQuerryTemplate: MetadataQuerry = {
     },
 }
 
+const dataElementsQuerry: MetadataQuerry = {
+    dataElements: {
+        fields: {
+            id: true,
+            name: true,
+            shortName: true,
+            formName: true,
+            dataSetSection: true,
+            code: true,
+            categoryCombo: true,
+            valueType: true,
+            aggregationType: true,
+            domainType: true,
+            description: true,
+            optionSet: {
+                id: true, 
+            },
+        },
+    },
+}
+
 // Make the appropriate query from the template
 // function makeMetadataItemQuery(queryTemplate: MetadataQuerry, all?: boolean, nameToFilter?: string) {
 //     let query: MetadataQuerry;
