@@ -4,9 +4,9 @@ import _ from "lodash";
 
 const log = console.log, env = process.env;
 
-type MetadataQuerry = { [key: string]: any };
+type MetadataQuery = { [key: string]: any };
 
-const programsQuerryTemplate: MetadataQuerry = {
+const programsQueryTemplate: MetadataQuery = {
     programs: {
         fields: {
             id: true,
@@ -47,7 +47,7 @@ const programsQuerryTemplate: MetadataQuerry = {
     },
 }
 
-const programstagesQuerryTemplate: MetadataQuerry = {
+const programstagesQueryTemplate: MetadataQuery = {
     programStages: {
         fields: {
             id: true,
@@ -97,7 +97,7 @@ const programstagesQuerryTemplate: MetadataQuerry = {
     },
 }
 
-const dataElementsQuerry: MetadataQuerry = {
+const dataElementsQuery: MetadataQuery = {
     dataElements: {
         fields: {
             id: true,
@@ -112,13 +112,13 @@ const dataElementsQuerry: MetadataQuerry = {
             domainType: true,
             description: true,
             optionSet: {
-                id: true, 
+                id: true,
             },
         },
     },
 }
 
-const CategoryOptionsQuerry: MetadataQuerry = {
+const CategoryOptionsQuery: MetadataQuery = {
     Categories: {
         fields: {
             id: true,
@@ -135,27 +135,31 @@ const CategoryOptionsQuerry: MetadataQuerry = {
 }
 
 // Make the appropriate query from the template
-// function makeMetadataItemQuery(queryTemplate: MetadataQuerry, all?: boolean, nameToFilter?: string) {
-//     let query: MetadataQuerry;
-//     if (all) {
-//         query = _(queryTemplate).clone();
-//     } else {
-//         query = queryTemplate;
-//     }
-//     if (typeof nameToFilter !== undefined) {
-//         query.filter.name.eq = nameToFilter;
-//     }
-//     return query;
-// }
+function makeMetadataItemQuery(queryTemplate: MetadataQuery, all?: boolean, nameToFilter?: string) {
+    const key = Object.keys(queryTemplate)[0];
+    let metadataQuery: MetadataQuery = {};
+
+    if (all) {
+        metadataQuery[key] = { fields: programsQueryTemplate[key]["fields"] };
+    } else {
+        metadataQuery[key] = { fields: { id: programsQueryTemplate[key]["fields"]["id"] } };
+    }
+    if (typeof nameToFilter !== undefined) {
+        metadataQuery[key]["filter"] = { name: { eq: nameToFilter } };
+    }
+    log(metadataQuery);
+    return metadataQuery;
+}
 
 // Sample function retrieving filtered metadata 
 export async function getMetadata(api: D2Api) {
-    let metadataQuery = _(programsQuerryTemplate).clone();
-    log(metadataQuery);
-    metadataQuery.programs.filter.name.eq = "Antenatal care visit";
-    log(metadataQuery);
+    let nameToFilter = "Antenatal care visit";
 
-    const metadata = await api.metadata.get(metadataQuery).getData();
+    const metadata = await api.metadata.get(
+        makeMetadataItemQuery(programsQueryTemplate, true, nameToFilter)
+    ).getData();
+
     log(JSON.stringify(metadata, null, 4));
+
     fs.writeFileSync("getMetadata.json", JSON.stringify(metadata, null, 4));
 }
