@@ -118,6 +118,22 @@ const dataElementsQuerry: MetadataQuerry = {
     },
 }
 
+const CategoryOptionsQuerry: MetadataQuerry = {
+    Categories: {
+        fields: {
+            id: true,
+            name: true,
+            shortName: true,
+            code: true,
+            categoryCombo: {
+                id: true,
+            },
+            dataDimensionType: true,
+            description: true
+        },
+    },
+}
+
 // Make the appropriate query from the template
 // function makeMetadataItemQuery(queryTemplate: MetadataQuerry, all?: boolean, nameToFilter?: string) {
 //     let query: MetadataQuerry;
