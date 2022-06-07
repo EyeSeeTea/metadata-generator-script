@@ -9,7 +9,7 @@ import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { getUid } from "../utils/uid";
 import { buildMetadata } from "../utils/buildMetadata";
-import { getMetadata } from "../utils/getMetadata";
+import { getMetadata, getNamesFromMetadata, getNamesFromSpreadsheet } from "../utils/getMetadata";
 
 async function main() {
     config(); // fill variable process.env from ".env.*" files
@@ -49,6 +49,7 @@ async function main() {
 
             if (env.PULL_UID === "true") {
                 log("Pulling UIDs ...");
+                getMetadata(api, getNamesFromMetadata(metadata));
             }
         } else if (env.PULL_UID === "true") {
             log("Pulling UIDs ...");
@@ -56,16 +57,17 @@ async function main() {
                 baseUrl: env.DHIS2_BASE_URL,
                 auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
             });
-            getMetadata(api);
+
+            getMetadata(api, getNamesFromMetadata(metadata));
         }
     } else {
         log("Pulling UIDs only...");
-        // if (env.TEST_RUN === "true") {} else {}
         const api = new D2Api({
             baseUrl: env.DHIS2_BASE_URL,
             auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
         });
-        getMetadata(api);
+
+        getMetadata(api, getNamesFromSpreadsheet(sheets));
     }
 }
 
