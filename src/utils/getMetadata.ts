@@ -1,15 +1,17 @@
 import fs from "fs";
 import { D2Api } from "@eyeseetea/d2-api/2.34";
 import _ from "lodash";
-import { MetadataItem } from "../domain/entities/MetadataItem";
+import { MetadataItem } from '../domain/entities/MetadataItem';
 import { Sheet } from "../domain/entities/Sheet";
 
 const log = console.log, env = process.env;
 
 type MetadataQuery = { [key: string]: any };
+type QueryTemplateArray = { type: string, template: MetadataQuery }[];
 type FilterNames = { [key: string]: string[] };
+// type FilterNames = { type: string, names: string[] }[];
 
-const queryTemplates: { type: string, template: MetadataQuery }[] = [
+const queryTemplates: QueryTemplateArray = [
     {
         type: "programs",
         template: {
@@ -234,67 +236,77 @@ const queryTemplates: { type: string, template: MetadataQuery }[] = [
     },
 ]
 
-function getNamesFromSpreadsheet(sheets: Sheet[]) {
-    let names: FilterNames = {};
+// Get names from spreadsheet data
+export function getNamesFromSpreadsheet(sheets: Sheet[]) {
+    let filterNames: FilterNames = {};
 
     sheets.forEach((sheet) => {
-        names[sheet.name] = [];
+        filterNames[sheet.name] = [];
         sheet.items.forEach((item) => {
-            names[sheet.name].push(item["name"]);
+            filterNames[sheet.name].push(item["name"]);
         })
     });
 
-    return names;
+    return filterNames;
 }
 
+// Get names from the output of buildMetadata
 export function getNamesFromMetadata(metadataItemArray: { [key: string]: MetadataItem[] }) {
-    let names: FilterNames = {};
+    let filterNames: FilterNames = {};
 
     Object.entries(metadataItemArray).forEach(([metadataItemType, metadataItem]) => {
-        names[metadataItemType] = [];
+        filterNames[metadataItemType] = [];
         metadataItem.forEach((item) => {
-            names[metadataItemType].push(item["name"]);
+            filterNames[metadataItemType].push(item["name"]);
         })
     });
 
-    return names;
+    return filterNames;
 }
 
-// Make the appropriate query from the template
-function makeMetadataItemQuery(queryTemplate: MetadataQuery, all?: boolean, nameToFilter?: string) {
+// Make the appropriate query from the template for one metadata type
+function makeMetadataItemQuery(queryTemplate: MetadataQuery, namesToFilter?: string[], all?: boolean) {
     const key = Object.keys(queryTemplate)[0];
     let metadataQuery: MetadataQuery = {};
 
     if (all) {
-        metadataQuery[key] = { fields: programsQueryTemplate[key]["fields"] };
+        metadataQuery[key] = { fields: queryTemplate[key]["fields"] };
     } else {
-        metadataQuery[key] = { fields: { id: programsQueryTemplate[key]["fields"]["id"] } };
+        metadataQuery[key] = { fields: { id: queryTemplate[key]["fields"]["id"] } };
     }
-    if (typeof nameToFilter !== undefined) {
-        metadataQuery[key]["filter"] = { name: { eq: nameToFilter } };
+    if (typeof namesToFilter !== undefined || namesToFilter?.length !== 0) {
+        metadataQuery[key]["filter"] = { name: { in: namesToFilter } };
     }
-    log(metadataQuery);
     return metadataQuery;
 }
 
-function getMetadataUIDs(queryTemplates: MetadataQuery[], names: FilterNames, all?: boolean) {
+// Make filtered query for each type present in names
+function makeFilteredQueries(queryTemplates: QueryTemplateArray, names: FilterNames, all?: boolean) {
+    let queries: { type: string, value: MetadataQuery }[] = []
+
     Object.entries(names).forEach(([metadataItemType, nameArray]) => {
-        const metadataItem = queryTemplates.find(template => template.type === metadataItemType)
-        nameArray.forEach((name) => {
-            makeMetadataItemQuery(metadataItem, false, name)
-        })
+        const metadataItem = queryTemplates.find(queryTemplate => {
+            return queryTemplate.type === metadataItemType;
+        })?.template ?? {};
+
+        queries.push({
+            type: metadataItemType,
+            value: makeMetadataItemQuery(metadataItem, nameArray, all)
+        });
     });
+
+    return queries;
 }
 
-// Sample function retrieving filtered metadata 
-export async function getMetadata(api: D2Api) {
-    let nameToFilter = "Antenatal care visit";
+export async function getMetadata(api: D2Api, filterNames: FilterNames) {
+    const queries = makeFilteredQueries(queryTemplates, filterNames, false);
 
-    const metadata = await api.metadata.get(
-        makeMetadataItemQuery(programsQueryTemplate, true, nameToFilter)
-    ).getData();
-
-    log(JSON.stringify(metadata, null, 4));
-
-    fs.writeFileSync("getMetadata.json", JSON.stringify(metadata, null, 4));
+    queries.forEach(async (query) => {
+        // Query answer without the system property
+        const metadata = _.omit(await api.metadata.get(query.value).getData(), "system");
+        // TEST FILE OUTPUT
+        fs.appendFileSync("getMetadata.json", JSON.stringify(metadata, null, 4));
+        // NOTE TO MARIE: your CSV function could go here,
+        // query.type can be the base for each file name and metadata is the data to be writed
+    })
 }
