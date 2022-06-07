@@ -112,7 +112,7 @@ const dataElementsQuery: MetadataQuery = {
 }
 
 
-const datasetsQuerry: MetadataQuerry = {
+const datasetsQuerry: MetadataQuery = {
     datasets: {
         fields: {
             id: true,
@@ -126,14 +126,14 @@ const datasetsQuerry: MetadataQuerry = {
 }
 
 
-const sectionsQuerry: MetadataQuerry = {
+const sectionsQuerry: MetadataQuery = {
     sections: {
         fields: {
             id: true,
             name: true,
             code: true,
-            dataSet: { 
-                id: true, 
+            dataSet: {
+                id: true,
             },
             showRowTotals: true,
             showColumnTotals: true,
@@ -159,7 +159,7 @@ const CategoryQuery: MetadataQuery = {
     },
 }
 
-const categoryCombosQuerry: MetadataQuerry = {
+const categoryCombosQuerry: MetadataQuery = {
     categoryCombos: {
         fields: {
             id: true,
@@ -171,14 +171,14 @@ const categoryCombosQuerry: MetadataQuerry = {
     },
 }
 
-const categoryOptionsQuerry: MetadataQuerry = {
+const categoryOptionsQuerry: MetadataQuery = {
     categoryOptions: {
         fields: {
             id: true,
             name: true,
             code: true,
             category: {
-                id: true, 
+                id: true,
             },
             shortName: true,
             description: true,
@@ -186,7 +186,7 @@ const categoryOptionsQuerry: MetadataQuerry = {
     },
 }
 
-const optionSetsQuerry: MetadataQuerry = {
+const optionSetsQuerry: MetadataQuery = {
     optionSets: {
         fields: {
             id: true,
@@ -198,19 +198,21 @@ const optionSetsQuerry: MetadataQuerry = {
     },
 }
 
-const optionsQuerry: MetadataQuerry = {
+const optionsQuerry: MetadataQuery = {
     options: {
         fields: {
             id: true,
             name: true,
             code: true,
             optionSet: {
-                id: true, 
+                id: true,
             },
             shortName: true,
             description: true,
         },
     },
+}
+
 function getNamesFromSpreadsheet(sheets: Sheet[]) {
     let names: FilterNames = {};
 
