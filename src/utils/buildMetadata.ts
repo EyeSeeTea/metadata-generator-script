@@ -344,7 +344,7 @@ function buildProgramStageSections(sheets: Sheet[]) {
         if (typeof programStageSection.sortOrder === 'undefined') {
             makeSortOrder(programStageSections.filter((programStageSections) => {
                 return programStageSections.program === programStageSection.program &&
-                    programStageSection.programStage === programStageSection.programStage
+                    programStageSections.programStage === programStageSection.programStage
             }));
         }
 
@@ -433,25 +433,9 @@ function makeSortOrder(filteredMetadataItems: MetadataItem[]) {
     });
 }
 
-// Transforms "TRUE" or "FALSE" strings to booleans
-function metadataItemsStringToBool(items: MetadataItem[]) {
-    items.forEach((item) => {
-        Object.keys(item).forEach(key => {
-            if (typeof item[key] === "string") {
-                const value = item[key].toLowerCase()
-                if (value === "true" || value === "false") {
-                    item[key] = value === "true";
-                }
-            }
-        });
-    });
-}
-
 // Return all the items (rows) from the sheet with the given name.
 function getItems(sheets: Sheet[], name: string) {
-    const items = sheets.find(sheet => sheet.name === name)?.items ?? [];
-    metadataItemsStringToBool(items);
-    return items;
+    return sheets.find(sheet => sheet.name === name)?.items ?? [];
 }
 
 // Return the item from the list that has the given name.
