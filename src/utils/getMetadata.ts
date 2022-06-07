@@ -118,6 +118,38 @@ const dataElementsQuery: MetadataQuery = {
     },
 }
 
+
+const datasetsQuerry: MetadataQuerry = {
+    datasets: {
+        fields: {
+            id: true,
+            name: true,
+            code: true,
+            periodType: true,
+            categoryCombo: true,
+            description: true,
+        },
+    },
+}
+
+
+const sectionsQuerry: MetadataQuerry = {
+    sections: {
+        fields: {
+            id: true,
+            name: true,
+            code: true,
+            dataSet: { 
+                id: true, 
+            },
+            showRowTotals: true,
+            showColumnTotals: true,
+            description: true,
+        },
+    },
+}
+
+
 const CategoryOptionsQuery: MetadataQuery = {
     Categories: {
         fields: {
