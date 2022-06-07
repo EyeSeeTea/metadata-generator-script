@@ -1,10 +1,13 @@
 import fs from "fs";
 import { D2Api } from "@eyeseetea/d2-api/2.34";
 import _ from "lodash";
+import { MetadataItem } from "../domain/entities/MetadataItem";
+import { Sheet } from "../domain/entities/Sheet";
 
 const log = console.log, env = process.env;
 
 type MetadataQuery = { [key: string]: any };
+type FilterNames = { [key: string]: string[] };
 
 const programsQueryTemplate: MetadataQuery = {
     programs: {
@@ -37,11 +40,6 @@ const programsQueryTemplate: MetadataQuery = {
             relatedProgram: true,
             programStages: {
                 id: true,
-            },
-        },
-        filter: {
-            name: {
-                eq: "name",
             },
         },
     },
@@ -87,11 +85,6 @@ const programstagesQueryTemplate: MetadataQuery = {
                 dataElement: {
                     id: true,
                 },
-            },
-        },
-        filter: {
-            name: {
-                eq: "name",
             },
         },
     },
@@ -218,6 +211,30 @@ const optionsQuerry: MetadataQuerry = {
             description: true,
         },
     },
+function getNamesFromSpreadsheet(sheets: Sheet[]) {
+    let names: FilterNames = {};
+
+    sheets.forEach((sheet) => {
+        names[sheet.name] = [];
+        sheet.items.forEach((item) => {
+            names[sheet.name].push(item["name"]);
+        })
+    });
+
+    return names;
+}
+
+export function getNamesFromMetadata(metadataItemArray: { [key: string]: MetadataItem[] }) {
+    let names: FilterNames = {};
+
+    Object.entries(metadataItemArray).forEach(([metadataItemType, metadataItem]) => {
+        names[metadataItemType] = [];
+        metadataItem.forEach((item) => {
+            names[metadataItemType].push(item["name"]);
+        })
+    });
+
+    return names;
 }
 
 // Make the appropriate query from the template
@@ -235,6 +252,15 @@ function makeMetadataItemQuery(queryTemplate: MetadataQuery, all?: boolean, name
     }
     log(metadataQuery);
     return metadataQuery;
+}
+
+function getMetadataUIDs(queryTemplates: MetadataQuery[], names: FilterNames, all?: boolean) {
+    Object.entries(names).forEach(([metadataItemType, nameArray]) => {
+        const metadataItem = queryTemplates.find(template => template.type === metadataItemType)
+        nameArray.forEach((name) => {
+            makeMetadataItemQuery(metadataItem, false, name)
+        })
+    });
 }
 
 // Sample function retrieving filtered metadata 
