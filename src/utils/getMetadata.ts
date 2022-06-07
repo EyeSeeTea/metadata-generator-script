@@ -150,7 +150,7 @@ const sectionsQuerry: MetadataQuerry = {
 }
 
 
-const CategoryOptionsQuery: MetadataQuery = {
+const CategoryQuery: MetadataQuery = {
     Categories: {
         fields: {
             id: true,
@@ -162,6 +162,60 @@ const CategoryOptionsQuery: MetadataQuery = {
             },
             dataDimensionType: true,
             description: true
+        },
+    },
+}
+
+const categoryCombosQuerry: MetadataQuerry = {
+    categoryCombos: {
+        fields: {
+            id: true,
+            name: true,
+            code: true,
+            dataDimensionType: true,
+            description: true,
+        },
+    },
+}
+
+const categoryOptionsQuerry: MetadataQuerry = {
+    categoryOptions: {
+        fields: {
+            id: true,
+            name: true,
+            code: true,
+            category: {
+                id: true, 
+            },
+            shortName: true,
+            description: true,
+        },
+    },
+}
+
+const optionSetsQuerry: MetadataQuerry = {
+    optionSets: {
+        fields: {
+            id: true,
+            name: true,
+            code: true,
+            valueType: true,
+            description: true,
+        },
+    },
+}
+
+const optionsQuerry: MetadataQuerry = {
+    options: {
+        fields: {
+            id: true,
+            name: true,
+            code: true,
+            optionSet: {
+                id: true, 
+            },
+            shortName: true,
+            description: true,
         },
     },
 }
