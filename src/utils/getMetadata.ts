@@ -9,209 +9,230 @@ const log = console.log, env = process.env;
 type MetadataQuery = { [key: string]: any };
 type FilterNames = { [key: string]: string[] };
 
-const programsQueryTemplate: MetadataQuery = {
-    programs: {
-        fields: {
-            id: true,
-            name: true,
-            shortName: true,
-            code: true,
-            description: true,
-            trackedEntityType: true,
-            categoryCombo: true,
-            version: true,
-            expiryPeriodType: true,
-            expiryDays: true,
-            completeEventsExpiryDays: true,
-            style: true,
-            displayFrontPageList: true,
-            useFirstStageDuringRegistration: true,
-            accessLevel: true,
-            minAttributesRequiredToSearch: true,
-            maxTeiCountToReturn: true,
-            selectIncidentDatesInFuture: true,
-            selectEnrollmentDatesInFuture: true,
-            onlyEnrollOnce: true,
-            displayIncidentDate: true,
-            incidentDateLabel: true,
-            enrollmentDateLabel: true,
-            ignoreOverdueEvents: true,
-            featureType: true,
-            relatedProgram: true,
-            programStages: {
-                id: true,
-            },
-        },
-    },
-}
-
-const programstagesQueryTemplate: MetadataQuery = {
-    programStages: {
-        fields: {
-            id: true,
-            name: true,
-            program: true,
-            enableUserAssignment: true,
-            blockEntryForm: true,
-            featureType: true,
-            preGenerateUID: true,
-            executionDateLabel: true,
-            validationStrategy: true,
-            style: true,
-            description: true,
-            minDaysFromStart: true,
-            repeatable: true,
-            periodType: true,
-            displayGenerateEventBox: true,
-            standardInterval: true,
-            autoGenerateEvent: true,
-            openAfterEnrollment: true,
-            reportDateToUse: true,
-            remindCompleted: true,
-            allowGenerateNextVisit: true,
-            generatedByEnrollmentDate: true,
-            hideDueDate: true,
-            dueDateLabel: true,
-            programStageDataElements: {
-                id: true,
-                programStage: true,
-                sortOrder: true,
-                compulsory: true,
-                allowProvidedElsewhere: true,
-                displayInReports: true,
-                allowFutureDate: true,
-                skipSynchronization: true,
-                renderType: true,
-                dataElement: {
+const queryTemplates: { type: string, template: MetadataQuery }[] = [
+    {
+        type: "programs",
+        template: {
+            programs: {
+                fields: {
                     id: true,
+                    name: true,
+                    shortName: true,
+                    code: true,
+                    description: true,
+                    trackedEntityType: true,
+                    categoryCombo: true,
+                    version: true,
+                    expiryPeriodType: true,
+                    expiryDays: true,
+                    completeEventsExpiryDays: true,
+                    style: true,
+                    displayFrontPageList: true,
+                    useFirstStageDuringRegistration: true,
+                    accessLevel: true,
+                    minAttributesRequiredToSearch: true,
+                    maxTeiCountToReturn: true,
+                    selectIncidentDatesInFuture: true,
+                    selectEnrollmentDatesInFuture: true,
+                    onlyEnrollOnce: true,
+                    displayIncidentDate: true,
+                    incidentDateLabel: true,
+                    enrollmentDateLabel: true,
+                    ignoreOverdueEvents: true,
+                    featureType: true,
+                    relatedProgram: true,
+                    programStages: {
+                        id: true,
+                    },
+                },
+            },
+        }
+    },
+    {
+        type: "programStages",
+        template: {
+            programStages: {
+                fields: {
+                    id: true,
+                    name: true,
+                    program: true,
+                    enableUserAssignment: true,
+                    blockEntryForm: true,
+                    featureType: true,
+                    preGenerateUID: true,
+                    executionDateLabel: true,
+                    validationStrategy: true,
+                    style: true,
+                    description: true,
+                    minDaysFromStart: true,
+                    repeatable: true,
+                    periodType: true,
+                    displayGenerateEventBox: true,
+                    standardInterval: true,
+                    autoGenerateEvent: true,
+                    openAfterEnrollment: true,
+                    reportDateToUse: true,
+                    remindCompleted: true,
+                    allowGenerateNextVisit: true,
+                    generatedByEnrollmentDate: true,
+                    hideDueDate: true,
+                    dueDateLabel: true,
+                    programStageDataElements: {
+                        id: true,
+                        programStage: true,
+                        sortOrder: true,
+                        compulsory: true,
+                        allowProvidedElsewhere: true,
+                        displayInReports: true,
+                        allowFutureDate: true,
+                        skipSynchronization: true,
+                        renderType: true,
+                        dataElement: {
+                            id: true,
+                        },
+                    },
                 },
             },
         },
     },
-}
-
-const dataElementsQuery: MetadataQuery = {
-    dataElements: {
-        fields: {
-            id: true,
-            name: true,
-            shortName: true,
-            formName: true,
-            dataSetSection: true,
-            code: true,
-            categoryCombo: true,
-            valueType: true,
-            aggregationType: true,
-            domainType: true,
-            description: true,
-            optionSet: {
-                id: true,
+    {
+        type: "dataElements",
+        template: {
+            dataElements: {
+                fields: {
+                    id: true,
+                    name: true,
+                    shortName: true,
+                    formName: true,
+                    dataSetSection: true,
+                    code: true,
+                    categoryCombo: true,
+                    valueType: true,
+                    aggregationType: true,
+                    domainType: true,
+                    description: true,
+                    optionSet: {
+                        id: true,
+                    },
+                },
+            },
+        }
+    },
+    {
+        type: "datasets",
+        template: {
+            datasets: {
+                fields: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    periodType: true,
+                    categoryCombo: true,
+                    description: true,
+                },
             },
         },
     },
-}
-
-
-const datasetsQuerry: MetadataQuery = {
-    datasets: {
-        fields: {
-            id: true,
-            name: true,
-            code: true,
-            periodType: true,
-            categoryCombo: true,
-            description: true,
-        },
-    },
-}
-
-
-const sectionsQuerry: MetadataQuery = {
-    sections: {
-        fields: {
-            id: true,
-            name: true,
-            code: true,
-            dataSet: {
-                id: true,
+    {
+        type: "sections",
+        template: {
+            sections: {
+                fields: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    dataSet: {
+                        id: true,
+                    },
+                    showRowTotals: true,
+                    showColumnTotals: true,
+                    description: true,
+                },
             },
-            showRowTotals: true,
-            showColumnTotals: true,
-            description: true,
-        },
+
+        }
     },
-}
-
-
-const CategoryQuery: MetadataQuery = {
-    Categories: {
-        fields: {
-            id: true,
-            name: true,
-            shortName: true,
-            code: true,
-            categoryCombo: {
-                id: true,
+    {
+        type: "Categories",
+        template: {
+            Categories: {
+                fields: {
+                    id: true,
+                    name: true,
+                    shortName: true,
+                    code: true,
+                    categoryCombo: {
+                        id: true,
+                    },
+                    dataDimensionType: true,
+                    description: true
+                },
             },
-            dataDimensionType: true,
-            description: true
-        },
+        }
     },
-}
-
-const categoryCombosQuerry: MetadataQuery = {
-    categoryCombos: {
-        fields: {
-            id: true,
-            name: true,
-            code: true,
-            dataDimensionType: true,
-            description: true,
-        },
-    },
-}
-
-const categoryOptionsQuerry: MetadataQuery = {
-    categoryOptions: {
-        fields: {
-            id: true,
-            name: true,
-            code: true,
-            category: {
-                id: true,
+    {
+        type: "categoryCombos",
+        template: {
+            categoryCombos: {
+                fields: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    dataDimensionType: true,
+                    description: true,
+                },
             },
-            shortName: true,
-            description: true,
-        },
+        }
     },
-}
-
-const optionSetsQuerry: MetadataQuery = {
-    optionSets: {
-        fields: {
-            id: true,
-            name: true,
-            code: true,
-            valueType: true,
-            description: true,
-        },
-    },
-}
-
-const optionsQuerry: MetadataQuery = {
-    options: {
-        fields: {
-            id: true,
-            name: true,
-            code: true,
-            optionSet: {
-                id: true,
+    {
+        type: "categoryOptions",
+        template: {
+            categoryOptions: {
+                fields: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    category: {
+                        id: true,
+                    },
+                    shortName: true,
+                    description: true,
+                },
             },
-            shortName: true,
-            description: true,
-        },
+        }
     },
-}
+    {
+        type: "optionSets",
+        template: {
+            optionSets: {
+                fields: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    valueType: true,
+                    description: true,
+                },
+            },
+        }
+    },
+    {
+        type: "options",
+        template: {
+            options: {
+                fields: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    optionSet: {
+                        id: true,
+                    },
+                    shortName: true,
+                    description: true,
+                },
+            },
+        }
+    },
+]
 
 function getNamesFromSpreadsheet(sheets: Sheet[]) {
     let names: FilterNames = {};
