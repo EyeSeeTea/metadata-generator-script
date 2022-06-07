@@ -27,7 +27,7 @@ async function main() {
     log("Writing it to out.json ...");
     fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
 
-    if (env.UPDATE_SERVER !== "true") {
+    if (env.UPDATE_SERVER === "true") {
         log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
         const api = new D2Api({
             baseUrl: env.DHIS2_BASE_URL,
