@@ -13,6 +13,21 @@ type FilterNames = { [key: string]: string[] };
 
 const queryTemplates: QueryTemplateArray = [
     {
+        type: "programSections",
+        template: {
+            programSections: {
+                fields: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    renderType: true,
+                    program: true,
+                    trackedEntityAttributes: true,
+                }
+            }
+        },
+    },
+    {
         type: "programs",
         template: {
             programs: {
@@ -23,12 +38,10 @@ const queryTemplates: QueryTemplateArray = [
                     code: true,
                     description: true,
                     trackedEntityType: true,
-                    categoryCombo: true,
                     version: true,
                     expiryPeriodType: true,
                     expiryDays: true,
                     completeEventsExpiryDays: true,
-                    style: true,
                     displayFrontPageList: true,
                     useFirstStageDuringRegistration: true,
                     accessLevel: true,
@@ -43,9 +56,9 @@ const queryTemplates: QueryTemplateArray = [
                     ignoreOverdueEvents: true,
                     featureType: true,
                     relatedProgram: true,
-                    programStages: {
-                        id: true,
-                    },
+                    categoryCombo: true,
+                    programSections: true,
+                    programStages: true,
                 },
             },
         }
@@ -64,7 +77,6 @@ const queryTemplates: QueryTemplateArray = [
                     preGenerateUID: true,
                     executionDateLabel: true,
                     validationStrategy: true,
-                    style: true,
                     description: true,
                     minDaysFromStart: true,
                     repeatable: true,
@@ -79,20 +91,122 @@ const queryTemplates: QueryTemplateArray = [
                     generatedByEnrollmentDate: true,
                     hideDueDate: true,
                     dueDateLabel: true,
-                    programStageDataElements: {
-                        id: true,
-                        programStage: true,
-                        sortOrder: true,
-                        compulsory: true,
-                        allowProvidedElsewhere: true,
-                        displayInReports: true,
-                        allowFutureDate: true,
-                        skipSynchronization: true,
-                        renderType: true,
-                        dataElement: {
-                            id: true,
-                        },
-                    },
+                    programStageDataElements: true,
+                    programStageSections: true,
+                },
+            },
+        },
+    },
+    {
+        type: "programStageSections",
+        template: {
+            programStageSections: {
+                fields: {
+                    id: true,
+                    programStage: true,
+                    name: true,
+                    renderType: true,
+                    sortOrder: true,
+                    description: true,
+                    dataElements: true,
+                },
+            },
+        },
+    },
+    {
+        type: "trackedEntityTypes",
+        template: {
+            trackedEntityTypes: {
+                fields: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    allowAuditLog: true,
+                    featureType: true,
+                    minAttributesRequiredToSearch: true,
+                    trackedEntityTypeAttributes: true,
+                    attributeValues: true,
+                },
+            },
+        },
+    },
+    {
+        type: "trackedEntityAttributes",
+        template: {
+            trackedEntityAttributes: {
+                fields: {
+                    id: true,
+                    name: true,
+                    shortName: true,
+                    formName: true,
+                    code: true,
+                    description: true,
+                    fieldMask: true,
+                    optionSetValue: true,
+                    optionSet: true,
+                    valueType: true,
+                    aggregationType: true,
+                    unique: true,
+                    orgunitScope: true,
+                    generated: true,
+                    pattern: true,
+                    inherit: true,
+                    confidential: true,
+                    displayInListNoProgram: true,
+                    skipSynchronization: true,
+                    legendSet: true,
+                    legendSets: true,
+                },
+            },
+        },
+    },
+    {
+        type: "programRules",
+        template: {
+            programRules: {
+                fields: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    program: true,
+                    condition: true,
+                    programRuleActions: true,
+                },
+            },
+        },
+    },
+    {
+        type: "programRuleActions",
+        template: {
+            programRuleActions: {
+                fields: {
+                    id: true,
+                    name: true,
+                    programRule: true,
+                    programRuleActionType: true,
+                    content: true,
+                    data: true,
+                    location: true,
+                    dataElement: true,
+                    trackedEntityAttribute: true,
+                },
+            },
+        },
+    },
+    {
+        type: "programRuleVariables",
+        template: {
+            programRuleVariables: {
+                fields: {
+                    id: true,
+                    name: true,
+                    displayName: true,
+                    program: true,
+                    useCodeForOptionSet: true,
+                    programRuleVariableSourceType: true,
+                    dataElement: true,
+                    trackedEntityAttribute: true,
+                    programStage: true,
                 },
             },
         },
