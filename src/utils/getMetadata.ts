@@ -310,3 +310,18 @@ export async function getMetadata(api: D2Api, filterNames: FilterNames) {
         // query.type can be the base for each file name and metadata is the data to be writed
     })
 }
+
+
+function writeCsv(element: MetadataQuery): void {
+  
+  const CSV_name = `${element.key}.csv`;
+  const csvPath = path.join(CSV_name);
+
+  const header: {title: string } = 
+      { title: "UID" };
+      
+  const Writer = createObjectCsvWriter({ path: csvPath, header });
+
+  Writer.writeRecords(element.key);
+  console.debug(`Written: ${csvPath}`);
+}
