@@ -53,13 +53,14 @@ function loadSheet(sheet: any): Sheet {
     const header = data[0];
     const rows = data.slice(1);
 
-    return {
-        name: sheetName,
-        items: rows
-            .map(row => _.fromPairs(row.map((value, index) => [header[index], value])))
-            .map(item => ({ ...item, id: item.id ?? getUid(makeSeed(item, sheetName)) } as MetadataItem))
-            .filter(({ name }) => name !== undefined),
-    };
+    const items = rows
+        .map(row => _.fromPairs(row.map((value, index) => [header[index], value]).filter(([, value]) => value)))
+        .filter(item => !_.isEmpty(item))
+        .map(item => ({ ...item, id: item.id ?? getUid(makeSeed(item, sheetName)) } as MetadataItem));
+
+    if (!items.every(item => item.name)) throw Error(`Rows with no name in sheet ${sheetName}`);
+
+    return { name: sheetName, items };
 }
 
 // Return a string that can be used as a seed to generate a uid, corresponding
