@@ -19,7 +19,7 @@ async function main() {
     const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
 
     const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
-    const sheets = data.sheets?.map(loadSheet) ?? [];
+    const sheets = data.sheets?.filter(sheet => sheet.properties?.title != "DHIS2").map(loadSheet) ?? [];
 
     log("Converting to metadata...");
     const metadata = buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "");
