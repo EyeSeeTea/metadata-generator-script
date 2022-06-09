@@ -426,16 +426,19 @@ export async function getMetadata(api: D2Api, filterNames: FilterNames) {
 }
 
 
-function writeCsv(element: MetadataQuery): void {
-  
-  const CSV_name = `${element.key}.csv`;
-  const csvPath = path.join(CSV_name);
 
-  const header: {title: string } = 
-      { title: "UID" };
-      
-  const Writer = createObjectCsvWriter({ path: csvPath, header });
 
-  Writer.writeRecords(element.key);
-  console.debug(`Written: ${csvPath}`);
-}
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const header: Array<{ id: keyof MetadataQuery; title: string }> = [
+  { id: "id", title: "UID" },
+]; 
+const csvWriter = createCsvWriter({
+  path: 'MetadataUIDsFile.csv',
+  header: header,
+});
+
+csvWriter
+  .writeRecords(data)
+  .then(()=> console.log('The CSV file was written successfully'));
+
+
