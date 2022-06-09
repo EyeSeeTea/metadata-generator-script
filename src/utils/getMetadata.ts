@@ -426,8 +426,6 @@ export async function getMetadata(api: D2Api, filterNames: FilterNames) {
 }
 
 
-
-
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const header: Array<{ id: keyof MetadataQuery; title: string }> = [
   { id: "id", title: "UID" },
@@ -438,7 +436,7 @@ const csvWriter = createCsvWriter({
 });
 
 csvWriter
-  .writeRecords(data)
+  .writeRecords(metadataQuery)
   .then(()=> console.log('The CSV file was written successfully'));
 
 
