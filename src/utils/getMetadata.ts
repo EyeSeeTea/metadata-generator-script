@@ -236,9 +236,9 @@ const queryTemplates: QueryTemplateArray = [
         }
     },
     {
-        type: "datasets",
+        type: "dataSets",
         template: {
-            datasets: {
+            dataSets: {
                 fields: {
                     id: true,
                     name: true,
@@ -356,10 +356,12 @@ export function getNamesFromSpreadsheet(sheets: Sheet[]) {
     let filterNames: FilterNames = {};
 
     sheets.forEach((sheet) => {
-        filterNames[sheet.name] = [];
-        sheet.items.forEach((item) => {
-            filterNames[sheet.name].push(item["name"]);
-        })
+        if (sheet.items.length !== 0) {
+            filterNames[sheet.name] = [];
+            sheet.items.forEach((item) => {
+                filterNames[sheet.name].push(item["name"]);
+            })
+        }
     });
 
     return filterNames;
@@ -386,14 +388,16 @@ function makeFilteredQueries(queryTemplates: QueryTemplateArray, names: FilterNa
     let queries: { type: string, value: MetadataQuery }[] = []
 
     Object.entries(names).forEach(([metadataItemType, nameArray]) => {
-        const metadataItem = queryTemplates.find(queryTemplate => {
+        const queryTemplate = queryTemplates.find(queryTemplate => {
             return queryTemplate.type === metadataItemType;
-        })?.template ?? {};
+        })?.template ?? undefined;
 
-        queries.push({
-            type: metadataItemType,
-            value: makeMetadataItemQuery(metadataItem, nameArray, all)
-        });
+        if (queryTemplate !== undefined) {
+            queries.push({
+                type: metadataItemType,
+                value: makeMetadataItemQuery(queryTemplate, nameArray, all)
+            });
+        }
     });
 
     return queries;
@@ -421,23 +425,13 @@ export async function getMetadata(api: D2Api, filterNames: FilterNames) {
     const queries = makeFilteredQueries(queryTemplates, filterNames, false);
 
     queries.forEach(async (query) => {
-        // Query answer without the system property
-        const metadata = _.omit(await api.metadata.get(query.value).getData(), "system");
-        // TEST FILE OUTPUT
-        fs.appendFileSync("getMetadata.json", JSON.stringify(metadata, null, 4));
+        const metadata = await api.metadata.get(query.value).getData().then(results => {
+            let resultsAsMetadataItem = _.omit(results, "system") as MetadataItem;
+            return resultsAsMetadataItem[query.type];
+        })
 
-
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-const header: Array<{ id: keyof MetadataQuery; title: string }> = [
-  { id: "id", title: "UID" },
-]; 
-const csvWriter = createCsvWriter({
-  path: 'MetadataUIDsFile.csv',
-  header: header,
-});
-
-csvWriter
-  .writeRecords(metadataQuery)
-  .then(()=> console.log('The CSV file was written successfully'));
-
-
+        if (metadata.length !== 0) {
+            writeCsv(query.type, metadata);
+        }
+    })
+}
