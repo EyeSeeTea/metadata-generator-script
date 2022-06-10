@@ -167,8 +167,8 @@ function buildPrograms(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name);
 
     const programs = get("programs");
-    const programSectionsData = get("programSections");
-    const programStagesData = get("programStages");
+    const pSections = get("programSections");
+    const pStages = get("programStages");
     const trackedEntityTypes = get("trackedEntityTypes");
     const categoryCombos = get("categoryCombos");
 
@@ -177,32 +177,22 @@ function buildPrograms(sheets: Sheet[]) {
             id: getByName(trackedEntityTypes, program.trackedEntityType)?.id
         };
 
-        const programStages = programStagesData
-            .filter((programStages) => {
-                return programStages?.program === program.name;
-            }).map(({ id }) => ({ id }));
+        const programStages = pStages.filter((programStages) => {
+            return programStages?.program === program.name;
+        }).map(programStages => ({ id: programStages.id }));
 
-        const categoryCombo = {
-            id: getByName(categoryCombos, program.categoryCombo)?.id ?? process.env.DEFAULT_CATEGORY_COMBO_ID
-        };
+        replaceById(program, "categoryCombo", categoryCombos);
 
-        const style = {
-            color: program.styleColor ?? "",
-            icon: program.styleIcon ?? ""
-        };
-        delete program.styleColor;
-        delete program.styleIcon;
-
-        const programSections = programSectionsData.filter((programSections) => {
+        const programSections = pSections.filter((programSections) => {
             return programSections?.program === program.name;
-        }).map(({ id }) => ({ id }));
+        }).map(programSections => ({ id: programSections.id }));
 
         if (trackedEntityType.id) {
             const programType = "WITH_REGISTRATION";
-            return { ...program, programType, trackedEntityType, categoryCombo, style, programStages, programSections };
+            return { ...program, programType, trackedEntityType, programStages, programSections };
         } else {
             const programType = "WITHOUT_REGISTRATION";
-            return { ...program, programType, categoryCombo, style, programStages };
+            return { ...program, programType, programStages };
         }
     });
 }
@@ -212,23 +202,20 @@ function buildprogramSections(sheets: Sheet[]) {
 
     const programSections = get("programSections");
     const programs = get("programs");
-    const trackedEntityAttributesData = get("trackedEntityAttributes");
-    const programSectionsTrackedEntityAttributes = get("programSectionsTrackedEntityAttributes")
-        .map(programSectionsTrackedEntityAttributes => {
-            const programSection = programSections.find(
-                programSection => {
-                    return programSection.name === programSectionsTrackedEntityAttributes.programSection &&
-                        programSection.program === programSectionsTrackedEntityAttributes.program
-                }
-            )?.id;
+    const teAttributes = get("trackedEntityAttributes");
 
-            const trackedEntityAttribute = getByName(
-                trackedEntityAttributesData,
-                programSectionsTrackedEntityAttributes.name
-            )?.id;
+    const sectionsAttributes = get("programSectionsTrackedEntityAttributes").map(trackedEntityAttributes => {
+        const programSection = programSections.find(
+            programSection => {
+                return programSection.name === trackedEntityAttributes.programSection &&
+                    programSection.program === trackedEntityAttributes.program
+            }
+        )?.id;
 
-            return { programSection, trackedEntityAttribute }
-        });
+        const trackedEntityAttribute = getByName(teAttributes, trackedEntityAttributes.name)?.id;
+
+        return { programSection, trackedEntityAttribute }
+    });
 
     return programSections.map(programSection => {
         const program = {
@@ -241,19 +228,19 @@ function buildprogramSections(sheets: Sheet[]) {
             }));
         }
 
+        let data = { ...programSection } as MetadataItem;
         const renderType = {
             DESKTOP: { type: programSection.renderTypeDesktop ?? "LISTING" },
             MOBILE: { type: programSection.renderTypeMobile ?? "LISTING" }
         };
-        delete programSection.renderTypeDesktop;
-        delete programSection.renderTypeMobile;
+        delete data.renderTypeDesktop;
+        delete data.renderTypeMobile;
 
-        const trackedEntityAttributes = programSectionsTrackedEntityAttributes
-            .filter((trackedEntityAttributes) => {
-                return trackedEntityAttributes?.programSection === programSection?.id;
-            }).map(({ trackedEntityAttribute }) => ({ id: trackedEntityAttribute }));
+        const trackedEntityAttributes = sectionsAttributes.filter((trackedEntityAttributes) => {
+            return trackedEntityAttributes?.programSection === programSection?.id;
+        }).map(trackedEntityAttributes => ({ id: trackedEntityAttributes.trackedEntityAttribute }));
 
-        return { ...programSection, program, renderType, trackedEntityAttributes }
+        return { ...data, program, renderType, trackedEntityAttributes }
     });
 }
 
@@ -262,52 +249,44 @@ function buildProgramStages(sheets: Sheet[]) {
 
     const programStages = get("programStages");
     const programs = get("programs");
-    const programStageSectionsData = get("programStageSections");
-    const programStageDataElementsData = get("programStageDataElements");
-    const dataElements = get("programDataElements");
+    const psSections = get("programStageSections");
+    const psDataElements = get("programStageDataElements");
+    const programDataElements = get("programDataElements");
 
     return programStages.map(programStage => {
         const program = {
             id: getByName(programs, programStage.program)?.id
         };
 
-        const programStageSections = programStageSectionsData.filter((programStageSections) => {
+        const programStageSections = psSections.filter((programStageSections) => {
             return programStageSections?.programStage === programStage.name &&
                 programStageSections?.program === programStage.program;
-        }).map(({ id }) => ({ id }));
+        }).map(programStageSections => ({ id: programStageSections.id }));
 
-        const style = {
-            color: programStage.styleColor ?? "",
-            icon: programStage.styleIcon ?? ""
-        };
-        delete programStage.styleColor;
-        delete programStage.styleIcon;
-
-        const programStageDataElements = programStageDataElementsData.filter((programStageDataElements) => {
+        const programStageDataElements = psDataElements.filter((programStageDataElements) => {
             return programStageDataElements?.program === programStage.program &&
                 programStageDataElements?.programStage === programStage.name;
-        }).map(({ id, name, compulsory, allowProvidedElsewhere, displayInReports, allowFutureDate,
-            skipSynchronization, renderTypeDesktop, renderTypeMobile }, index) => ({
-                id,
-                programStage: {
-                    id: programStage.id
-                },
-                sortOrder: index,
-                compulsory,
-                allowProvidedElsewhere,
-                displayInReports,
-                allowFutureDate,
-                skipSynchronization,
-                renderType: {
-                    DESKTOP: { type: renderTypeDesktop },
-                    MOBILE: { type: renderTypeMobile }
-                },
-                dataElement: {
-                    id: dataElements.find(dataElement => dataElement.name === name)?.id
-                },
-            }));
+        }).map((data, index) => ({
+            id: data.id,
+            programStage: {
+                id: programStage.id
+            },
+            sortOrder: index,
+            compulsory: data.compulsory,
+            allowProvidedElsewhere: data.allowProvidedElsewhere,
+            displayInReports: data.displayInReports,
+            allowFutureDate: data.allowFutureDate,
+            skipSynchronization: data.skipSynchronization,
+            renderType: {
+                DESKTOP: { type: data.renderTypeDesktop },
+                MOBILE: { type: data.renderTypeMobile }
+            },
+            dataElement: {
+                id: programDataElements.find(dataElement => dataElement.name === data.name)?.id
+            },
+        }));
 
-        return { ...programStage, style, program, programStageDataElements, programStageSections }
+        return { ...programStage, program, programStageDataElements, programStageSections }
     });
 }
 
@@ -316,21 +295,21 @@ function buildProgramStageSections(sheets: Sheet[]) {
 
     const programStageSections = get("programStageSections");
     const programStages = get("programStages");
-    const programStageSectionsDataElementsData = get("programStageSectionsDataElements");
-    const dataElementsData = get("programDataElements");
+    const pssDataElements = get("programStageSectionsDataElements");
+    const programDataElements = get("programDataElements");
 
-    const programStageSectionsDataElements = programStageSectionsDataElementsData
-        .map(PSSDataElements => {
+    const programStageSectionsDataElements = pssDataElements
+        .map(pssDataElements => {
             const programStageSection = programStageSections.find(
                 programStageSection => {
-                    return programStageSection.name === PSSDataElements.programStageSection &&
-                        programStageSection.programStage === PSSDataElements.programStage &&
-                        programStageSection.program === PSSDataElements.program
+                    return programStageSection.name === pssDataElements.programStageSection &&
+                        programStageSection.programStage === pssDataElements.programStage &&
+                        programStageSection.program === pssDataElements.program
                 }
             )?.id;
 
-            const dataElement = dataElementsData.find(
-                dataElement => dataElement.name === PSSDataElements.name
+            const dataElement = programDataElements.find(
+                dataElement => dataElement.name === pssDataElements.name
             )?.id;
 
             return { programStageSection, dataElement }
@@ -348,20 +327,21 @@ function buildProgramStageSections(sheets: Sheet[]) {
             }));
         }
 
+        let data = { ...programStageSection } as MetadataItem;
         const renderType = {
             DESKTOP: { type: programStageSection.renderTypeDesktop ?? "LISTING" },
             MOBILE: { type: programStageSection.renderTypeMobile ?? "LISTING" }
         };
-        delete programStageSection.renderTypeDesktop;
-        delete programStageSection.renderTypeMobile;
+        delete data.renderTypeDesktop;
+        delete data.renderTypeMobile;
 
         const dataElements = programStageSectionsDataElements.filter((dataElements) => {
             return dataElements?.programStageSection === programStageSection?.id;
-        }).map(({ dataElement }) => ({ id: dataElement }));
+        }).map(dataElements => ({ id: dataElements.dataElement }));
 
-        delete programStageSection.program;
+        delete data.program;
 
-        return { ...programStageSection, programStage, renderType, dataElements }
+        return { ...data, programStage, renderType, dataElements }
     });
 }
 
