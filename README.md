@@ -18,7 +18,7 @@ DHIS2_BASE_URL=...
 DHIS2_USERNAME=...
 DHIS2_PASSWORD=...
 UPDATE_CATEGORY_OPTION_COMBOS=false # true or false
-TEST_RUN=false # true or false
+UPDATE_SERVER=false # true or false
 PULL_UID=false # true or false
 PULL_UID_ONLY=false # true or false
 ```
@@ -39,7 +39,7 @@ The script will generate a json file containing all the
 information that dhis2 needs to update the metadata, and also
 connect to a dhis2 server to update the metadata directly.
 
-If you need to generate only the json set the `TEST_RUN` option to `true`.
+If you need to generate only the json set the `UPDATE_SERVER` option to `true`.
 
 The `PULL_UID` and `PULL_UID_ONLY` flags allows to retrieve the UIDs of the
 metadata items referenced in the spreadsheet from a DHIS2 instance.

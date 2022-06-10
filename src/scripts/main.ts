@@ -16,10 +16,6 @@ async function main() {
     const log = console.log,
         env = process.env; // shortcuts
 
-    if (env.TEST_RUN === "true") {
-        log("----TEST RUN----");
-    }
-
     log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
     const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
 
@@ -34,7 +30,7 @@ async function main() {
         log("Writing it to out.json ...");
         fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
 
-        if (env.TEST_RUN !== "true") {
+        if (env.UPDATE_SERVER === "true") {
             log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
             const api = new D2Api({
                 baseUrl: env.DHIS2_BASE_URL,
