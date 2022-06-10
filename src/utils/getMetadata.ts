@@ -364,20 +364,6 @@ export function getNamesFromSpreadsheet(sheets: Sheet[]) {
     return filterNames;
 }
 
-// Get names from the output of buildMetadata
-export function getNamesFromMetadata(metadataItemArray: { [key: string]: MetadataItem[] }) {
-    let filterNames: FilterNames = {};
-
-    Object.entries(metadataItemArray).forEach(([metadataItemType, metadataItem]) => {
-        filterNames[metadataItemType] = [];
-        metadataItem.forEach((item) => {
-            filterNames[metadataItemType].push(item["name"]);
-        })
-    });
-
-    return filterNames;
-}
-
 // Make the appropriate query from the template for one metadata type
 function makeMetadataItemQuery(queryTemplate: MetadataQuery, namesToFilter?: string[], all?: boolean) {
     const key = Object.keys(queryTemplate)[0];

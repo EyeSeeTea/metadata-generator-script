@@ -9,7 +9,7 @@ import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { getUid } from "../utils/uid";
 import { buildMetadata } from "../utils/buildMetadata";
-import { getMetadata, getNamesFromMetadata, getNamesFromSpreadsheet } from "../utils/getMetadata";
+import { getMetadata, getNamesFromSpreadsheet } from "../utils/getMetadata";
 
 async function main() {
     config(); // fill variable process.env from ".env.*" files
@@ -45,7 +45,7 @@ async function main() {
 
             if (env.PULL_UID === "true") {
                 log("Pulling UIDs ...");
-                getMetadata(api, getNamesFromMetadata(metadata));
+                getMetadata(api, getNamesFromSpreadsheet(sheets));
             }
         } else if (env.PULL_UID === "true") {
             log("Pulling UIDs ...");
@@ -54,7 +54,7 @@ async function main() {
                 auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
             });
 
-            getMetadata(api, getNamesFromMetadata(metadata));
+            getMetadata(api, getNamesFromSpreadsheet(sheets));
         }
     } else {
         log("Pulling UIDs only...");
