@@ -1,8 +1,9 @@
 import fs from "fs";
 import { D2Api } from "@eyeseetea/d2-api/2.34";
 import _ from "lodash";
-import { MetadataItem } from '../domain/entities/MetadataItem';
+import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
+import { createObjectCsvWriter } from "csv-writer";
 
 const log = console.log, env = process.env;
 
@@ -398,6 +399,24 @@ function makeFilteredQueries(queryTemplates: QueryTemplateArray, names: FilterNa
     return queries;
 }
 
+function makeCsvHeader(element: [object]) {
+    return Object.keys(element[0]).map(key => ({
+        id: key,
+        title: key
+    }))
+}
+
+function writeCsv(metadataType: string, metadata: [object]) {
+    const filePath = `${env.PULL_UID_CSV_PATH}${metadataType}.csv`;
+
+    const header = makeCsvHeader(metadata);
+
+    const Writer = createObjectCsvWriter({ path: filePath, header });
+
+    Writer.writeRecords(metadata);
+    console.debug(`Written: ${filePath}`);
+}
+
 export async function getMetadata(api: D2Api, filterNames: FilterNames) {
     const queries = makeFilteredQueries(queryTemplates, filterNames, false);
 
@@ -406,10 +425,6 @@ export async function getMetadata(api: D2Api, filterNames: FilterNames) {
         const metadata = _.omit(await api.metadata.get(query.value).getData(), "system");
         // TEST FILE OUTPUT
         fs.appendFileSync("getMetadata.json", JSON.stringify(metadata, null, 4));
-        // NOTE TO MARIE: your CSV function could go here,
-        // query.type can be the base for each file name and metadata is the data to be writed
-    })
-}
 
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
