@@ -352,7 +352,7 @@ const queryTemplates: QueryTemplateArray = [
 ]
 
 // Get names from spreadsheet data
-export function getNamesFromSpreadsheet(sheets: Sheet[]) {
+function getNamesFromSpreadsheet(sheets: Sheet[]) {
     let filterNames: FilterNames = {};
 
     sheets.forEach((sheet) => {
@@ -368,14 +368,14 @@ export function getNamesFromSpreadsheet(sheets: Sheet[]) {
 }
 
 // Make the appropriate query from the template for one metadata type
-function makeMetadataItemQuery(queryTemplate: MetadataQuery, namesToFilter?: string[], all?: boolean) {
+function makeMetadataItemQuery(queryTemplate: MetadataQuery, namesToFilter?: string[], uidOnly?: boolean) {
     const key = Object.keys(queryTemplate)[0];
     let metadataQuery: MetadataQuery = {};
 
-    if (all) {
-        metadataQuery[key] = { fields: queryTemplate[key]["fields"] };
-    } else {
+    if (uidOnly) {
         metadataQuery[key] = { fields: { id: queryTemplate[key]["fields"]["id"] } };
+    } else {
+        metadataQuery[key] = { fields: queryTemplate[key]["fields"] };
     }
     if (typeof namesToFilter !== undefined || namesToFilter?.length !== 0) {
         metadataQuery[key]["filter"] = { name: { in: namesToFilter } };
@@ -384,7 +384,7 @@ function makeMetadataItemQuery(queryTemplate: MetadataQuery, namesToFilter?: str
 }
 
 // Make filtered query for each type present in names
-function makeFilteredQueries(queryTemplates: QueryTemplateArray, names: FilterNames, all?: boolean) {
+function makeFilteredQueries(queryTemplates: QueryTemplateArray, names: FilterNames, uidOnly?: boolean) {
     let queries: { type: string, value: MetadataQuery }[] = []
 
     Object.entries(names).forEach(([metadataItemType, nameArray]) => {
@@ -395,7 +395,7 @@ function makeFilteredQueries(queryTemplates: QueryTemplateArray, names: FilterNa
         if (queryTemplate !== undefined) {
             queries.push({
                 type: metadataItemType,
-                value: makeMetadataItemQuery(queryTemplate, nameArray, all)
+                value: makeMetadataItemQuery(queryTemplate, nameArray, uidOnly)
             });
         }
     });
@@ -403,17 +403,29 @@ function makeFilteredQueries(queryTemplates: QueryTemplateArray, names: FilterNa
     return queries;
 }
 
-function makeCsvHeader(element: [object]) {
-    return Object.keys(element[0]).map(key => ({
-        id: key,
-        title: key
-    }))
+function makeCsvHeader(element: object) {
+    const keys = Object.keys(element).filter(key => key !== "id");
+    let csvHeaders: { id: string; title: string; }[] = [{
+        id: "id",
+        title: "id"
+    }];
+
+    keys.forEach(headerItem => {
+        if (keys.includes(headerItem)) {
+            csvHeaders.push({
+                id: headerItem,
+                title: headerItem
+            })
+        }
+    })
+
+    return csvHeaders;
 }
 
 function writeCsv(metadataType: string, metadata: [object]) {
-    const filePath = `${env.PULL_UID_CSV_PATH}${metadataType}.csv`;
+    const filePath = `${env.PULL_METADATA_CSV_PATH}${metadataType}.csv`;
 
-    const header = makeCsvHeader(metadata);
+    const header = makeCsvHeader(metadata[0]);
 
     const Writer = createObjectCsvWriter({ path: filePath, header });
 
@@ -421,8 +433,10 @@ function writeCsv(metadataType: string, metadata: [object]) {
     console.debug(`Written: ${filePath}`);
 }
 
-export async function getMetadata(api: D2Api, filterNames: FilterNames) {
-    const queries = makeFilteredQueries(queryTemplates, filterNames, false);
+export async function getMetadata(api: D2Api, sheets: Sheet[], uidOnly?: boolean) {
+    const filterNames = getNamesFromSpreadsheet(sheets);
+
+    const queries = makeFilteredQueries(queryTemplates, filterNames, uidOnly);
 
     queries.forEach(async (query) => {
         const metadata = await api.metadata.get(query.value).getData().then(results => {
