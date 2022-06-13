@@ -17,10 +17,12 @@ DEFAULT_CATEGORY_COMBO_ID=...
 DHIS2_BASE_URL=...
 DHIS2_USERNAME=...
 DHIS2_PASSWORD=...
-UPDATE_CATEGORY_OPTION_COMBOS=false # true or false
-UPDATE_SERVER=false # true or false
-PULL_UID=false # true or false
+BUILD_METADATA=false # true or false
+PULL_METADATA=false # true or false
+PULL_METADATA_CSV_PATH=/path/to/write/csv/files
 PULL_UID_ONLY=false # true or false
+UPDATE_SERVER=false # true or false
+UPDATE_CATEGORY_OPTION_COMBOS=false # true or false
 ```
 
 The first time, we have to run `yarn install` to install all the dependencies.
@@ -39,12 +41,13 @@ The script will generate a json file containing all the
 information that dhis2 needs to update the metadata, and also
 connect to a dhis2 server to update the metadata directly.
 
-If you need to generate only the json set the `UPDATE_SERVER` option to `true`.
+If you need to generate only the json set the `UPDATE_SERVER` option to `false`.
 
-The `PULL_UID` and `PULL_UID_ONLY` flags allows to retrieve the UIDs of the
+The `PULL_METADATA` and `PULL_UID_ONLY` flags allows to retrieve the metadata of the
 metadata items referenced in the spreadsheet from a DHIS2 instance.
-The `PULL_UID_ONLY` flag means the script only performs the UIDs retrieval
-function. These flags are mutually exclusive.
+Setting both `PULL_METADATA` and `PULL_UID_ONLY` flag means the script only performs the UIDs retrieval
+function.
+The `PULL_METADATA_CSV_PATH` variable will store the path where the CSV files will be written. If empty, the current working directory will be used.
 
 If you want to manually upload the generated json file to a dhis2 instance,
 use its `Import/Export` app, go to `Metadata import` and use `Merge` as
