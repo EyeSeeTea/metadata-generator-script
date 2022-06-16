@@ -9,7 +9,7 @@ import { getUid } from "../utils/uid";
 import { buildMetadata } from "../utils/buildMetadata";
 import { getMetadata } from "../utils/getMetadata";
 
-async function main() {
+async function download_ids() {
     config(); // fill variable process.env from ".env.*" files
     const log = console.log,
         env = process.env; // shortcuts
@@ -25,29 +25,10 @@ async function main() {
         auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
     });
 
-    if (env.BUILD_METADATA === "true") {
-        log("Converting to metadata...");
-        const metadata = buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "");
-
-        log("Writing it to out.json ...");
-        fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
-
-        if (env.UPDATE_SERVER === "true") {
-            log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
-
-            await uploadMetadata(api, metadata);
-
-            if (env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
-                log("Updating category option combos...");
-                await api.maintenance.categoryOptionComboUpdate().getData();
-            }
-
-        }
-
-        if (env.PULL_METADATA === "true") {
+    if (env.PULL_METADATA === "true") {
             pullMetadata(api, sheets);
         }
-    } else if (env.PULL_METADATA === "true") {
+    else if (env.PULL_METADATA === "true") {
         pullMetadata(api, sheets);
     }
 }
@@ -101,5 +82,5 @@ function pullMetadata(api: D2Api, sheets: Sheet[]) {
     getMetadata(api, sheets, uidOnly);
 }
 
-main();
+download_ids();
 
