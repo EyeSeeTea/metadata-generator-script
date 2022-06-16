@@ -1,4 +1,3 @@
-import fs from "fs";
 import { D2Api } from "@eyeseetea/d2-api/2.34";
 import { config } from "dotenv-flow";
 import { google } from "googleapis";
@@ -6,7 +5,6 @@ import _ from "lodash";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { getUid } from "../utils/uid";
-import { buildMetadata } from "../utils/buildMetadata";
 import { getMetadata } from "../utils/getMetadata";
 
 async function download_ids() {
