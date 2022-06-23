@@ -37,7 +37,7 @@ The script will generate a json file containing all the
 information that dhis2 needs to update the metadata, and also
 connect to a dhis2 server to update the metadata directly.
 
-If you need to generate only the json set the `UPDATE_SERVER` option to `true`.
+If you need to generate only the json set the `UPDATE_SERVER` option to `false`.
 
 If you want to manually upload the generated json file to a dhis2 instance,
 use its `Import/Export` app, go to `Metadata import` and use `Merge` as
