@@ -15,8 +15,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string, altNameId: str
         sheetCategories = get("categories"),
         sheetOptionSets = get("optionSets"),
         sheetOptions = get("options"),
-        sheetTrackedEntityAttributes = get("trackedEntityAttributes"),
-        sheetTrackedEntityTypes = get("trackedEntityTypes"),
         sheetProgramDataElements = get("programDataElements");
 
     const options = _(sheetOptions)
