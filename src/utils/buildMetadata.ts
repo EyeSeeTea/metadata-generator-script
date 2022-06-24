@@ -4,7 +4,7 @@ import { Sheet } from "../domain/entities/Sheet";
 
 // Return an object containing the metadata representation of all the sheets
 // that are included in the spreadsheet.
-export function buildMetadata(sheets: Sheet[], defaultCC: string) {
+export function buildMetadata(sheets: Sheet[], defaultCC: string, altNameId: string) {
     const get = (name: string) => getItems(sheets, name); // shortcut
 
     const sheetDataSets = get("dataSets"),
@@ -125,6 +125,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         categoryOptions,
         optionSets,
         trackedEntityAttributes: buildTrackedEntityAttributes(sheets),
+        trackedEntityTypes: buildTrackedEntityTypes(sheets, altNameId),
         programSections: buildprogramSections(sheets),
         programs: buildPrograms(sheets),
         programStages: buildProgramStages(sheets),
@@ -360,6 +361,58 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
         }).map(teasLegends => ({ id: teasLegends.id }));
 
         return { ...data, legendSets }
+    });
+}
+
+function buildTrackedEntityTypes(sheets: Sheet[], altNameId: string) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const trackedEntityTypes = get("trackedEntityTypes");
+    const trackedEntityAttributes = get("trackedEntityAttributes");
+    const teaAttributes = get("trackedEntityTypeAttributes");
+    const optionSets = get("optionSets");
+
+    return trackedEntityTypes.map(trackedEntityType => {
+        let data = { ...trackedEntityType } as MetadataItem;
+
+        const attributeValues = [
+            {
+                value: data.alternativeName,
+                attribute: {
+                    id: altNameId,
+                    name: "Alternative name"
+                }
+            }
+        ]
+        delete data.alternativeName;
+
+        const trackedEntityTypeAttributes = teaAttributes.filter(teaAttributesToFilter => {
+            return teaAttributesToFilter.trackedEntityType === trackedEntityType.name;
+        }).map(trackedEntityTypeAttribute => {
+            const displayName = trackedEntityTypeAttribute.name;
+            const trackedEntityAttribute = getByName(trackedEntityAttributes, displayName);
+            const trackedEntityAttributeId = trackedEntityAttribute?.id;
+            const optionSetId = getByName(optionSets, trackedEntityTypeAttribute.optionSet)?.id;
+
+            return {
+                displayName,
+                text: displayName,
+                value: trackedEntityAttributeId,
+                valueType: trackedEntityAttribute?.valueType,
+                unique: trackedEntityAttribute?.unique,
+                displayInList: trackedEntityTypeAttribute.displayInList,
+                mandatory: trackedEntityTypeAttribute.mandatory,
+                searchable: trackedEntityTypeAttribute.searchable,
+                optionSet: optionSetId ? {
+                    id: optionSetId,
+                } : undefined,
+                trackedEntityAttribute: {
+                    id: trackedEntityAttributeId,
+                }
+            };
+        });
+
+        return { ...data, attributeValues, trackedEntityTypeAttributes }
     });
 }
 
