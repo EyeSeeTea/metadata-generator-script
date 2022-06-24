@@ -105,33 +105,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
 
     const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id);
 
-    const trackedEntityAttributes: any[] = sheetTrackedEntityAttributes.map(attribute => {
-        const optionSet = sheetOptionSets.find(({ name }) => name === attribute.optionSet)?.id;
-
-        return {
-            ...attribute,
-            optionSet: optionSet ? { id: optionSet } : undefined,
-        };
-    });
-
-    const trackedEntityTypes = sheetTrackedEntityTypes.map(type => {
-        const trackedEntityTypeAttributes = trackedEntityAttributes
-            .filter(({ trackedEntityType }) => trackedEntityType === type.name)
-            .map(({ id, name, searchable, mandatory, unique, valueType, displayInList, optionSet }) => ({
-                value: id,
-                text: name,
-                searchable,
-                mandatory,
-                unique,
-                valueType,
-                displayInList,
-                trackedEntityAttribute: { id },
-                optionSet,
-            }));
-
-        return { ...type, trackedEntityTypeAttributes };
-    });
-
     const programDataElements = sheetProgramDataElements.map(dataElement => {
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
@@ -151,8 +124,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         categoryCombos,
         categoryOptions,
         optionSets,
-        trackedEntityAttributes,
-        trackedEntityTypes,
         programSections: buildprogramSections(sheets),
         programs: buildPrograms(sheets),
         programStages: buildProgramStages(sheets),
