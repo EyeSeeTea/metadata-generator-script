@@ -14,6 +14,7 @@ It should look like this:
 GOOGLE_API_KEY=...
 GOOGLE_SHEET_ID=...
 DEFAULT_CATEGORY_COMBO_ID=...
+ALTERNATIVE_NAME_ID=...
 DHIS2_BASE_URL=...
 DHIS2_USERNAME=...
 DHIS2_PASSWORD=...
@@ -37,7 +38,7 @@ The script will generate a json file containing all the
 information that dhis2 needs to update the metadata, and also
 connect to a dhis2 server to update the metadata directly.
 
-If you need to generate only the json set the `UPDATE_SERVER` option to `true`.
+If you need to generate only the json set the `UPDATE_SERVER` option to `false`.
 
 If you want to manually upload the generated json file to a dhis2 instance,
 use its `Import/Export` app, go to `Metadata import` and use `Merge` as
@@ -55,6 +56,11 @@ can use the `Data Administration` app, go to `Maintenance`, select
 To get the default `categoryCombo` used at a dhis2 instance, go to the
 following endpoint:
 `/api/categoryCombos.json?filter=name:eq:default&fields=id,name` .
+
+## Alternative Name Attribute ID
+
+This flag is used for the `Alternative name` field of `Tracked entity type`.
+To get it go to this endpoint: `/api/attributes?query=Alternative%20name`
 
 ### How the default category combo is used
 
