@@ -17,7 +17,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string, altNameId: str
         sheetOptions = get("options"),
         sheetTrackedEntityAttributes = get("trackedEntityAttributes"),
         sheetTrackedEntityTypes = get("trackedEntityTypes"),
-        sheetProgramDataElements = get("programDataElements")
+        sheetProgramDataElements = get("programDataElements");
 
     const options = _(sheetOptions)
         .map(option => {
@@ -147,15 +147,17 @@ function buildPrograms(sheets: Sheet[]) {
     const categoryCombos = get("categoryCombos");
 
     return programs.map(program => {
+        let data = { ...program } as MetadataItem;
+
         const trackedEntityType = {
             id: getByName(trackedEntityTypes, program.trackedEntityType)?.id
         };
 
         const programStages = pStages.filter((programStages) => {
-            return programStages?.program === program.name;
+            return programStages.program === program.name;
         }).map(programStages => ({ id: programStages.id }));
 
-        replaceById(program, "categoryCombo", categoryCombos);
+        replaceById(data, "categoryCombo", categoryCombos);
 
         const programSections = pSections.filter((programSections) => {
             return programSections?.program === program.name;
@@ -163,10 +165,10 @@ function buildPrograms(sheets: Sheet[]) {
 
         if (trackedEntityType.id) {
             const programType = "WITH_REGISTRATION";
-            return { ...program, programType, trackedEntityType, programStages, programSections };
+            return { ...data, programType, trackedEntityType, programStages, programSections };
         } else {
             const programType = "WITHOUT_REGISTRATION";
-            return { ...program, programType, programStages };
+            return { ...data, programType, programStages };
         }
     });
 }
@@ -174,7 +176,7 @@ function buildPrograms(sheets: Sheet[]) {
 function buildprogramSections(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name);
 
-    const programSections = get("programSections");
+    const programSections = _.cloneDeep(get("programSections"));
     const programs = get("programs");
     const teAttributes = get("trackedEntityAttributes");
 
@@ -197,24 +199,18 @@ function buildprogramSections(sheets: Sheet[]) {
         };
 
         if (typeof programSection.sortOrder === 'undefined') {
-            makeSortOrder(programSections.filter((programSections) => {
-                return programSections.program === programSection.program;
+            addSortOrder(programSections.filter((sectionsToSort) => {
+                return sectionsToSort.program === programSection.program;
             }));
         }
 
-        let data = { ...programSection } as MetadataItem;
-        const renderType = {
-            DESKTOP: { type: programSection.renderTypeDesktop ?? "LISTING" },
-            MOBILE: { type: programSection.renderTypeMobile ?? "LISTING" }
-        };
-        delete data.renderTypeDesktop;
-        delete data.renderTypeMobile;
+        const renderType = addRenderType(programSection, "LISTING");
 
         const trackedEntityAttributes = sectionsAttributes.filter((trackedEntityAttributes) => {
             return trackedEntityAttributes?.programSection === programSection?.id;
         }).map(trackedEntityAttributes => ({ id: trackedEntityAttributes.trackedEntityAttribute }));
 
-        return { ...data, program, renderType, trackedEntityAttributes }
+        return { ...programSection, program, renderType, trackedEntityAttributes }
     });
 }
 
@@ -251,12 +247,9 @@ function buildProgramStages(sheets: Sheet[]) {
             displayInReports: data.displayInReports,
             allowFutureDate: data.allowFutureDate,
             skipSynchronization: data.skipSynchronization,
-            renderType: {
-                DESKTOP: { type: data.renderTypeDesktop },
-                MOBILE: { type: data.renderTypeMobile }
-            },
+            renderType: addRenderType(data, "DEFAULT"),
             dataElement: {
-                id: programDataElements.find(dataElement => dataElement.name === data.name)?.id
+                id: getByName(programDataElements, data.name)?.id
             },
         }));
 
@@ -267,7 +260,7 @@ function buildProgramStages(sheets: Sheet[]) {
 function buildProgramStageSections(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name);
 
-    const programStageSections = get("programStageSections");
+    const programStageSections = _.cloneDeep(get("programStageSections"));
     const programStages = get("programStages");
     const pssDataElements = get("programStageSectionsDataElements");
     const programDataElements = get("programDataElements");
@@ -282,9 +275,7 @@ function buildProgramStageSections(sheets: Sheet[]) {
                 }
             )?.id;
 
-            const dataElement = programDataElements.find(
-                dataElement => dataElement.name === pssDataElements.name
-            )?.id;
+            const dataElement = getByName(programDataElements, pssDataElements.name)?.id;
 
             return { programStageSection, dataElement }
         });
@@ -295,27 +286,21 @@ function buildProgramStageSections(sheets: Sheet[]) {
         };
 
         if (typeof programStageSection.sortOrder === 'undefined') {
-            makeSortOrder(programStageSections.filter((programStageSections) => {
-                return programStageSections.program === programStageSection.program &&
-                    programStageSections.programStage === programStageSection.programStage
+            addSortOrder(programStageSections.filter((stageSectionsToSort) => {
+                return stageSectionsToSort.program === programStageSection.program &&
+                    stageSectionsToSort.programStage === programStageSection.programStage
             }));
         }
 
-        let data = { ...programStageSection } as MetadataItem;
-        const renderType = {
-            DESKTOP: { type: programStageSection.renderTypeDesktop ?? "LISTING" },
-            MOBILE: { type: programStageSection.renderTypeMobile ?? "LISTING" }
-        };
-        delete data.renderTypeDesktop;
-        delete data.renderTypeMobile;
+        const renderType = addRenderType(programStageSection, "LISTING");
 
         const dataElements = programStageSectionsDataElements.filter((dataElements) => {
             return dataElements?.programStageSection === programStageSection?.id;
         }).map(dataElements => ({ id: dataElements.dataElement }));
 
-        delete data.program;
+        delete programStageSection.program;
 
-        return { ...data, programStage, renderType, dataElements }
+        return { ...programStageSection, programStage, renderType, dataElements }
     });
 }
 
@@ -478,10 +463,22 @@ function buildProgramRuleVariables(sheets: Sheet[]) {
 
 // Add sortOrder to filteredMetadataItems, these items belong to the same 'group'.
 // The idea is to use metadataItems.filter(filterFunction) as filteredMetadataItems.
-function makeSortOrder(filteredMetadataItems: MetadataItem[]) {
+function addSortOrder(filteredMetadataItems: MetadataItem[]) {
     filteredMetadataItems.forEach((item, index) => {
         item.sortOrder = index;
     });
+}
+
+// Adds renderType to a metadata object with a default fallback value
+function addRenderType(metadataItem: MetadataItem, defaultValue: string) {
+    const renderType = {
+        DESKTOP: { type: metadataItem.renderTypeDesktop ?? defaultValue },
+        MOBILE: { type: metadataItem.renderTypeMobile ?? defaultValue }
+    };
+    delete metadataItem.renderTypeDesktop;
+    delete metadataItem.renderTypeMobile;
+
+    return renderType;
 }
 
 // Return all the items (rows) from the sheet with the given name.
