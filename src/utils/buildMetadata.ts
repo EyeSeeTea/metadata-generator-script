@@ -124,6 +124,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         categoryCombos,
         categoryOptions,
         optionSets,
+        trackedEntityAttributes: buildTrackedEntityAttributes(sheets),
         programSections: buildprogramSections(sheets),
         programs: buildPrograms(sheets),
         programStages: buildProgramStages(sheets),
@@ -131,6 +132,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         programRules: buildProgramRules(sheets),
         programRuleActions: buildProgramRuleActions(sheets),
         programRuleVariables: buildProgramRuleVariables(sheets),
+        legendSets: buildLegendSets(sheets),
     };
 }
 
@@ -313,6 +315,51 @@ function buildProgramStageSections(sheets: Sheet[]) {
         delete data.program;
 
         return { ...data, programStage, renderType, dataElements }
+    });
+}
+
+function buildLegendSets(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const legendSets = get("legendSets");
+    const legendItems = get("legends");
+
+    return legendSets.map(legendSet => {
+        const legends = legendItems.filter(legendItems => {
+            return legendItems.legendSet === legendSet.name;
+        }).map(legendItems => ({
+            id: legendItems.id,
+            name: legendItems.name,
+            startValue: legendItems?.startValue,
+            endValue: legendItems?.endValue,
+        }));
+
+        return { ...legendSet, legends }
+    });
+}
+
+function buildTrackedEntityAttributes(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const trackedEntityAttributes = get("trackedEntityAttributes");
+    const optionSets = get("optionSets");
+    const legendSetsItems = get("legendSets");
+    const teasLegends = get("trackedEntityAttributesLegends").map(teasLegend => {
+        let data = { ...teasLegend } as MetadataItem;
+        replaceById(data, "name", legendSetsItems);
+        return data;
+    })
+
+    return trackedEntityAttributes.map(trackedEntityAttribute => {
+        let data = { ...trackedEntityAttribute } as MetadataItem;
+
+        replaceById(data, "optionSet", optionSets);
+
+        const legendSets = teasLegends.filter(teasLegends => {
+            return teasLegends.trackedEntityAttribute === trackedEntityAttribute.name;
+        }).map(teasLegends => ({ id: teasLegends.id }));
+
+        return { ...data, legendSets }
     });
 }
 
