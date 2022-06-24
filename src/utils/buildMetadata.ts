@@ -143,6 +143,8 @@ function buildPrograms(sheets: Sheet[]) {
     const pStages = get("programStages");
     const trackedEntityTypes = get("trackedEntityTypes");
     const categoryCombos = get("categoryCombos");
+    const programTeas = get("programTrackedEntityAttributes");
+    const trackedEntityAttributes = get("trackedEntityAttributes");
 
     return programs.map(program => {
         let data = { ...program } as MetadataItem;
@@ -163,7 +165,30 @@ function buildPrograms(sheets: Sheet[]) {
 
         if (trackedEntityType.id) {
             const programType = "WITH_REGISTRATION";
-            return { ...data, programType, trackedEntityType, programStages, programSections };
+            const programTrackedEntityAttributes = programTeas.filter(pTeasToFilter => {
+                return pTeasToFilter.program === program.name;
+            }).map(pTea => {
+                const tea = getByName(trackedEntityAttributes, pTea.name);
+                return {
+                    id: pTea.id,
+                    program: { id: program.id },
+                    displayName: `${program.name} ${pTea.name}`,
+                    valueType: pTea.valueType,
+                    displayInList: pTea.displayInList,
+                    mandatory: pTea.mandatory,
+                    allowFutureDate: pTea.allowFutureDate,
+                    searchable: pTea.searchable,
+                    renderType: addRenderType(pTea, "DEFAULT"),
+                    trackedEntityAttribute: {
+                        id: tea.id,
+                        displayName: tea.name,
+                        valueType: tea.valueType,
+                        unique: tea?.unique,
+                    },
+                }
+            });
+            addSortOrder(programTrackedEntityAttributes);
+            return { ...data, programType, trackedEntityType, programStages, programSections, programTrackedEntityAttributes };
         } else {
             const programType = "WITHOUT_REGISTRATION";
             return { ...data, programType, programStages };
