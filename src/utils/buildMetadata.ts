@@ -230,12 +230,7 @@ function buildprogramSections(sheets: Sheet[]) {
             }));
         }
 
-        const renderType = {
-            DESKTOP: { type: programSection.renderTypeDesktop ?? "LISTING" },
-            MOBILE: { type: programSection.renderTypeMobile ?? "LISTING" }
-        };
-        delete programSection.renderTypeDesktop;
-        delete programSection.renderTypeMobile;
+        const renderType = addRenderType(programSection, "LISTING");
 
         const trackedEntityAttributes = sectionsAttributes.filter((trackedEntityAttributes) => {
             return trackedEntityAttributes?.programSection === programSection?.id;
@@ -278,12 +273,9 @@ function buildProgramStages(sheets: Sheet[]) {
             displayInReports: data.displayInReports,
             allowFutureDate: data.allowFutureDate,
             skipSynchronization: data.skipSynchronization,
-            renderType: {
-                DESKTOP: { type: data.renderTypeDesktop },
-                MOBILE: { type: data.renderTypeMobile }
-            },
+            renderType: addRenderType(data, "DEFAULT"),
             dataElement: {
-                id: programDataElements.find(dataElement => dataElement.name === data.name)?.id
+                id: getByName(programDataElements, data.name)?.id
             },
         }));
 
@@ -309,9 +301,7 @@ function buildProgramStageSections(sheets: Sheet[]) {
                 }
             )?.id;
 
-            const dataElement = programDataElements.find(
-                dataElement => dataElement.name === pssDataElements.name
-            )?.id;
+            const dataElement = getByName(programDataElements, pssDataElements.name)?.id;
 
             return { programStageSection, dataElement }
         });
@@ -328,12 +318,7 @@ function buildProgramStageSections(sheets: Sheet[]) {
             }));
         }
 
-        const renderType = {
-            DESKTOP: { type: programStageSection.renderTypeDesktop ?? "LISTING" },
-            MOBILE: { type: programStageSection.renderTypeMobile ?? "LISTING" }
-        };
-        delete programStageSection.renderTypeDesktop;
-        delete programStageSection.renderTypeMobile;
+        const renderType = addRenderType(programStageSection, "LISTING");
 
         const dataElements = programStageSectionsDataElements.filter((dataElements) => {
             return dataElements?.programStageSection === programStageSection?.id;
@@ -411,6 +396,18 @@ function addSortOrder(filteredMetadataItems: MetadataItem[]) {
     filteredMetadataItems.forEach((item, index) => {
         item.sortOrder = index;
     });
+}
+
+// Adds renderType to a metadata object with a default fallback value
+function addRenderType(metadataItem: MetadataItem, defaultValue: string) {
+    const renderType = {
+        DESKTOP: { type: metadataItem.renderTypeDesktop ?? defaultValue },
+        MOBILE: { type: metadataItem.renderTypeMobile ?? defaultValue }
+    };
+    delete metadataItem.renderTypeDesktop;
+    delete metadataItem.renderTypeMobile;
+
+    return renderType;
 }
 
 // Return all the items (rows) from the sheet with the given name.
