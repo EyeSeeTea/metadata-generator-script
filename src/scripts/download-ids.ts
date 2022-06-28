@@ -1,3 +1,5 @@
+// Pull IDs from DHIS2 Instance script.
+
 import { D2Api } from "@eyeseetea/d2-api/2.34";
 import { config } from "dotenv-flow";
 import { google } from "googleapis";
@@ -5,7 +7,7 @@ import _ from "lodash";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { getUid } from "../utils/uid";
-import { getMetadata } from "../utils/getMetadata";
+import { pullMetadata } from "../utils/pullMetadata";
 
 async function download_ids() {
     config(); // fill variable process.env from ".env.*" files
@@ -23,12 +25,7 @@ async function download_ids() {
         auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
     });
 
-    if (env.PULL_METADATA === "true") {
-            pullMetadata(api, sheets);
-        }
-    else if (env.PULL_METADATA === "true") {
-        pullMetadata(api, sheets);
-    }
+    pullMetadata(api, sheets);
 }
 
 // Return an object with the name of the sheet and a list of items that
@@ -67,18 +64,4 @@ function makeSeed(item: MetadataItem, sheetName: string) {
     return seed0;
 }
 
-function pullMetadata(api: D2Api, sheets: Sheet[]) {
-    const log = console.log, env = process.env;
-    let uidOnly;
-    if (env.PULL_UID_ONLY === "true") {
-        log("Pulling UIDs ...");
-        uidOnly = true;
-    } else {
-        log("Pulling metadata ...");
-        uidOnly = false;
-    }
-    getMetadata(api, sheets, uidOnly);
-}
-
 download_ids();
-
