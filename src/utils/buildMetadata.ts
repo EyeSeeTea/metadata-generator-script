@@ -189,6 +189,8 @@ function buildPrograms(sheets: Sheet[]) {
             // WITH_REGISTRATION == Tracker Program
             const programType = "WITH_REGISTRATION";
 
+            replaceById(data, "relatedProgram", programs);
+
             // Event Program Stages belong to programStageSections
             const programSections = pSections.filter((pSectionToFilter) => {
                 return pSectionToFilter?.program === program.name;
