@@ -331,16 +331,16 @@ function buildLegendSets(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name);
 
     const legendSets = get("legendSets");
-    const legendItems = get("legends");
+    const legendsArray = get("legends");
 
     return legendSets.map(legendSet => {
-        const legends = legendItems.filter(legendItems => {
-            return legendItems.legendSet === legendSet.name;
-        }).map(legendItems => ({
-            id: legendItems.id,
-            name: legendItems.name,
-            startValue: legendItems?.startValue,
-            endValue: legendItems?.endValue,
+        const legends = legendsArray.filter(legendsToFilter => {
+            return legendsToFilter.legendSet === legendSet.name;
+        }).map(legend => ({
+            id: legend.id,
+            name: legend.name,
+            startValue: legend?.startValue,
+            endValue: legend?.endValue,
         }));
 
         return { ...legendSet, legends }
@@ -352,10 +352,10 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
 
     const trackedEntityAttributes = get("trackedEntityAttributes");
     const optionSets = get("optionSets");
-    const legendSetsItems = get("legendSets");
+    const legendSetsArray = get("legendSets");
     const teasLegends = get("trackedEntityAttributesLegends").map(teasLegend => {
         let data = { ...teasLegend } as MetadataItem;
-        data.id = getByName(legendSetsItems, teasLegend.name)?.id;
+        data.id = getByName(legendSetsArray, teasLegend.name)?.id;
         return data;
     })
 
@@ -388,13 +388,12 @@ function buildTrackedEntityTypes(sheets: Sheet[]) {
         }).map(trackedEntityTypeAttribute => {
             const displayName = trackedEntityTypeAttribute.name;
             const trackedEntityAttribute = getByName(trackedEntityAttributes, displayName);
-            const trackedEntityAttributeId = trackedEntityAttribute?.id;
             const optionSetId = getByName(optionSets, trackedEntityTypeAttribute.optionSet)?.id;
 
             return {
                 displayName,
                 text: displayName,
-                value: trackedEntityAttributeId,
+                value: trackedEntityAttribute.id,
                 valueType: trackedEntityAttribute?.valueType,
                 unique: trackedEntityAttribute?.unique,
                 displayInList: trackedEntityTypeAttribute.displayInList,
@@ -404,7 +403,7 @@ function buildTrackedEntityTypes(sheets: Sheet[]) {
                     id: optionSetId,
                 } : undefined,
                 trackedEntityAttribute: {
-                    id: trackedEntityAttributeId,
+                    id: trackedEntityAttribute.id,
                 }
             };
         });
