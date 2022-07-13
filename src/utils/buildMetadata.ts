@@ -355,7 +355,7 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
     const legendSetsItems = get("legendSets");
     const teasLegends = get("trackedEntityAttributesLegends").map(teasLegend => {
         let data = { ...teasLegend } as MetadataItem;
-        replaceById(data, "name", legendSetsItems);
+        data.id = getByName(legendSetsItems, teasLegend.name)?.id;
         return data;
     })
 
@@ -364,9 +364,9 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
 
         replaceById(data, "optionSet", optionSets);
 
-        const legendSets = teasLegends.filter(teasLegends => {
-            return teasLegends.trackedEntityAttribute === trackedEntityAttribute.name;
-        }).map(teasLegends => (teasLegends.id));
+        const legendSets = teasLegends.filter(teasLegendsToFilter => {
+            return teasLegendsToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
+        }).map(teasLegend => ({ id: teasLegend.id }));
 
         return { ...data, legendSets }
     });
