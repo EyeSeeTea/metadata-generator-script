@@ -22,7 +22,7 @@ async function main() {
     const sheets = data.sheets?.filter(sheet => sheet.properties?.title != "DHIS2").map(loadSheet) ?? [];
 
     log("Converting to metadata...");
-    const metadata = buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "", env.ALTERNATIVE_NAME_ID ?? "");
+    const metadata = buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "");
 
     log("Writing it to out.json ...");
     fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));

@@ -4,7 +4,7 @@ import { Sheet } from "../domain/entities/Sheet";
 
 // Return an object containing the metadata representation of all the sheets
 // that are included in the spreadsheet.
-export function buildMetadata(sheets: Sheet[], defaultCC: string, altNameId: string) {
+export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     const get = (name: string) => getItems(sheets, name); // shortcut
 
     const sheetDataSets = get("dataSets"),
@@ -123,7 +123,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string, altNameId: str
         categoryOptions,
         optionSets,
         trackedEntityAttributes: buildTrackedEntityAttributes(sheets),
-        trackedEntityTypes: buildTrackedEntityTypes(sheets, altNameId),
+        trackedEntityTypes: buildTrackedEntityTypes(sheets),
         programSections: buildprogramSections(sheets),
         programs: buildPrograms(sheets),
         programStages: buildProgramStages(sheets),
@@ -366,13 +366,13 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
 
         const legendSets = teasLegends.filter(teasLegends => {
             return teasLegends.trackedEntityAttribute === trackedEntityAttribute.name;
-        }).map(teasLegends => ({ id: teasLegends.id }));
+        }).map(teasLegends => (teasLegends.id));
 
         return { ...data, legendSets }
     });
 }
 
-function buildTrackedEntityTypes(sheets: Sheet[], altNameId: string) {
+function buildTrackedEntityTypes(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name);
 
     const trackedEntityTypes = get("trackedEntityTypes");
@@ -382,17 +382,6 @@ function buildTrackedEntityTypes(sheets: Sheet[], altNameId: string) {
 
     return trackedEntityTypes.map(trackedEntityType => {
         let data = { ...trackedEntityType } as MetadataItem;
-
-        const attributeValues = [
-            {
-                value: data.alternativeName,
-                attribute: {
-                    id: altNameId,
-                    name: "Alternative name"
-                }
-            }
-        ]
-        delete data.alternativeName;
 
         const trackedEntityTypeAttributes = teaAttributes.filter(teaAttributesToFilter => {
             return teaAttributesToFilter.trackedEntityType === trackedEntityType.name;
@@ -420,7 +409,7 @@ function buildTrackedEntityTypes(sheets: Sheet[], altNameId: string) {
             };
         });
 
-        return { ...data, attributeValues, trackedEntityTypeAttributes }
+        return { ...data, trackedEntityTypeAttributes }
     });
 }
 
