@@ -338,13 +338,13 @@ function buildLegendSets(sheets: Sheet[]) {
     const legendsArray = get("legends");
 
     return legendSets.map(legendSet => {
-        const legends = legendsArray.filter(legendsToFilter => {
-            return legendsToFilter.legendSet === legendSet.name;
+        const legends = legendsArray.filter(legendToFilter => {
+            return legendToFilter.legendSet === legendSet.name;
         }).map(legend => ({
             id: legend.id,
             name: legend.name,
-            startValue: legend?.startValue,
-            endValue: legend?.endValue,
+            startValue: legend.startValue,
+            endValue: legend.endValue,
         }));
 
         return { ...legendSet, legends }
@@ -359,7 +359,7 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
     const legendSetsArray = get("legendSets");
     const teasLegends = get("trackedEntityAttributesLegends").map(teasLegend => {
         let data = { ...teasLegend } as MetadataItem;
-        data.id = getByName(legendSetsArray, teasLegend.name)?.id;
+        data.id = getByName(legendSetsArray, teasLegend.name).id;
         return data;
     })
 
@@ -368,8 +368,8 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
 
         replaceById(data, "optionSet", optionSets);
 
-        const legendSets = teasLegends.filter(teasLegendsToFilter => {
-            return teasLegendsToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
+        const legendSets = teasLegends.filter(teasLegendToFilter => {
+            return teasLegendToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
         }).map(teasLegend => ({ id: teasLegend.id }));
 
         return { ...data, legendSets }
@@ -387,18 +387,18 @@ function buildTrackedEntityTypes(sheets: Sheet[]) {
     return trackedEntityTypes.map(trackedEntityType => {
         let data = { ...trackedEntityType } as MetadataItem;
 
-        const trackedEntityTypeAttributes = teaAttributes.filter(teaAttributesToFilter => {
-            return teaAttributesToFilter.trackedEntityType === trackedEntityType.name;
+        const trackedEntityTypeAttributes = teaAttributes.filter(teaAttributeToFilter => {
+            return teaAttributeToFilter.trackedEntityType === trackedEntityType.name;
         }).map(trackedEntityTypeAttribute => {
             const displayName = trackedEntityTypeAttribute.name;
             const trackedEntityAttribute = getByName(trackedEntityAttributes, displayName);
-            const optionSetId = getByName(optionSets, trackedEntityTypeAttribute.optionSet)?.id;
+            const optionSetId = getByName(optionSets, trackedEntityAttribute.optionSet)?.id;
 
             return {
                 displayName,
                 text: displayName,
                 value: trackedEntityAttribute.id,
-                valueType: trackedEntityAttribute?.valueType,
+                valueType: trackedEntityAttribute.valueType,
                 unique: trackedEntityAttribute?.unique,
                 displayInList: trackedEntityTypeAttribute.displayInList,
                 mandatory: trackedEntityTypeAttribute.mandatory,
