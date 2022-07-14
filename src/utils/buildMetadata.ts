@@ -172,27 +172,9 @@ function buildPrograms(sheets: Sheet[]) {
 
             const programTrackedEntityAttributes = programTeas.filter(pTeasToFilter => {
                 return pTeasToFilter.program === program.name;
-            }).map(pTea => {
-                const tea = getByName(trackedEntityAttributes, pTea.name);
-                return {
-                    id: pTea.id,
-                    program: { id: program.id },
-                    displayName: `${program.name} ${pTea.name}`,
-                    valueType: pTea.valueType,
-                    displayInList: pTea.displayInList,
-                    mandatory: pTea.mandatory,
-                    allowFutureDate: pTea.allowFutureDate,
-                    searchable: pTea.searchable,
-                    renderType: addRenderType(pTea, "DEFAULT"),
-                    trackedEntityAttribute: {
-                        id: tea.id,
-                        displayName: tea.name,
-                        valueType: tea.valueType,
-                        unique: tea?.unique,
-                    },
-                }
-            });
+            }).map(pTea => buildProgTEA(program, pTea, trackedEntityAttributes));
             addSortOrder(programTrackedEntityAttributes);
+
             return { ...data, programType, trackedEntityType, programStages, programSections, programTrackedEntityAttributes };
         } else {
             // WITHOUT_REGISTRATION == Event Program
@@ -326,6 +308,27 @@ function buildProgramStageSections(sheets: Sheet[]) {
 
         return { ...programStageSection, programStage, renderType, dataElements }
     });
+}
+
+function buildProgTEA(program: MetadataItem, pTea: MetadataItem, trackedEntityAttributes: MetadataItem[]) {
+    const tea = getByName(trackedEntityAttributes, pTea.name);
+    return {
+        id: pTea.id,
+        program: { id: program.id },
+        displayName: `${program.name} ${pTea.name}`,
+        valueType: pTea.valueType,
+        displayInList: pTea.displayInList,
+        mandatory: pTea.mandatory,
+        allowFutureDate: pTea.allowFutureDate,
+        searchable: pTea.searchable,
+        renderType: addRenderType(pTea, "DEFAULT"),
+        trackedEntityAttribute: {
+            id: tea.id,
+            displayName: tea.name,
+            valueType: tea.valueType,
+            unique: tea?.unique,
+        },
+    }
 }
 
 function buildLegendSets(sheets: Sheet[]) {
