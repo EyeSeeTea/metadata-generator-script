@@ -252,10 +252,6 @@ function buildProgramStages(sheets: Sheet[]) {
     const programDataElements = get("programDataElements");
 
     return programStages.map(programStage => {
-        const program = {
-            id: getByName(programs, programStage.program)?.id
-        };
-
         const programStageSections = psSections.filter((psSectionToFilter) => {
             return psSectionToFilter?.programStage === programStage.name &&
                 psSectionToFilter?.program === programStage.program;
@@ -281,7 +277,9 @@ function buildProgramStages(sheets: Sheet[]) {
             },
         }));
 
-        return { ...programStage, program, programStageDataElements, programStageSections }
+        replaceById(programStage, "program", programs);
+
+        return { ...programStage, programStageDataElements, programStageSections }
     });
 }
 
@@ -294,7 +292,7 @@ function buildProgramStageSections(sheets: Sheet[]) {
     const programDataElements = get("programDataElements");
 
     const programStageSectionsDataElements = pssDataElements.map(pssDataElement => {
-        const programStageSection = programStageSections.find(
+        const programStageSectionId = programStageSections.find(
             psSectionToFind => {
                 return psSectionToFind.name === pssDataElement.programStageSection &&
                     psSectionToFind.programStage === pssDataElement.programStage &&
@@ -302,16 +300,12 @@ function buildProgramStageSections(sheets: Sheet[]) {
             }
         )?.id;
 
-        const dataElement = getByName(programDataElements, pssDataElement.name)?.id;
+        const dataElementId = getByName(programDataElements, pssDataElement.name)?.id;
 
-        return { programStageSection, dataElement }
+        return { programStageSectionId, dataElementId }
     });
 
     return programStageSections.map(programStageSection => {
-        const programStage = {
-            id: getByName(programStages, programStageSection.programStage)?.id
-        };
-
         if (typeof programStageSection.sortOrder === 'undefined') {
             addSortOrder(programStageSections.filter((psSectionToFilter) => {
                 return psSectionToFilter.program === programStageSection.program &&
@@ -319,15 +313,17 @@ function buildProgramStageSections(sheets: Sheet[]) {
             }));
         }
 
+        replaceById(programStageSection, "programStage", programStages);
+
         const renderType = addRenderType(programStageSection, "LISTING");
 
         const dataElements = programStageSectionsDataElements.filter((pssDataElementToFilter) => {
-            return pssDataElementToFilter?.programStageSection === programStageSection?.id;
-        }).map(pssDataElement => ({ id: pssDataElement.dataElement }));
+            return pssDataElementToFilter?.programStageSectionId === programStageSection?.id;
+        }).map(pssDataElement => ({ id: pssDataElement.dataElementId }));
 
         delete programStageSection.program;
 
-        return { ...programStageSection, programStage, renderType, dataElements }
+        return { ...programStageSection, renderType, dataElements }
     });
 }
 
