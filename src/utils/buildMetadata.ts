@@ -224,15 +224,13 @@ function buildprogramSections(sheets: Sheet[]) {
     });
 
     return programSections.map(programSection => {
-        const program = {
-            id: getByName(programs, programSection.program)?.id
-        };
-
         if (programSection.sortOrder === undefined) {
             addSortOrder(programSections.filter((pSectionToFilter) => {
                 return pSectionToFilter.program === programSection.program;
             }));
         }
+
+        replaceById(programSection, "program", programs)
 
         const renderType = addRenderType(programSection, "LISTING");
 
@@ -240,7 +238,7 @@ function buildprogramSections(sheets: Sheet[]) {
             return sectionsAttributeToFilter?.programSection === programSection.id;
         }).map(sectionsAttribute => ({ id: sectionsAttribute.trackedEntityAttribute }));
 
-        return { ...programSection, program, renderType, trackedEntityAttributes }
+        return { ...programSection, renderType, trackedEntityAttributes }
     });
 }
 
