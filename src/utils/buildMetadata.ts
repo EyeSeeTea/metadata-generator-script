@@ -153,18 +153,23 @@ function buildPrograms(sheets: Sheet[]) {
             id: getByName(trackedEntityTypes, program.trackedEntityType)?.id
         };
 
-        const programStages = pStages.filter((programStages) => {
-            return programStages.program === program.name;
-        }).map(programStages => ({ id: programStages.id }));
+        const programStages = pStages.filter((pStageToFilter) => {
+            return pStageToFilter.program === program.name;
+        }).map(programStage => ({ id: programStage.id }));
 
         replaceById(data, "categoryCombo", categoryCombos);
 
-        const programSections = pSections.filter((programSections) => {
-            return programSections?.program === program.name;
-        }).map(programSections => ({ id: programSections.id }));
-
         if (trackedEntityType.id) {
+            // WITH_REGISTRATION == Tracker Program
             const programType = "WITH_REGISTRATION";
+
+            replaceById(data, "relatedProgram", programs);
+
+            // Event Program Stages belong to programStageSections
+            const programSections = pSections.filter((pSectionToFilter) => {
+                return pSectionToFilter?.program === program.name;
+            }).map(programSection => ({ id: programSection.id }));
+
             const programTrackedEntityAttributes = programTeas.filter(pTeasToFilter => {
                 return pTeasToFilter.program === program.name;
             }).map(pTea => {
@@ -190,6 +195,7 @@ function buildPrograms(sheets: Sheet[]) {
             addSortOrder(programTrackedEntityAttributes);
             return { ...data, programType, trackedEntityType, programStages, programSections, programTrackedEntityAttributes };
         } else {
+            // WITHOUT_REGISTRATION == Event Program
             const programType = "WITHOUT_REGISTRATION";
             return { ...data, programType, programStages };
         }
@@ -203,37 +209,33 @@ function buildprogramSections(sheets: Sheet[]) {
     const programs = get("programs");
     const teAttributes = get("trackedEntityAttributes");
 
-    const sectionsAttributes = get("programSectionsTrackedEntityAttributes").map(trackedEntityAttributes => {
-        const programSection = programSections.find(
-            programSection => {
-                return programSection.name === trackedEntityAttributes.programSection &&
-                    programSection.program === trackedEntityAttributes.program
-            }
-        )?.id;
+    const sectionsAttributes = get("programSectionsTrackedEntityAttributes").map(psTrackedEntityAttribute => {
+        const programSection = programSections.find(pSectionToFind => {
+            return pSectionToFind.name === psTrackedEntityAttribute.programSection &&
+                pSectionToFind.program === psTrackedEntityAttribute.program
+        })?.id;
 
-        const trackedEntityAttribute = getByName(teAttributes, trackedEntityAttributes.name)?.id;
+        const trackedEntityAttribute = getByName(teAttributes, psTrackedEntityAttribute.name)?.id;
 
         return { programSection, trackedEntityAttribute }
     });
 
     return programSections.map(programSection => {
-        const program = {
-            id: getByName(programs, programSection.program)?.id
-        };
-
-        if (typeof programSection.sortOrder === 'undefined') {
-            addSortOrder(programSections.filter((sectionsToSort) => {
-                return sectionsToSort.program === programSection.program;
+        if (programSection.sortOrder === undefined) {
+            addSortOrder(programSections.filter((pSectionToFilter) => {
+                return pSectionToFilter.program === programSection.program;
             }));
         }
 
+        replaceById(programSection, "program", programs)
+
         const renderType = addRenderType(programSection, "LISTING");
 
-        const trackedEntityAttributes = sectionsAttributes.filter((trackedEntityAttributes) => {
-            return trackedEntityAttributes?.programSection === programSection?.id;
-        }).map(trackedEntityAttributes => ({ id: trackedEntityAttributes.trackedEntityAttribute }));
+        const trackedEntityAttributes = sectionsAttributes.filter((sectionsAttributeToFilter) => {
+            return sectionsAttributeToFilter?.programSection === programSection.id;
+        }).map(sectionsAttribute => ({ id: sectionsAttribute.trackedEntityAttribute }));
 
-        return { ...programSection, program, renderType, trackedEntityAttributes }
+        return { ...programSection, renderType, trackedEntityAttributes }
     });
 }
 
@@ -251,14 +253,14 @@ function buildProgramStages(sheets: Sheet[]) {
             id: getByName(programs, programStage.program)?.id
         };
 
-        const programStageSections = psSections.filter((programStageSections) => {
-            return programStageSections?.programStage === programStage.name &&
-                programStageSections?.program === programStage.program;
-        }).map(programStageSections => ({ id: programStageSections.id }));
+        const programStageSections = psSections.filter((psSectionToFilter) => {
+            return psSectionToFilter?.programStage === programStage.name &&
+                psSectionToFilter?.program === programStage.program;
+        }).map(psSection => ({ id: psSection.id }));
 
-        const programStageDataElements = psDataElements.filter((programStageDataElements) => {
-            return programStageDataElements?.program === programStage.program &&
-                programStageDataElements?.programStage === programStage.name;
+        const programStageDataElements = psDataElements.filter((psDataElementToFilter) => {
+            return psDataElementToFilter?.program === programStage.program &&
+                psDataElementToFilter?.programStage === programStage.name;
         }).map((data, index) => ({
             id: data.id,
             programStage: {
@@ -288,20 +290,19 @@ function buildProgramStageSections(sheets: Sheet[]) {
     const pssDataElements = get("programStageSectionsDataElements");
     const programDataElements = get("programDataElements");
 
-    const programStageSectionsDataElements = pssDataElements
-        .map(pssDataElements => {
-            const programStageSection = programStageSections.find(
-                programStageSection => {
-                    return programStageSection.name === pssDataElements.programStageSection &&
-                        programStageSection.programStage === pssDataElements.programStage &&
-                        programStageSection.program === pssDataElements.program
-                }
-            )?.id;
+    const programStageSectionsDataElements = pssDataElements.map(pssDataElement => {
+        const programStageSection = programStageSections.find(
+            psSectionToFind => {
+                return psSectionToFind.name === pssDataElement.programStageSection &&
+                    psSectionToFind.programStage === pssDataElement.programStage &&
+                    psSectionToFind.program === pssDataElement.program
+            }
+        )?.id;
 
-            const dataElement = getByName(programDataElements, pssDataElements.name)?.id;
+        const dataElement = getByName(programDataElements, pssDataElement.name)?.id;
 
-            return { programStageSection, dataElement }
-        });
+        return { programStageSection, dataElement }
+    });
 
     return programStageSections.map(programStageSection => {
         const programStage = {
@@ -309,17 +310,17 @@ function buildProgramStageSections(sheets: Sheet[]) {
         };
 
         if (typeof programStageSection.sortOrder === 'undefined') {
-            addSortOrder(programStageSections.filter((stageSectionsToSort) => {
-                return stageSectionsToSort.program === programStageSection.program &&
-                    stageSectionsToSort.programStage === programStageSection.programStage
+            addSortOrder(programStageSections.filter((psSectionToFilter) => {
+                return psSectionToFilter.program === programStageSection.program &&
+                    psSectionToFilter.programStage === programStageSection.programStage
             }));
         }
 
         const renderType = addRenderType(programStageSection, "LISTING");
 
-        const dataElements = programStageSectionsDataElements.filter((dataElements) => {
-            return dataElements?.programStageSection === programStageSection?.id;
-        }).map(dataElements => ({ id: dataElements.dataElement }));
+        const dataElements = programStageSectionsDataElements.filter((pssDataElementToFilter) => {
+            return pssDataElementToFilter?.programStageSection === programStageSection?.id;
+        }).map(pssDataElement => ({ id: pssDataElement.dataElement }));
 
         delete programStageSection.program;
 
