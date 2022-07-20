@@ -70,8 +70,10 @@ function loadSheet(sheet: any): Sheet {
 function makeSeed(item: MetadataItem, sheetName: string) {
     const seed0 = `${sheetName}-${item.name}`; // the seed will be at least the page and the item's name
     if (sheetName === "options") return `${seed0}-${item.optionSet}`;
-    if (sheetName === "programSections") return `${seed0}-${item.program}`;
+    if (sheetName === "legends") return `${seed0}-${item.legendSet}`;
     if (sheetName === "programStages") return `${seed0}-${item.program}`;
+    if (sheetName === "programSections") return `${seed0}-${item.program}`;
+    if (sheetName === "programTrackedEntityAttributes") return `${seed0}-${item.program}`;
     if (sheetName === "programStageSections") return `${seed0}-${item.program}-${item.programStage}`;
     if (sheetName === "programStageDataElements") return `${seed0}-${item.program}-${item.programStage}`;
     return seed0;

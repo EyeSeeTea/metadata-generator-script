@@ -15,8 +15,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         sheetCategories = get("categories"),
         sheetOptionSets = get("optionSets"),
         sheetOptions = get("options"),
-        sheetTrackedEntityAttributes = get("trackedEntityAttributes"),
-        sheetTrackedEntityTypes = get("trackedEntityTypes"),
         sheetProgramDataElements = get("programDataElements");
 
     const options = _(sheetOptions)
@@ -105,33 +103,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
 
     const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id);
 
-    const trackedEntityAttributes: any[] = sheetTrackedEntityAttributes.map(attribute => {
-        const optionSet = sheetOptionSets.find(({ name }) => name === attribute.optionSet)?.id;
-
-        return {
-            ...attribute,
-            optionSet: optionSet ? { id: optionSet } : undefined,
-        };
-    });
-
-    const trackedEntityTypes = sheetTrackedEntityTypes.map(type => {
-        const trackedEntityTypeAttributes = trackedEntityAttributes
-            .filter(({ trackedEntityType }) => trackedEntityType === type.name)
-            .map(({ id, name, searchable, mandatory, unique, valueType, displayInList, optionSet }) => ({
-                value: id,
-                text: name,
-                searchable,
-                mandatory,
-                unique,
-                valueType,
-                displayInList,
-                trackedEntityAttribute: { id },
-                optionSet,
-            }));
-
-        return { ...type, trackedEntityTypeAttributes };
-    });
-
     const programDataElements = sheetProgramDataElements.map(dataElement => {
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
@@ -151,8 +122,8 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         categoryCombos,
         categoryOptions,
         optionSets,
-        trackedEntityAttributes,
-        trackedEntityTypes,
+        trackedEntityAttributes: buildTrackedEntityAttributes(sheets),
+        trackedEntityTypes: buildTrackedEntityTypes(sheets),
         programSections: buildprogramSections(sheets),
         programs: buildPrograms(sheets),
         programStages: buildProgramStages(sheets),
@@ -160,6 +131,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         programRules: buildProgramRules(sheets),
         programRuleActions: buildProgramRuleActions(sheets),
         programRuleVariables: buildProgramRuleVariables(sheets),
+        legendSets: buildLegendSets(sheets),
     };
 }
 
@@ -171,6 +143,8 @@ function buildPrograms(sheets: Sheet[]) {
     const pStages = get("programStages");
     const trackedEntityTypes = get("trackedEntityTypes");
     const categoryCombos = get("categoryCombos");
+    const programTeas = get("programTrackedEntityAttributes");
+    const trackedEntityAttributes = get("trackedEntityAttributes");
 
     return programs.map(program => {
         let data = { ...program } as MetadataItem;
@@ -196,7 +170,12 @@ function buildPrograms(sheets: Sheet[]) {
                 return pSectionToFilter?.program === program.name;
             }).map(programSection => ({ id: programSection.id }));
 
-            return { ...data, programType, trackedEntityType, programStages, programSections };
+            const programTrackedEntityAttributes = programTeas.filter(pTeasToFilter => {
+                return pTeasToFilter.program === program.name;
+            }).map(pTea => buildProgTEA(program, pTea, trackedEntityAttributes));
+            addSortOrder(programTrackedEntityAttributes);
+
+            return { ...data, programType, trackedEntityType, programStages, programSections, programTrackedEntityAttributes };
         } else {
             // WITHOUT_REGISTRATION == Event Program
             const programType = "WITHOUT_REGISTRATION";
@@ -324,6 +303,112 @@ function buildProgramStageSections(sheets: Sheet[]) {
         delete programStageSection.program;
 
         return { ...programStageSection, renderType, dataElements }
+    });
+}
+
+function buildProgTEA(program: MetadataItem, pTea: MetadataItem, trackedEntityAttributes: MetadataItem[]) {
+    const tea = getByName(trackedEntityAttributes, pTea.name);
+    return {
+        id: pTea.id,
+        program: { id: program.id },
+        displayName: `${program.name} ${pTea.name}`,
+        valueType: pTea.valueType,
+        displayInList: pTea.displayInList,
+        mandatory: pTea.mandatory,
+        allowFutureDate: pTea.allowFutureDate,
+        searchable: pTea.searchable,
+        renderType: addRenderType(pTea, "DEFAULT"),
+        trackedEntityAttribute: {
+            id: tea.id,
+            displayName: tea.name,
+            valueType: tea.valueType,
+            unique: tea?.unique,
+        },
+    }
+}
+
+function buildLegendSets(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const legendSets = get("legendSets");
+    const legendsArray = get("legends");
+
+    return legendSets.map(legendSet => {
+        const legends = legendsArray.filter(legendToFilter => {
+            return legendToFilter.legendSet === legendSet.name;
+        }).map(legend => ({
+            id: legend.id,
+            name: legend.name,
+            startValue: legend.startValue,
+            endValue: legend.endValue,
+        }));
+
+        return { ...legendSet, legends }
+    });
+}
+
+function buildTrackedEntityAttributes(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const trackedEntityAttributes = get("trackedEntityAttributes");
+    const optionSets = get("optionSets");
+    const legendSetsArray = get("legendSets");
+    const teasLegends = get("trackedEntityAttributesLegends").map(teasLegend => {
+        let data = { ...teasLegend } as MetadataItem;
+        data.id = getByName(legendSetsArray, teasLegend.name).id;
+        return data;
+    })
+
+    return trackedEntityAttributes.map(trackedEntityAttribute => {
+        let data = { ...trackedEntityAttribute } as MetadataItem;
+
+        replaceById(data, "optionSet", optionSets);
+
+        const legendSets = teasLegends.filter(teasLegendToFilter => {
+            return teasLegendToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
+        }).map(teasLegend => ({ id: teasLegend.id }));
+
+        return { ...data, legendSets }
+    });
+}
+
+function buildTrackedEntityTypes(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const trackedEntityTypes = get("trackedEntityTypes");
+    const trackedEntityAttributes = get("trackedEntityAttributes");
+    const teaAttributes = get("trackedEntityTypeAttributes");
+    const optionSets = get("optionSets");
+
+    return trackedEntityTypes.map(trackedEntityType => {
+        let data = { ...trackedEntityType } as MetadataItem;
+
+        const trackedEntityTypeAttributes = teaAttributes.filter(teaAttributeToFilter => {
+            return teaAttributeToFilter.trackedEntityType === trackedEntityType.name;
+        }).map(trackedEntityTypeAttribute => {
+            const displayName = trackedEntityTypeAttribute.name;
+            const trackedEntityAttribute = getByName(trackedEntityAttributes, displayName);
+            const optionSetId = getByName(optionSets, trackedEntityAttribute.optionSet)?.id;
+
+            return {
+                displayName,
+                text: displayName,
+                value: trackedEntityAttribute.id,
+                valueType: trackedEntityAttribute.valueType,
+                unique: trackedEntityAttribute?.unique,
+                displayInList: trackedEntityTypeAttribute.displayInList,
+                mandatory: trackedEntityTypeAttribute.mandatory,
+                searchable: trackedEntityTypeAttribute.searchable,
+                optionSet: optionSetId ? {
+                    id: optionSetId,
+                } : undefined,
+                trackedEntityAttribute: {
+                    id: trackedEntityAttribute.id,
+                }
+            };
+        });
+
+        return { ...data, trackedEntityTypeAttributes }
     });
 }
 
