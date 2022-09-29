@@ -140,6 +140,8 @@ function buildDataSets(sheets: Sheet[]) {
 
         replaceById(data, "categoryCombo", categoryCombos);
 
+        data.workflow = data.workflow ? { id: data.workflow } : undefined
+
         return { ...data, dataSetElements };
     });
 }
