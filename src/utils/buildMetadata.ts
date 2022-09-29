@@ -10,6 +10,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     const sheetDataSets = get("dataSets"),
         sheetDataElements = get("dataElements"),
         sheetDataSetSections = get("sections"),
+        sheetSectionDataElements = get("sectionDataElements"),
         sheetCategoryCombos = get("categoryCombos"),
         sheetCategoryOptions = get("categoryOptions"),
         sheetCategories = get("categories"),
@@ -32,9 +33,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     const sections = _(sheetDataSetSections)
         .map(section => {
             const dataSet = sheetDataSets.find(({ name }) => name === section.dataSet)?.id;
-            const dataElements = sheetDataElements
-                .filter(({ dataSetSection }) => dataSetSection === section.name)
-                .map(({ id }) => ({ id }));
+            const dataElements = sheetSectionDataElements
+                .filter((item) => item.section === section.name)
+                .map(({ name }) => ({ id: getByName(sheetDataElements, name).id }));
 
             return { ...section, dataSet: { id: dataSet }, dataElements };
         })
@@ -122,7 +123,7 @@ function buildDataSets(sheets: Sheet[]) {
     const dataSetElements = get("dataSetElements");
     const dataSetInputPeriods = get("dataSetInputPeriods");
     const dataSetSections = get("sections");
-    const dataSetsLegends = get("dataSetsLegends");
+    const dataSetLegends = get("dataSetLegends");
     const categoryCombos = get("categoryCombos");
 
     return dataSets.map(dataSet => {
@@ -155,7 +156,7 @@ function buildDataSets(sheets: Sheet[]) {
             };
         });
 
-        data.legendSets = dataSetsLegends.filter(dslToFilter => {
+        data.legendSets = dataSetLegends.filter(dslToFilter => {
             return dslToFilter.dataSet === data.name;
         }).map(legend => {
             return { id: legend.id };
