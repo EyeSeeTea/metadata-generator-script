@@ -73,6 +73,7 @@ function makeSeed(item: MetadataItem, sheetName: string) {
     if (sheetName === "legends") return `${seed0}-${item.legendSet}`;
     if (sheetName === "programStages") return `${seed0}-${item.program}`;
     if (sheetName === "programSections") return `${seed0}-${item.program}`;
+    if (sheetName === "dataSetElements") return `${seed0}-${item.dataSet}`;
     if (sheetName === "programTrackedEntityAttributes") return `${seed0}-${item.program}`;
     if (sheetName === "programStageSections") return `${seed0}-${item.program}-${item.programStage}`;
     if (sheetName === "programStageDataElements") return `${seed0}-${item.program}-${item.programStage}`;
