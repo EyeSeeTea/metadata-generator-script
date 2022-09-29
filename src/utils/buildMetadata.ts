@@ -119,22 +119,21 @@ function buildDataSets(sheets: Sheet[]) {
 
     const dataSets = get("dataSets");
     const dataElements = get("dataElements");
+    const dataSetElements = get("dataSetElements");
     const dataSetSections = get("sections");
     const categoryCombos = get("categoryCombos");
 
     return dataSets.map(dataSet => {
         let data: MetadataItem = JSON.parse(JSON.stringify(dataSet));
 
-        const dataSetElements = dataElements.filter(({ dataSetSection }) => {
-            const section = getByName(dataSetSections, dataSetSection);
-            return section?.dataSet === data.name;
-        }).map(({ id, categoryCombo }) => {
-            const categoryComboId = getByName(categoryCombos, categoryCombo)?.id;
-
+        data.dataSetElements = dataSetElements.filter(dseToFilter => {
+            return dseToFilter.dataSet === data.name;
+        }).map(elements => {
             return {
                 dataSet: { id: data.id },
-                dataElement: { id },
-                categoryCombo: { id: categoryComboId },
+                dataElement: { id: getByName(dataElements, elements.name).id },
+                categoryCombo: elements.categoryCombo ?
+                    { id: getByName(categoryCombos, elements.categoryCombo).id } : undefined,
             };
         });
 
@@ -142,7 +141,7 @@ function buildDataSets(sheets: Sheet[]) {
 
         data.workflow = data.workflow ? { id: data.workflow } : undefined
 
-        return { ...data, dataSetElements };
+        return { ...data };
     });
 }
 
