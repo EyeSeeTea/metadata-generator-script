@@ -122,6 +122,7 @@ function buildDataSets(sheets: Sheet[]) {
     const dataSetElements = get("dataSetElements");
     const dataSetInputPeriods = get("dataSetInputPeriods");
     const dataSetSections = get("sections");
+    const dataSetsLegends = get("dataSetsLegends");
     const categoryCombos = get("categoryCombos");
 
     return dataSets.map(dataSet => {
@@ -152,6 +153,12 @@ function buildDataSets(sheets: Sheet[]) {
                 openingDate: inputPeriod.openingDate,
                 closingDate: inputPeriod.closingDate,
             };
+        });
+
+        data.legendSets = dataSetsLegends.filter(dslToFilter => {
+            return dslToFilter.dataSet === data.name;
+        }).map(legend => {
+            return { id: legend.id };
         });
 
         replaceById(data, "categoryCombo", categoryCombos);
