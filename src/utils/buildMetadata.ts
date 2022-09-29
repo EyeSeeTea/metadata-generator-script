@@ -58,27 +58,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         };
     });
 
-    const dataSets = sheetDataSets.map(dataSet => {
-        const dataSetElements = sheetDataElements
-            .filter(({ dataSetSection }) => {
-                const section = sheetDataSetSections.find(({ name }) => name === dataSetSection);
-                return section?.dataSet === dataSet.name;
-            })
-            .map(({ id, categoryCombo }) => {
-                const categoryComboId = sheetCategoryCombos.find(({ name }) => name === categoryCombo)?.id ?? defaultCC;
-
-                return {
-                    dataSet: { id: dataSet.id },
-                    dataElement: { id },
-                    categoryCombo: { id: categoryComboId },
-                };
-            });
-
-        const categoryCombo = sheetCategoryCombos.find(({ name }) => name === dataSet.categoryCombo)?.id ?? defaultCC;
-
-        return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
-    });
-
     const categories = sheetCategories.map(category => {
         const categoryOptions = sheetCategoryOptions
             .filter(option => option.category === category.name)
@@ -114,7 +93,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     });
 
     return {
-        dataSets,
+        dataSets: buildDataSets(sheets, defaultCC),
         dataElements: [...dataElements, ...programDataElements],
         options,
         sections,
@@ -133,6 +112,36 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         programRuleVariables: buildProgramRuleVariables(sheets),
         legendSets: buildLegendSets(sheets),
     };
+}
+
+function buildDataSets(sheets: Sheet[], defaultCC: string) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const dataSets = get("dataSets");
+    const dataElements = get("dataElements");
+    const dataSetSections = get("sections");
+    const categoryCombos = get("categoryCombos");
+
+    return dataSets.map(dataSet => {
+        const dataSetElements = dataElements
+            .filter(({ dataSetSection }) => {
+                const section = dataSetSections.find(({ name }) => name === dataSetSection);
+                return section?.dataSet === dataSet.name;
+            })
+            .map(({ id, categoryCombo }) => {
+                const categoryComboId = categoryCombos.find(({ name }) => name === categoryCombo)?.id ?? defaultCC;
+
+                return {
+                    dataSet: { id: dataSet.id },
+                    dataElement: { id },
+                    categoryCombo: { id: categoryComboId },
+                };
+            });
+
+        const categoryCombo = categoryCombos.find(({ name }) => name === dataSet.categoryCombo)?.id ?? defaultCC;
+
+        return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
+    });
 }
 
 function buildPrograms(sheets: Sheet[]) {
