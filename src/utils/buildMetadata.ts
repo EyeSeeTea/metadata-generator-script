@@ -93,7 +93,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     });
 
     return {
-        dataSets: buildDataSets(sheets, defaultCC),
+        dataSets: buildDataSets(sheets),
         dataElements: [...dataElements, ...programDataElements],
         options,
         sections,
@@ -114,7 +114,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     };
 }
 
-function buildDataSets(sheets: Sheet[], defaultCC: string) {
+function buildDataSets(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name);
 
     const dataSets = get("dataSets");
@@ -123,24 +123,24 @@ function buildDataSets(sheets: Sheet[], defaultCC: string) {
     const categoryCombos = get("categoryCombos");
 
     return dataSets.map(dataSet => {
-        const dataSetElements = dataElements
-            .filter(({ dataSetSection }) => {
-                const section = dataSetSections.find(({ name }) => name === dataSetSection);
-                return section?.dataSet === dataSet.name;
-            })
-            .map(({ id, categoryCombo }) => {
-                const categoryComboId = categoryCombos.find(({ name }) => name === categoryCombo)?.id ?? defaultCC;
+        let data: MetadataItem = JSON.parse(JSON.stringify(dataSet));
 
-                return {
-                    dataSet: { id: dataSet.id },
-                    dataElement: { id },
-                    categoryCombo: { id: categoryComboId },
-                };
-            });
+        const dataSetElements = dataElements.filter(({ dataSetSection }) => {
+            const section = getByName(dataSetSections, dataSetSection);
+            return section?.dataSet === data.name;
+        }).map(({ id, categoryCombo }) => {
+            const categoryComboId = getByName(categoryCombos, categoryCombo)?.id;
 
-        const categoryCombo = categoryCombos.find(({ name }) => name === dataSet.categoryCombo)?.id ?? defaultCC;
+            return {
+                dataSet: { id: data.id },
+                dataElement: { id },
+                categoryCombo: { id: categoryComboId },
+            };
+        });
 
-        return { ...dataSet, dataSetElements, categoryCombo: { id: categoryCombo } };
+        replaceById(data, "categoryCombo", categoryCombos);
+
+        return { ...data, dataSetElements };
     });
 }
 
