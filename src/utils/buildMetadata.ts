@@ -137,6 +137,12 @@ function buildDataSets(sheets: Sheet[]) {
             };
         });
 
+        data.sections = dataSetSections.filter(dssToFilter => {
+            return dssToFilter.dataSet === data.name;
+        }).map(section => {
+            return { id: section.id };
+        });
+
         replaceById(data, "categoryCombo", categoryCombos);
 
         data.workflow = data.workflow ? { id: data.workflow } : undefined
