@@ -120,6 +120,7 @@ function buildDataSets(sheets: Sheet[]) {
     const dataSets = get("dataSets");
     const dataElements = get("dataElements");
     const dataSetElements = get("dataSetElements");
+    const dataSetInputPeriods = get("dataSetInputPeriods");
     const dataSetSections = get("sections");
     const categoryCombos = get("categoryCombos");
 
@@ -143,9 +144,19 @@ function buildDataSets(sheets: Sheet[]) {
             return { id: section.id };
         });
 
+        data.dataInputPeriods = dataSetInputPeriods.filter(dsipToFilter => {
+            return dsipToFilter.name === data.name;
+        }).map(inputPeriod => {
+            return {
+                period: { id: inputPeriod.period },
+                openingDate: inputPeriod.openingDate,
+                closingDate: inputPeriod.closingDate,
+            };
+        });
+
         replaceById(data, "categoryCombo", categoryCombos);
 
-        data.workflow = data.workflow ? { id: data.workflow } : undefined
+        data.workflow = data.workflow ? { id: data.workflow } : undefined;
 
         return { ...data };
     });
