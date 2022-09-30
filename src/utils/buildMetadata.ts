@@ -185,7 +185,7 @@ function buildDataSets(sheets: Sheet[]) {
 
         data.translation = buildTranslation(sheets, data, "dataSet");
 
-        data.attributeValues = processItemAtributes(sheets, data, "dataSet");
+        data.attributeValues = processItemAttributes(sheets, data, "dataSet");
 
         replaceById(data, "categoryCombo", categoryCombos);
 
@@ -560,7 +560,7 @@ function buildTranslation(sheets: Sheet[], parentData: MetadataItem, metadataTyp
     });
 }
 
-function processItemAtributes(sheets: Sheet[], parentData: MetadataItem, metadataType: string) {
+function processItemAttributes(sheets: Sheet[], parentData: MetadataItem, metadataType: string) {
     const get = (name: string) => getItems(sheets, name);
     const attributes = get("attributes");
 
