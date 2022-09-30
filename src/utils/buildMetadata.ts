@@ -185,6 +185,8 @@ function buildDataSets(sheets: Sheet[]) {
 
         data.translation = buildTranslation(sheets, data, "dataSet");
 
+        data.attributeValues = processItemAtributes(sheets, data, "dataSet");
+
         replaceById(data, "categoryCombo", categoryCombos);
 
         data.workflow = data.workflow ? { id: data.workflow } : undefined;
@@ -555,6 +557,26 @@ function buildTranslation(sheets: Sheet[], parentData: MetadataItem, metadataTyp
             locale: locale,
             value: translation.value,
         } : {};
+    });
+}
+
+function processItemAtributes(sheets: Sheet[], parentData: MetadataItem, metadataType: string) {
+    const get = (name: string) => getItems(sheets, name);
+    const attributes = get("attributes");
+
+    return attributes.filter(attribute => {
+        return attribute[`${metadataType}Attribute`] === "TRUE";
+    }).flatMap(atribute => {
+        const value = parentData[atribute.name];
+        delete parentData[atribute.name];
+
+        return value ? {
+            value: value,
+            attribute: {
+                id: atribute.id,
+                name: atribute.name,
+            },
+        } : [];
     });
 }
 
