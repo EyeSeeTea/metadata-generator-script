@@ -112,6 +112,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         programRuleActions: buildProgramRuleActions(sheets),
         programRuleVariables: buildProgramRuleVariables(sheets),
         legendSets: buildLegendSets(sheets),
+        attributes: buildAttributes(sheets),
     };
 }
 
@@ -165,6 +166,25 @@ function buildDataSets(sheets: Sheet[]) {
         replaceById(data, "categoryCombo", categoryCombos);
 
         data.workflow = data.workflow ? { id: data.workflow } : undefined;
+
+        return { ...data };
+    });
+}
+
+function buildAttributes(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const attributes = get("attributes");
+    const optionSets = get("optionSets");
+
+    return attributes.map(attribute => {
+        let data: MetadataItem = JSON.parse(JSON.stringify(attribute));
+
+        data.optionSet = {
+            id: optionSets.find(osToFilter => {
+                return osToFilter.name === data.optionSet;
+            })?.id
+        };
 
         return { ...data };
     });
