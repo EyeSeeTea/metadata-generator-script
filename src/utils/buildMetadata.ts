@@ -2,6 +2,12 @@ import _ from "lodash";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 
+type localeKey = "Afrikaans" | "Amharic" | "Arabic" | "Bislama" | "Burmese" |
+    "Chinese" | "Dutch" | "Dzongkha" | "English" | "French" | "German" |
+    "Gujarati" | "Hindi" | "Indonesian" | "Italian" | "Khmer" | "Kinyarwanda" |
+    "Lao" | "Nepali" | "Norwegian" | "Persian" | "Portuguese" | "Pushto" |
+    "Russian" | "Spanish" | "Swahili" | "Tajik" | "Vietnamese" | "default";
+
 // Return an object containing the metadata representation of all the sheets
 // that are included in the spreadsheet.
 export function buildMetadata(sheets: Sheet[], defaultCC: string) {
@@ -51,11 +57,14 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
 
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
+        const translation = buildTranslation(sheets, dataElement, "dataElement");
+
         return {
             ...dataElement,
             categoryCombo: { id: categoryCombo },
             optionSet: optionSet ? { id: optionSet } : undefined,
             domainType: "AGGREGATE",
+            translation: translation,
         };
     });
 
@@ -64,7 +73,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
             .filter(option => option.category === category.name)
             .map(({ id }) => ({ id }));
 
-        return { ...category, categoryOptions };
+        const translation = buildTranslation(sheets, category, "category");
+
+        return { ...category, categoryOptions, translation };
     });
 
     const categoryCombos = sheetCategoryCombos.map(categoryCombo => {
@@ -72,7 +83,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
             .filter(category => category.categoryCombo === categoryCombo?.name)
             .map(({ id }) => ({ id }));
 
-        return { ...categoryCombo, categories };
+        const translation = buildTranslation(sheets, categoryCombo, "categoryCombo");
+
+        return { ...categoryCombo, categories, translation };
     });
 
     const optionSets = sheetOptionSets.map(optionSet => {
@@ -81,15 +94,22 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         return { ...optionSet, options };
     });
 
-    const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id);
+    const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
+        const translation = buildTranslation(sheets, categoryOption, "categoryOption");
+
+        return { ...categoryOption, translation };
+    });
 
     const programDataElements = sheetProgramDataElements.map(dataElement => {
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
+
+        const translation = buildTranslation(sheets, dataElement, "programDataElement");
 
         return {
             ...dataElement,
             domainType: "TRACKER",
             optionSet: optionSet ? { id: optionSet } : undefined,
+            translation: translation,
         };
     });
 
@@ -162,6 +182,8 @@ function buildDataSets(sheets: Sheet[]) {
         }).map(legend => {
             return { id: legend.id };
         });
+
+        data.translation = buildTranslation(sheets, data, "dataSet");
 
         replaceById(data, "categoryCombo", categoryCombos);
 
@@ -480,6 +502,57 @@ function buildProgramRules(sheets: Sheet[]) {
             .map(action => ({ id: action.id }));
 
         return { ...rule, program: { id: program.id }, programRuleActions };
+    });
+}
+
+// UTILS
+const localeDictionary = {
+    Afrikaans: "af",
+    Amharic: "am",
+    Arabic: "ar",
+    Bislama: "bi",
+    Burmese: "my",
+    Chinese: "zh",
+    Dutch: "nl",
+    Dzongkha: "dz",
+    English: "en",
+    French: "fr",
+    German: "de",
+    Gujarati: "gu",
+    Hindi: "hi",
+    Indonesian: "in",
+    Italian: "it",
+    Khmer: "km",
+    Kinyarwanda: "rw",
+    Lao: "lo",
+    Nepali: "ne",
+    Norwegian: "no",
+    Persian: "fa",
+    Portuguese: "pt",
+    Pushto: "ps",
+    Russian: "ru",
+    Spanish: "es",
+    Swahili: "sw",
+    Tajik: "tg",
+    Vietnamese: "vi",
+    default: undefined,
+};
+
+function buildTranslation(sheets: Sheet[], parentData: MetadataItem, metadataType: string) {
+    const get = (name: string) => getItems(sheets, name);
+    const translations = get(`${metadataType}Translations`);
+
+    return translations.filter(translationsToFilter => {
+        return translationsToFilter[metadataType] === parentData.name;
+    }).map(translation => {
+        const localeKey: localeKey = translation.locale ?? "default";
+        const locale: string | undefined = localeDictionary[localeKey];
+
+        return locale ? {
+            property: translation.name,
+            locale: locale,
+            value: translation.value,
+        } : {};
     });
 }
 
