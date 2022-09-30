@@ -57,11 +57,14 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
 
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
+        const translation = buildTranslation(sheets, dataElement, "dataElement");
+
         return {
             ...dataElement,
             categoryCombo: { id: categoryCombo },
             optionSet: optionSet ? { id: optionSet } : undefined,
             domainType: "AGGREGATE",
+            translation: translation,
         };
     });
 
@@ -70,7 +73,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
             .filter(option => option.category === category.name)
             .map(({ id }) => ({ id }));
 
-        return { ...category, categoryOptions };
+        const translation = buildTranslation(sheets, category, "category");
+
+        return { ...category, categoryOptions, translation };
     });
 
     const categoryCombos = sheetCategoryCombos.map(categoryCombo => {
@@ -78,7 +83,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
             .filter(category => category.categoryCombo === categoryCombo?.name)
             .map(({ id }) => ({ id }));
 
-        return { ...categoryCombo, categories };
+        const translation = buildTranslation(sheets, categoryCombo, "categoryCombo");
+
+        return { ...categoryCombo, categories, translation };
     });
 
     const optionSets = sheetOptionSets.map(optionSet => {
@@ -87,15 +94,22 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         return { ...optionSet, options };
     });
 
-    const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id);
+    const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
+        const translation = buildTranslation(sheets, categoryOption, "categoryOption");
+
+        return { ...categoryOption, translation };
+    });
 
     const programDataElements = sheetProgramDataElements.map(dataElement => {
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
+
+        const translation = buildTranslation(sheets, dataElement, "programDataElement");
 
         return {
             ...dataElement,
             domainType: "TRACKER",
             optionSet: optionSet ? { id: optionSet } : undefined,
+            translation: translation,
         };
     });
 
