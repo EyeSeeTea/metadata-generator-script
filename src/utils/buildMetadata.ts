@@ -208,6 +208,8 @@ function buildAttributes(sheets: Sheet[]) {
             })?.id
         };
 
+        data.translation = buildTranslation(sheets, data, "attribute");
+
         return { ...data };
     });
 }
