@@ -96,6 +96,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     return {
         dataSets: buildDataSets(sheets),
         dataElements: [...dataElements, ...programDataElements],
+        dataElementGroups: buildDataElementGroups(sheets),
         options,
         sections,
         categories,
@@ -165,6 +166,28 @@ function buildDataSets(sheets: Sheet[]) {
         replaceById(data, "categoryCombo", categoryCombos);
 
         data.workflow = data.workflow ? { id: data.workflow } : undefined;
+
+        return { ...data };
+    });
+}
+
+function buildDataElementGroups(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const dataElementGroups = get("dataElementGroups");
+    const dataElementGroupElements = get("dataElementGroupElements");
+    const dataElements = get("dataElements");
+
+    return dataElementGroups.map(deGroup => {
+        let data: MetadataItem = JSON.parse(JSON.stringify(deGroup));
+
+        data.dataElements = dataElementGroupElements.filter(degeToFilter => {
+            return degeToFilter.dataElementGroup === data.name;
+        }).map(elements => {
+            return {
+                id: getByName(dataElements, elements.name).id,
+            };
+        });
 
         return { ...data };
     });
