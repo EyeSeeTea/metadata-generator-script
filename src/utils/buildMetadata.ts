@@ -120,6 +120,8 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     return {
         dataSets: buildDataSets(sheets),
         dataElements: [...dataElements, ...programDataElements],
+        dataElementGroups: buildDataElementGroups(sheets),
+        dataElementGroupSets: buildDataElementGroupSets(sheets),
         options,
         sections,
         categories,
@@ -191,6 +193,50 @@ function buildDataSets(sheets: Sheet[]) {
         replaceById(data, "categoryCombo", categoryCombos);
 
         data.workflow = data.workflow ? { id: data.workflow } : undefined;
+
+        return { ...data };
+    });
+}
+
+function buildDataElementGroups(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const dataElementGroups = get("dataElementGroups");
+    const dataElementGroupElements = get("dataElementGroupElements");
+    const dataElements = get("dataElements");
+
+    return dataElementGroups.map(degGroup => {
+        let data: MetadataItem = JSON.parse(JSON.stringify(degGroup));
+
+        data.dataElements = dataElementGroupElements.filter(degeToFilter => {
+            return degeToFilter.dataElementGroup === data.name;
+        }).map(elements => {
+            return {
+                id: getByName(dataElements, elements.name).id,
+            };
+        });
+
+        return { ...data };
+    });
+}
+
+function buildDataElementGroupSets(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const dataElementGroupSets = get("dataElementGroupSets");
+    const dataElementGroupSetGroups = get("dataElementGroupSetGroups");
+    const dataElementGroups = get("dataElementGroups");
+
+    return dataElementGroupSets.map(degsGroup => {
+        let data: MetadataItem = JSON.parse(JSON.stringify(degsGroup));
+
+        data.dataElementGroups = dataElementGroupSetGroups.filter(degsgToFilter => {
+            return degsgToFilter.dataElementGroupSet === data.name;
+        }).map(groups => {
+            return {
+                id: getByName(dataElementGroups, groups.name).id,
+            };
+        });
 
         return { ...data };
     });
