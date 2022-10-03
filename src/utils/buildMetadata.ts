@@ -223,6 +223,8 @@ function buildDataElementGroups(sheets: Sheet[]) {
             };
         });
 
+        data.translation = buildTranslation(sheets, data, "dataElementGroup");
+
         return { ...data };
     });
 }
@@ -244,6 +246,8 @@ function buildDataElementGroupSets(sheets: Sheet[]) {
                 id: getByName(dataElementGroups, groups.name).id,
             };
         });
+
+        data.translation = buildTranslation(sheets, data, "dataElementGroupSet");
 
         return { ...data };
     });
