@@ -60,6 +60,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
         const translation = buildTranslation(sheets, dataElement, "dataElement");
+        const attributeValues = processItemAttributes(sheets, dataElement, "dataElement");
 
         return {
             ...dataElement,
@@ -67,6 +68,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
             optionSet: optionSet ? { id: optionSet } : undefined,
             domainType: "AGGREGATE",
             translation: translation,
+            attributeValues: attributeValues,
         };
     });
 
@@ -108,12 +110,14 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
         const translation = buildTranslation(sheets, dataElement, "programDataElement");
+        const attributeValues = processItemAttributes(sheets, dataElement, "DataElement");
 
         return {
             ...dataElement,
             domainType: "TRACKER",
             optionSet: optionSet ? { id: optionSet } : undefined,
             translation: translation,
+            attributeValues: attributeValues,
         };
     });
 
