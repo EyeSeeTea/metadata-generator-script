@@ -43,7 +43,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
                 .filter((item) => item.section === section.name)
                 .map(({ name }) => ({ id: getByName(sheetDataElements, name).id }));
 
-            return { ...section, dataSet: { id: dataSet }, dataElements };
+            const translation = buildTranslation(sheets, section, "section");
+
+            return { ...section, dataSet: { id: dataSet }, dataElements, translation };
         })
         .groupBy(({ dataSet }) => dataSet.id)
         .mapValues(items => items.map((section, index) => ({ ...section, sortOrder: index + 1 })))
@@ -91,7 +93,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     const optionSets = sheetOptionSets.map(optionSet => {
         const options = sheetOptions.filter(option => option.optionSet === optionSet.name).map(({ id }) => ({ id }));
 
-        return { ...optionSet, options };
+        const translation = buildTranslation(sheets, optionSet, "optionSet");
+
+        return { ...optionSet, options, translation };
     });
 
     const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
@@ -216,6 +220,8 @@ function buildPrograms(sheets: Sheet[]) {
 
         replaceById(data, "categoryCombo", categoryCombos);
 
+        data.translation = buildTranslation(sheets, data, "program");
+
         if (trackedEntityType.id) {
             // WITH_REGISTRATION == Tracker Program
             const programType = "WITH_REGISTRATION";
@@ -315,7 +321,9 @@ function buildProgramStages(sheets: Sheet[]) {
 
         replaceById(programStage, "program", programs);
 
-        return { ...programStage, programStageDataElements, programStageSections }
+        const translation = buildTranslation(sheets, programStage, "programStage");
+
+        return { ...programStage, programStageDataElements, programStageSections, translation }
     });
 }
 
@@ -425,7 +433,9 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
             return teasLegendToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
         }).map(teasLegend => ({ id: teasLegend.id }));
 
-        return { ...data, legendSets }
+        const translation = buildTranslation(sheets, trackedEntityAttribute, "trackedEntityAttribute");
+
+        return { ...data, legendSets, translation }
     });
 }
 
@@ -465,7 +475,9 @@ function buildTrackedEntityTypes(sheets: Sheet[]) {
             };
         });
 
-        return { ...data, trackedEntityTypeAttributes }
+        const translation = buildTranslation(sheets, trackedEntityType, "trackedEntityType");
+
+        return { ...data, trackedEntityTypeAttributes, translation }
     });
 }
 
@@ -481,7 +493,55 @@ function buildProgramRules(sheets: Sheet[]) {
             .filter(action => action.programRule === rule.name)
             .map(action => ({ id: action.id }));
 
-        return { ...rule, program: { id: program.id }, programRuleActions };
+        const translation = buildTranslation(sheets, rule, "programRule");
+
+        return { ...rule, program: { id: program.id }, programRuleActions, translation };
+    });
+}
+
+function buildProgramRuleActions(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name); // shortcut
+
+    const actions = get("programRuleActions"),
+        rules = get("programRules"),
+        elements = get("programDataElements"),
+        attrs = get("trackedEntityAttributes"),
+        stages = get("programStages"),
+        sections = get("programStageSections");
+
+    return actions.map(action => {
+        let data = { ...action } as MetadataItem; // copy that we will modify
+
+        replaceById(data, "programRule", rules);
+        replaceById(data, "dataElement", elements);
+        replaceById(data, "trackedEntityAttribute", attrs);
+        replaceById(data, "programStage", stages);
+        replaceById(data, "programStageSection", sections);
+
+        return data;
+    });
+}
+
+function buildProgramRuleVariables(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name); // shortcut
+
+    const vars = get("programRuleVariables"),
+        programs = get("programs"),
+        elements = get("programDataElements"),
+        attrs = get("trackedEntityAttributes"),
+        stages = get("programStages");
+
+    return vars.map(variable => {
+        let data = { ...variable } as MetadataItem; // copy that we will modify
+
+        replaceById(data, "program", programs);
+        replaceById(data, "dataElement", elements);
+        replaceById(data, "trackedEntityAttribute", attrs);
+        replaceById(data, "programStage", stages);
+
+        data.translation = buildTranslation(sheets, variable, "programRuleVariable");
+
+        return data;
     });
 }
 
@@ -533,50 +593,6 @@ function buildTranslation(sheets: Sheet[], parentData: MetadataItem, metadataTyp
             locale: locale,
             value: translation.value,
         } : {};
-    });
-}
-
-function buildProgramRuleActions(sheets: Sheet[]) {
-    const get = (name: string) => getItems(sheets, name); // shortcut
-
-    const actions = get("programRuleActions"),
-        rules = get("programRules"),
-        elements = get("programDataElements"),
-        attrs = get("trackedEntityAttributes"),
-        stages = get("programStages"),
-        sections = get("programStageSections");
-
-    return actions.map(action => {
-        let data = { ...action } as MetadataItem; // copy that we will modify
-
-        replaceById(data, "programRule", rules);
-        replaceById(data, "dataElement", elements);
-        replaceById(data, "trackedEntityAttribute", attrs);
-        replaceById(data, "programStage", stages);
-        replaceById(data, "programStageSection", sections);
-
-        return data;
-    });
-}
-
-function buildProgramRuleVariables(sheets: Sheet[]) {
-    const get = (name: string) => getItems(sheets, name); // shortcut
-
-    const vars = get("programRuleVariables"),
-        programs = get("programs"),
-        elements = get("programDataElements"),
-        attrs = get("trackedEntityAttributes"),
-        stages = get("programStages");
-
-    return vars.map(variable => {
-        let data = { ...variable } as MetadataItem; // copy that we will modify
-
-        replaceById(data, "program", programs);
-        replaceById(data, "dataElement", elements);
-        replaceById(data, "trackedEntityAttribute", attrs);
-        replaceById(data, "programStage", stages);
-
-        return data;
     });
 }
 
