@@ -262,15 +262,16 @@ function buildAttributes(sheets: Sheet[]) {
     return attributes.map(attribute => {
         let data: MetadataItem = JSON.parse(JSON.stringify(attribute));
 
-        data.optionSet = {
-            id: optionSets.find(osToFilter => {
-                return osToFilter.name === data.optionSet;
-            })?.id
-        };
+        const optionSetId = optionSets.find(osToFilter => {
+            return osToFilter.name === data.optionSet;
+        })?.id;
+        const optionSet = optionSetId ? {
+            id: optionSetId,
+        } : undefined;
 
         data.translation = buildTranslation(sheets, data, "attribute");
 
-        return { ...data };
+        return { ...data, optionSet };
     });
 }
 
