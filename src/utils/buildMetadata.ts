@@ -43,9 +43,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
                 .filter((item) => item.section === section.name)
                 .map(({ name }) => ({ id: getByName(sheetDataElements, name).id }));
 
-            const translation = buildTranslation(sheets, section, "section");
+            const translations = buildTranslation(sheets, section, "section");
 
-            return { ...section, dataSet: { id: dataSet }, dataElements, translation };
+            return { ...section, dataSet: { id: dataSet }, dataElements, translations };
         })
         .groupBy(({ dataSet }) => dataSet.id)
         .mapValues(items => items.map((section, index) => ({ ...section, sortOrder: index + 1 })))
@@ -59,14 +59,14 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
 
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
-        const translation = buildTranslation(sheets, dataElement, "dataElement");
+        const translations = buildTranslation(sheets, dataElement, "dataElement");
 
         return {
             ...dataElement,
             categoryCombo: { id: categoryCombo },
             optionSet: optionSet ? { id: optionSet } : undefined,
             domainType: "AGGREGATE",
-            translation: translation,
+            translations: translations,
         };
     });
 
@@ -75,9 +75,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
             .filter(option => option.category === category.name)
             .map(({ id }) => ({ id }));
 
-        const translation = buildTranslation(sheets, category, "category");
+        const translations = buildTranslation(sheets, category, "category");
 
-        return { ...category, categoryOptions, translation };
+        return { ...category, categoryOptions, translations };
     });
 
     const categoryCombos = sheetCategoryCombos.map(categoryCombo => {
@@ -85,35 +85,35 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
             .filter(category => category.categoryCombo === categoryCombo?.name)
             .map(({ id }) => ({ id }));
 
-        const translation = buildTranslation(sheets, categoryCombo, "categoryCombo");
+        const translations = buildTranslation(sheets, categoryCombo, "categoryCombo");
 
-        return { ...categoryCombo, categories, translation };
+        return { ...categoryCombo, categories, translations };
     });
 
     const optionSets = sheetOptionSets.map(optionSet => {
         const options = sheetOptions.filter(option => option.optionSet === optionSet.name).map(({ id }) => ({ id }));
 
-        const translation = buildTranslation(sheets, optionSet, "optionSet");
+        const translations = buildTranslation(sheets, optionSet, "optionSet");
 
-        return { ...optionSet, options, translation };
+        return { ...optionSet, options, translations };
     });
 
     const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
-        const translation = buildTranslation(sheets, categoryOption, "categoryOption");
+        const translations = buildTranslation(sheets, categoryOption, "categoryOption");
 
-        return { ...categoryOption, translation };
+        return { ...categoryOption, translations };
     });
 
     const programDataElements = sheetProgramDataElements.map(dataElement => {
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
-        const translation = buildTranslation(sheets, dataElement, "programDataElement");
+        const translations = buildTranslation(sheets, dataElement, "programDataElement");
 
         return {
             ...dataElement,
             domainType: "TRACKER",
             optionSet: optionSet ? { id: optionSet } : undefined,
-            translation: translation,
+            translations: translations,
         };
     });
 
@@ -188,7 +188,7 @@ function buildDataSets(sheets: Sheet[]) {
             return { id: legend.id };
         });
 
-        data.translation = buildTranslation(sheets, data, "dataSet");
+        data.translations = buildTranslation(sheets, data, "dataSet");
 
         replaceById(data, "categoryCombo", categoryCombos);
 
@@ -216,7 +216,7 @@ function buildDataElementGroups(sheets: Sheet[]) {
             };
         });
 
-        data.translation = buildTranslation(sheets, data, "dataElementGroup");
+        data.translations = buildTranslation(sheets, data, "dataElementGroup");
 
         return { ...data };
     });
@@ -240,7 +240,7 @@ function buildDataElementGroupSets(sheets: Sheet[]) {
             };
         });
 
-        data.translation = buildTranslation(sheets, data, "dataElementGroupSet");
+        data.translations = buildTranslation(sheets, data, "dataElementGroupSet");
 
         return { ...data };
     });
@@ -270,7 +270,7 @@ function buildPrograms(sheets: Sheet[]) {
 
         replaceById(data, "categoryCombo", categoryCombos);
 
-        data.translation = buildTranslation(sheets, data, "program");
+        data.translations = buildTranslation(sheets, data, "program");
 
         if (trackedEntityType.id) {
             // WITH_REGISTRATION == Tracker Program
@@ -371,9 +371,9 @@ function buildProgramStages(sheets: Sheet[]) {
 
         replaceById(programStage, "program", programs);
 
-        const translation = buildTranslation(sheets, programStage, "programStage");
+        const translations = buildTranslation(sheets, programStage, "programStage");
 
-        return { ...programStage, programStageDataElements, programStageSections, translation }
+        return { ...programStage, programStageDataElements, programStageSections, translations }
     });
 }
 
@@ -483,9 +483,9 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
             return teasLegendToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
         }).map(teasLegend => ({ id: teasLegend.id }));
 
-        const translation = buildTranslation(sheets, trackedEntityAttribute, "trackedEntityAttribute");
+        const translations = buildTranslation(sheets, trackedEntityAttribute, "trackedEntityAttribute");
 
-        return { ...data, legendSets, translation }
+        return { ...data, legendSets, translations }
     });
 }
 
@@ -525,9 +525,9 @@ function buildTrackedEntityTypes(sheets: Sheet[]) {
             };
         });
 
-        const translation = buildTranslation(sheets, trackedEntityType, "trackedEntityType");
+        const translations = buildTranslation(sheets, trackedEntityType, "trackedEntityType");
 
-        return { ...data, trackedEntityTypeAttributes, translation }
+        return { ...data, trackedEntityTypeAttributes, translations }
     });
 }
 
@@ -543,9 +543,9 @@ function buildProgramRules(sheets: Sheet[]) {
             .filter(action => action.programRule === rule.name)
             .map(action => ({ id: action.id }));
 
-        const translation = buildTranslation(sheets, rule, "programRule");
+        const translations = buildTranslation(sheets, rule, "programRule");
 
-        return { ...rule, program: { id: program.id }, programRuleActions, translation };
+        return { ...rule, program: { id: program.id }, programRuleActions, translations };
     });
 }
 
@@ -589,7 +589,7 @@ function buildProgramRuleVariables(sheets: Sheet[]) {
         replaceById(data, "trackedEntityAttribute", attrs);
         replaceById(data, "programStage", stages);
 
-        data.translation = buildTranslation(sheets, variable, "programRuleVariable");
+        data.translations = buildTranslation(sheets, variable, "programRuleVariable");
 
         return data;
     });
