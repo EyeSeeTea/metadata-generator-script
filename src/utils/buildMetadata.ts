@@ -34,7 +34,8 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         .map(section => {
             const dataSet = sheetDataSets.find(({ name }) => name === section.dataSet)?.id;
             const dataElements = sheetSectionDataElements
-                .filter((item) => item.section === section.name)
+                .filter((item) => item.section === section.name &&
+                    item.dataSet === section.dataSet)
                 .map(({ name }) => ({ id: getByName(sheetDataElements, name).id }));
 
             return { ...section, dataSet: { id: dataSet }, dataElements };
