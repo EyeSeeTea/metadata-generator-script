@@ -147,6 +147,37 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     };
 }
 
+function buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "programDataElements") {
+    const get = (name: string) => getItems(sheets, name);
+
+    const dataElements = get(deType);
+    const categoryCombos = get("categoryCombos");
+    const optionSets = get("optionSets");
+
+    return dataElements.map(dataElement => {
+        let data: MetadataItem = JSON.parse(JSON.stringify(dataElement));
+
+        const domainType = deType === "dataElements" ? "AGGREGATE" : "TRACKER";
+
+        const categoryCombo = getByName(categoryCombos, data.categoryCombo)?.id;
+        const optionSet = getByName(optionSets, data.optionSet)?.id;
+        const commentOptionSet = getByName(optionSets, data.commentOptionSet)?.id;
+
+        const translations = buildTranslation(sheets, data, "dataElement");
+        const attributeValues = processItemAttributes(sheets, data, "dataElement");
+
+        return {
+            ...data,
+            categoryCombo: categoryCombo ? { id: categoryCombo } : undefined,
+            optionSet: optionSet ? { id: optionSet } : undefined,
+            commentOptionSet: commentOptionSet ? { id: commentOptionSet } : undefined,
+            domainType: domainType,
+            translations: translations,
+            attributeValues: attributeValues,
+        };
+    });
+};
+
 function buildDataSets(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name);
 
