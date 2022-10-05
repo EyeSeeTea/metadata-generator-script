@@ -130,6 +130,7 @@ function buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "progra
 
         const translations = buildTranslation(sheets, data, "dataElement");
         const attributeValues = processItemAttributes(sheets, data, "dataElement");
+        const legendSets = processItemLegendSets(sheets, data.name, "dataElement");
 
         return {
             ...data,
@@ -139,6 +140,7 @@ function buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "progra
             domainType: domainType,
             translations: translations,
             attributeValues: attributeValues,
+            legendSets: legendSets,
         };
     });
 };
@@ -696,6 +698,21 @@ function processItemAttributes(sheets: Sheet[], parentData: MetadataItem, metada
                 name: atribute.name,
             },
         } : [];
+    });
+}
+
+function processItemLegendSets(sheets: Sheet[], parentDataName: string, metadataType: string) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const legendSets = get("legendSets");
+    const itemLegends = get(`${metadataType}Legends`);
+
+    return itemLegends.filter(itemLegendToFilter => {
+        return itemLegendToFilter[metadataType] === parentDataName;
+    }).map(legend => {
+        const legendId = getByName(legendSets, legend.name)?.id;
+
+        return { id: legendId };
     });
 }
 
