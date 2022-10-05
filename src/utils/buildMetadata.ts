@@ -21,8 +21,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         sheetCategoryOptions = get("categoryOptions"),
         sheetCategories = get("categories"),
         sheetOptionSets = get("optionSets"),
-        sheetOptions = get("options"),
-        sheetProgramDataElements = get("programDataElements");
+        sheetOptions = get("options")
 
     const options = _(sheetOptions)
         .map(option => {
@@ -53,25 +52,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         .values()
         .flatten()
         .value();
-
-    const dataElements = sheetDataElements.map(dataElement => {
-        const categoryCombo =
-            sheetCategoryCombos.find(({ name }) => name === dataElement.categoryCombo)?.id ?? defaultCC;
-
-        const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
-
-        const translations = buildTranslation(sheets, dataElement, "dataElement");
-        const attributeValues = processItemAttributes(sheets, dataElement, "dataElement");
-
-        return {
-            ...dataElement,
-            categoryCombo: { id: categoryCombo },
-            optionSet: optionSet ? { id: optionSet } : undefined,
-            domainType: "AGGREGATE",
-            translations: translations,
-            attributeValues: attributeValues,
-        };
-    });
 
     const categories = sheetCategories.map(category => {
         const categoryOptions = sheetCategoryOptions
@@ -107,24 +87,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         return { ...categoryOption, translations };
     });
 
-    const programDataElements = sheetProgramDataElements.map(dataElement => {
-        const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
-
-        const translations = buildTranslation(sheets, dataElement, "programDataElement");
-        const attributeValues = processItemAttributes(sheets, dataElement, "DataElement");
-
-        return {
-            ...dataElement,
-            domainType: "TRACKER",
-            optionSet: optionSet ? { id: optionSet } : undefined,
-            translations: translations,
-            attributeValues: attributeValues,
-        };
-    });
-
     return {
         dataSets: buildDataSets(sheets),
-        dataElements: [...dataElements, ...programDataElements],
+        dataElements: buildDataElements(sheets),
         dataElementGroups: buildDataElementGroups(sheets),
         dataElementGroupSets: buildDataElementGroupSets(sheets),
         options,
@@ -176,6 +141,13 @@ function buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "progra
             attributeValues: attributeValues,
         };
     });
+};
+
+function buildDataElements(sheets: Sheet[]) {
+    return [
+        ...buildDataElementsType(sheets, "dataElements"),
+        ...buildDataElementsType(sheets, "programDataElements"),
+    ];
 };
 
 function buildDataSets(sheets: Sheet[]) {
