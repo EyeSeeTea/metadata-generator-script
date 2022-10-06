@@ -112,6 +112,60 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     };
 }
 
+function buildDataSets(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const dataSets = get("dataSets");
+    const dataElements = get("dataElements");
+    const dataSetElements = get("dataSetElements");
+    const dataSetInputPeriods = get("dataSetInputPeriods");
+    const dataSetSections = get("sections");
+    const categoryCombos = get("categoryCombos");
+
+    return dataSets.map(dataSet => {
+        let data: MetadataItem = JSON.parse(JSON.stringify(dataSet));
+
+        data.dataSetElements = dataSetElements.filter(dseToFilter => {
+            return dseToFilter.dataSet === data.name;
+        }).map(elements => {
+            return {
+                dataSet: { id: data.id },
+                dataElement: { id: getByName(dataElements, elements.name).id },
+                categoryCombo: elements.categoryCombo ?
+                    { id: getByName(categoryCombos, elements.categoryCombo).id } : undefined,
+            };
+        });
+
+        data.sections = dataSetSections.filter(dssToFilter => {
+            return dssToFilter.dataSet === data.name;
+        }).map(section => {
+            return { id: section.id };
+        });
+
+        data.dataInputPeriods = dataSetInputPeriods.filter(dsipToFilter => {
+            return dsipToFilter.name === data.name;
+        }).map(inputPeriod => {
+            return {
+                period: { id: inputPeriod.period },
+                openingDate: inputPeriod.openingDate,
+                closingDate: inputPeriod.closingDate,
+            };
+        });
+
+        data.legendSets = processItemLegendSets(sheets, data.name, "dataSet");
+
+        data.translations = buildTranslation(sheets, data, "dataSet");
+
+        data.attributeValues = processItemAttributes(sheets, data, "dataSet");
+
+        replaceById(data, "categoryCombo", categoryCombos);
+
+        data.workflow = data.workflow ? { id: data.workflow } : undefined;
+
+        return { ...data };
+    });
+}
+
 function buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "programDataElements") {
     const get = (name: string) => getItems(sheets, name);
 
@@ -151,65 +205,6 @@ function buildDataElements(sheets: Sheet[]) {
         ...buildDataElementsType(sheets, "programDataElements"),
     ];
 };
-
-function buildDataSets(sheets: Sheet[]) {
-    const get = (name: string) => getItems(sheets, name);
-
-    const dataSets = get("dataSets");
-    const dataElements = get("dataElements");
-    const dataSetElements = get("dataSetElements");
-    const dataSetInputPeriods = get("dataSetInputPeriods");
-    const dataSetSections = get("sections");
-    const dataSetLegends = get("dataSetLegends");
-    const categoryCombos = get("categoryCombos");
-
-    return dataSets.map(dataSet => {
-        let data: MetadataItem = JSON.parse(JSON.stringify(dataSet));
-
-        data.dataSetElements = dataSetElements.filter(dseToFilter => {
-            return dseToFilter.dataSet === data.name;
-        }).map(elements => {
-            return {
-                dataSet: { id: data.id },
-                dataElement: { id: getByName(dataElements, elements.name).id },
-                categoryCombo: elements.categoryCombo ?
-                    { id: getByName(categoryCombos, elements.categoryCombo).id } : undefined,
-            };
-        });
-
-        data.sections = dataSetSections.filter(dssToFilter => {
-            return dssToFilter.dataSet === data.name;
-        }).map(section => {
-            return { id: section.id };
-        });
-
-        data.dataInputPeriods = dataSetInputPeriods.filter(dsipToFilter => {
-            return dsipToFilter.name === data.name;
-        }).map(inputPeriod => {
-            return {
-                period: { id: inputPeriod.period },
-                openingDate: inputPeriod.openingDate,
-                closingDate: inputPeriod.closingDate,
-            };
-        });
-
-        data.legendSets = dataSetLegends.filter(dslToFilter => {
-            return dslToFilter.dataSet === data.name;
-        }).map(legend => {
-            return { id: legend.id };
-        });
-
-        data.translations = buildTranslation(sheets, data, "dataSet");
-
-        data.attributeValues = processItemAttributes(sheets, data, "dataSet");
-
-        replaceById(data, "categoryCombo", categoryCombos);
-
-        data.workflow = data.workflow ? { id: data.workflow } : undefined;
-
-        return { ...data };
-    });
-}
 
 function buildDataElementGroups(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name);
@@ -502,21 +497,13 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
 
     const trackedEntityAttributes = get("trackedEntityAttributes");
     const optionSets = get("optionSets");
-    const legendSetsArray = get("legendSets");
-    const teasLegends = get("trackedEntityAttributesLegends").map(teasLegend => {
-        let data = { ...teasLegend } as MetadataItem;
-        data.id = getByName(legendSetsArray, teasLegend.name).id;
-        return data;
-    })
 
     return trackedEntityAttributes.map(trackedEntityAttribute => {
         let data = { ...trackedEntityAttribute } as MetadataItem;
 
         replaceById(data, "optionSet", optionSets);
 
-        const legendSets = teasLegends.filter(teasLegendToFilter => {
-            return teasLegendToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
-        }).map(teasLegend => ({ id: teasLegend.id }));
+        const legendSets = processItemLegendSets(sheets, data.name, "trackedEntityAttribute");
 
         const translations = buildTranslation(sheets, trackedEntityAttribute, "trackedEntityAttribute");
 
