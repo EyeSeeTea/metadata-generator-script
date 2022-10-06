@@ -124,7 +124,6 @@ function buildDataSets(sheets: Sheet[]) {
     const dataSetElements = get("dataSetElements");
     const dataSetInputPeriods = get("dataSetInputPeriods");
     const dataSetSections = get("sections");
-    const dataSetLegends = get("dataSetLegends");
     const categoryCombos = get("categoryCombos");
 
     return dataSets.map(dataSet => {
@@ -157,11 +156,7 @@ function buildDataSets(sheets: Sheet[]) {
             };
         });
 
-        data.legendSets = dataSetLegends.filter(dslToFilter => {
-            return dslToFilter.dataSet === data.name;
-        }).map(legend => {
-            return { id: legend.id };
-        });
+        data.legendSets = processItemLegendSets(sheets, data.name, "dataSet");
 
         replaceById(data, "categoryCombo", categoryCombos);
 
@@ -388,21 +383,13 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
 
     const trackedEntityAttributes = get("trackedEntityAttributes");
     const optionSets = get("optionSets");
-    const legendSetsArray = get("legendSets");
-    const teasLegends = get("trackedEntityAttributesLegends").map(teasLegend => {
-        let data = { ...teasLegend } as MetadataItem;
-        data.id = getByName(legendSetsArray, teasLegend.name).id;
-        return data;
-    })
 
     return trackedEntityAttributes.map(trackedEntityAttribute => {
         let data = { ...trackedEntityAttribute } as MetadataItem;
 
         replaceById(data, "optionSet", optionSets);
 
-        const legendSets = teasLegends.filter(teasLegendToFilter => {
-            return teasLegendToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
-        }).map(teasLegend => ({ id: teasLegend.id }));
+        const legendSets = processItemLegendSets(sheets, data.name, "trackedEntityAttribute");
 
         return { ...data, legendSets }
     });
@@ -505,6 +492,22 @@ function buildProgramRuleVariables(sheets: Sheet[]) {
         replaceById(data, "programStage", stages);
 
         return data;
+    });
+}
+
+// UTILS
+function processItemLegendSets(sheets: Sheet[], parentDataName: string, metadataType: string) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const legendSets = get("legendSets");
+    const itemLegends = get(`${metadataType}Legends`);
+
+    return itemLegends.filter(itemLegendToFilter => {
+        return itemLegendToFilter[metadataType] === parentDataName;
+    }).map(legend => {
+        const legendId = getByName(legendSets, legend.name)?.id;
+
+        return { id: legendId };
     });
 }
 
