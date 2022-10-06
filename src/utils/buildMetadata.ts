@@ -21,7 +21,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         sheetCategoryOptions = get("categoryOptions"),
         sheetCategories = get("categories"),
         sheetOptionSets = get("optionSets"),
-        sheetOptions = get("options")
+        sheetOptions = get("options");
 
     const options = _(sheetOptions)
         .map(option => {
