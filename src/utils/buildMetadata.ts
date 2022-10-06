@@ -59,7 +59,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
 
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
-        const translations = buildTranslation(sheets, dataElement, "dataElement");
+        const translations = processTranslations(sheets, dataElement.name, "dataElement");
 
         return {
             ...dataElement,
@@ -107,7 +107,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
     const programDataElements = sheetProgramDataElements.map(dataElement => {
         const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
 
-        const translations = buildTranslation(sheets, dataElement, "programDataElement");
+        const translations = processTranslations(sheets, dataElement.name, "programDataElement");
 
         return {
             ...dataElement,
