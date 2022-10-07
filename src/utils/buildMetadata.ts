@@ -182,7 +182,7 @@ function buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "progra
         const optionSet = getByName(optionSets, data.optionSet)?.id;
         const commentOptionSet = getByName(optionSets, data.commentOptionSet)?.id;
 
-        const translations = buildTranslation(sheets, data, "dataElement");
+        const translations = processTranslations(sheets, data.name, "dataElement");
         const attributeValues = processItemAttributes(sheets, data, "dataElement");
         const legendSets = processItemLegendSets(sheets, data.name, "dataElement");
 
@@ -270,7 +270,7 @@ function buildAttributes(sheets: Sheet[]) {
             id: optionSetId,
         } : undefined;
 
-        data.translation = buildTranslation(sheets, data, "attribute");
+        data.translation = processTranslations(sheets, data.name, "attribute");
 
         return { ...data, optionSet };
     });
