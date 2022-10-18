@@ -71,6 +71,7 @@ function makeSeed(item: MetadataItem, sheetName: string) {
     const seed0 = `${sheetName}-${item.name}`; // the seed will be at least the page and the item's name
     if (sheetName === "options") return `${seed0}-${item.optionSet}`;
     if (sheetName === "legends") return `${seed0}-${item.legendSet}`;
+    if (sheetName === "sections") return `${seed0}-${item.dataSet}`;
     if (sheetName === "programStages") return `${seed0}-${item.program}`;
     if (sheetName === "programSections") return `${seed0}-${item.program}`;
     if (sheetName === "programTrackedEntityAttributes") return `${seed0}-${item.program}`;
