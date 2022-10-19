@@ -11,21 +11,26 @@ directory of the project. This file will be ignored by git, but
 It should look like this:
 
 ```ini
+# common
 GOOGLE_API_KEY=...
 GOOGLE_SHEET_ID=...
 DHIS2_BASE_URL=...
 DHIS2_USERNAME=...
 DHIS2_PASSWORD=...
+# build-metadata only
 UPDATE_CATEGORY_OPTION_COMBOS=false # true or false
 UPDATE_SERVER=false # true or false
+# download-ids only
 PULL_METADATA_CSV_PATH=...
 ```
 
 The first time, we have to run `yarn install` to install all the dependencies.
-After that, you can run `yarn update-server` to generate and update the metadata
+After that, you can run `yarn build-metadata` to generate and update the metadata
 or `yarn download-ids` to get the metadata IDs.
 
 ## Description
+
+### build-metadata:
 
 We can **create or modify metadata** in dhis2 by simply using the
 official `Maintenance` app. But sometimes this is a slow process.
@@ -44,15 +49,20 @@ If you want to manually upload the generated json file to a dhis2 instance,
 use its `Import/Export` app, go to `Metadata import` and use `Merge` as
 the "import strategy".
 
-The `PULL_METADATA_CSV_PATH` variable will store the path where the CSV files will
-be written. If empty, the current working directory will be used.
-
 If dhis2 fails to automatically update all the category option
 combinations (which happens occassionally and is a dhis2 issue), you
 can use the `Data Administration` app, go to `Maintenance`, select
 `Update category option combinations` and click on the
 `Perform Maintenance` button. Alternatively, you can just set in the
 `.env.local` file the `UPDATE_CATEGORY_OPTION_COMBOS` option to `true`.
+
+### download-ids:
+
+With this tool we can get the IDs of a spreadsheet's metadata from a DHIS2 instance.
+For now, two elements can't have the same name, which is possible in DHIS2.
+
+The `PULL_METADATA_CSV_PATH` variable will store the path where the CSV files will
+be written. If empty, the current working directory will be used.
 
 ## Accessing google spreadsheets
 
