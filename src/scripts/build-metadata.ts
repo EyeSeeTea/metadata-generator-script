@@ -8,7 +8,7 @@ import _ from "lodash";
 import { loadSheet, uploadMetadata } from "../utils/mainUtils";
 import { buildMetadata } from "../utils/buildMetadata";
 
-async function uploadServer() {
+async function main() {
     config(); // fill variable process.env from ".env.*" files
     const log = console.log,
         env = process.env; // shortcuts
@@ -40,4 +40,4 @@ async function uploadServer() {
     }
 }
 
-uploadServer();
+main();
