@@ -6,8 +6,7 @@
     "author": "EyeSeeTea team",
     "scripts": {
         "prettify": "prettier \"./**/*.{js,jsx,json,css,ts,tsx}\" --write",
-        "build": "ncc build src/scripts/upload-server.ts -m && cp dist/index.js $npm_package_name.js",
-        "start": "ts-node -P tsconfig.json src/scripts/upload-server.ts",
+        "build-metadata": "ts-node -P tsconfig.json src/scripts/build-metadata.ts",
         "download-ids": "ts-node -P tsconfig.json src/scripts/download-ids.ts"
     },
     "devDependencies": {
