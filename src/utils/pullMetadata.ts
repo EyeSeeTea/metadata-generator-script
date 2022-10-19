@@ -4,28 +4,42 @@ import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { createObjectCsvWriter } from "csv-writer";
 
-const log = console.log, env = process.env;
+const log = console.log,
+    env = process.env;
 
 type MetadataQuery = { [key: string]: any };
 type FilterNames = { [key: string]: string[] };
 
 const allowedTypesArray = [
-    "programSections", "programs", "programStages", "programStageSections",
-    "trackedEntityTypes", "trackedEntityAttributes", "programRules",
-    "programRuleActions", "programRuleVariables", "dataElements", "dataSets",
-    "sections", "Categories", "categoryCombos", "categoryOptions", "optionSets", "options"
-]
+    "programSections",
+    "programs",
+    "programStages",
+    "programStageSections",
+    "trackedEntityTypes",
+    "trackedEntityAttributes",
+    "programRules",
+    "programRuleActions",
+    "programRuleVariables",
+    "dataElements",
+    "dataSets",
+    "sections",
+    "Categories",
+    "categoryCombos",
+    "categoryOptions",
+    "optionSets",
+    "options",
+];
 
 // Get names from spreadsheet data
 function getNamesFromSpreadsheet(sheets: Sheet[]) {
     let filterNames: FilterNames = {};
 
-    sheets.forEach((sheet) => {
+    sheets.forEach(sheet => {
         if (sheet.items.length !== 0) {
             filterNames[sheet.name] = [];
-            sheet.items.forEach((item) => {
+            sheet.items.forEach(item => {
                 filterNames[sheet.name].push(item["name"]);
-            })
+            });
         }
     });
 
@@ -38,7 +52,7 @@ function makeMetadataItemQuery(itemType: string, namesToFilter?: string[]) {
     query[itemType] = {
         fields: {
             id: true,
-        }
+        },
     };
 
     if (typeof namesToFilter !== undefined || namesToFilter?.length !== 0) {
@@ -49,13 +63,13 @@ function makeMetadataItemQuery(itemType: string, namesToFilter?: string[]) {
 
 // Make filtered query for each type present in names
 function makeQueries(allowedTypesArray: string[], names: FilterNames) {
-    let queries: { type: string, value: MetadataQuery }[] = []
+    let queries: { type: string; value: MetadataQuery }[] = [];
 
     Object.entries(names).forEach(([metadataItemType, nameArray]) => {
         if (allowedTypesArray.includes(metadataItemType)) {
             queries.push({
                 type: metadataItemType,
-                value: makeMetadataItemQuery(metadataItemType, nameArray)
+                value: makeMetadataItemQuery(metadataItemType, nameArray),
             });
         }
     });
@@ -65,19 +79,21 @@ function makeQueries(allowedTypesArray: string[], names: FilterNames) {
 
 function makeCsvHeader(element: object) {
     const keys = Object.keys(element).filter(key => key !== "id");
-    let csvHeaders: { id: string; title: string; }[] = [{
-        id: "id",
-        title: "id"
-    }];
+    let csvHeaders: { id: string; title: string }[] = [
+        {
+            id: "id",
+            title: "id",
+        },
+    ];
 
     keys.forEach(headerItem => {
         if (keys.includes(headerItem)) {
             csvHeaders.push({
                 id: headerItem,
-                title: headerItem
-            })
+                title: headerItem,
+            });
         }
-    })
+    });
 
     return csvHeaders;
 }
@@ -98,14 +114,17 @@ export async function pullMetadata(api: D2Api, sheets: Sheet[]) {
 
     const queries = makeQueries(allowedTypesArray, filterNames);
 
-    queries.forEach(async (query) => {
-        const metadata = await api.metadata.get(query.value).getData().then(results => {
-            let resultsAsMetadataItem = _.omit(results, "system") as MetadataItem;
-            return resultsAsMetadataItem[query.type];
-        })
+    queries.forEach(async query => {
+        const metadata = await api.metadata
+            .get(query.value)
+            .getData()
+            .then(results => {
+                let resultsAsMetadataItem = _.omit(results, "system") as MetadataItem;
+                return resultsAsMetadataItem[query.type];
+            });
 
         if (metadata.length !== 0) {
             writeCsv(query.type, metadata);
         }
-    })
+    });
 }

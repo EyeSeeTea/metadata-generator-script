@@ -7,7 +7,7 @@ import _ from "lodash";
 import { loadSheet } from "../utils/mainUtils";
 import { pullMetadata } from "../utils/pullMetadata";
 
-async function download_ids() {
+async function downloadIds() {
     config(); // fill variable process.env from ".env.*" files
     const log = console.log,
         env = process.env; // shortcuts
@@ -26,4 +26,4 @@ async function download_ids() {
     pullMetadata(api, sheets);
 }
 
-download_ids();
+downloadIds();
