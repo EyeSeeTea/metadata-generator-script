@@ -13,7 +13,6 @@ It should look like this:
 ```ini
 GOOGLE_API_KEY=...
 GOOGLE_SHEET_ID=...
-DEFAULT_CATEGORY_COMBO_ID=...
 DHIS2_BASE_URL=...
 DHIS2_USERNAME=...
 DHIS2_PASSWORD=...
@@ -54,21 +53,6 @@ can use the `Data Administration` app, go to `Maintenance`, select
 `Update category option combinations` and click on the
 `Perform Maintenance` button. Alternatively, you can just set in the
 `.env.local` file the `UPDATE_CATEGORY_OPTION_COMBOS` option to `true`.
-
-## Default category combo
-
-To get the default `categoryCombo` used at a dhis2 instance, go to the
-following endpoint:
-`/api/categoryCombos.json?filter=name:eq:default&fields=id,name` .
-
-### How the default category combo is used
-
-If you want to understand what is special about the default category
-combination and how it works in dhis2, you can check [this talk by Jim
-Grace](https://youtu.be/EcR9QwJvc7c?t=314) (and maybe [these
-slides](https://drive.google.com/file/d/1MWq-Nx-AcSSuTfF9z7VPq0W9PXyl9IAn/view)).
-
-It is used at least in `dataElements`, `dataSets`, and `programs`.
 
 ## Accessing google spreadsheets
 

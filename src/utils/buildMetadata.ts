@@ -35,7 +35,7 @@ type localeKey =
 
 // Return an object containing the metadata representation of all the sheets
 // that are included in the spreadsheet.
-export function buildMetadata(sheets: Sheet[], defaultCC: string) {
+export function buildMetadata(sheets: Sheet[]) {
     const get = (name: string) => getItems(sheets, name); // shortcut
 
     const sheetDataSets = get("dataSets"),
