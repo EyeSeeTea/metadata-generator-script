@@ -2,11 +2,36 @@ import _ from "lodash";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 
-type localeKey = "Afrikaans" | "Amharic" | "Arabic" | "Bislama" | "Burmese" |
-    "Chinese" | "Dutch" | "Dzongkha" | "English" | "French" | "German" |
-    "Gujarati" | "Hindi" | "Indonesian" | "Italian" | "Khmer" | "Kinyarwanda" |
-    "Lao" | "Nepali" | "Norwegian" | "Persian" | "Portuguese" | "Pushto" |
-    "Russian" | "Spanish" | "Swahili" | "Tajik" | "Vietnamese" | "default";
+type localeKey =
+    | "Afrikaans"
+    | "Amharic"
+    | "Arabic"
+    | "Bislama"
+    | "Burmese"
+    | "Chinese"
+    | "Dutch"
+    | "Dzongkha"
+    | "English"
+    | "French"
+    | "German"
+    | "Gujarati"
+    | "Hindi"
+    | "Indonesian"
+    | "Italian"
+    | "Khmer"
+    | "Kinyarwanda"
+    | "Lao"
+    | "Nepali"
+    | "Norwegian"
+    | "Persian"
+    | "Portuguese"
+    | "Pushto"
+    | "Russian"
+    | "Spanish"
+    | "Swahili"
+    | "Tajik"
+    | "Vietnamese"
+    | "default";
 
 // Return an object containing the metadata representation of all the sheets
 // that are included in the spreadsheet.
@@ -21,8 +46,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         sheetCategoryOptions = get("categoryOptions"),
         sheetCategories = get("categories"),
         sheetOptionSets = get("optionSets"),
-        sheetOptions = get("options"),
-        sheetProgramDataElements = get("programDataElements");
+        sheetOptions = get("options");
 
     const options = _(sheetOptions)
         .map(option => {
@@ -40,7 +64,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         .map(section => {
             const dataSet = sheetDataSets.find(({ name }) => name === section.dataSet)?.id;
             const dataElements = sheetSectionDataElements
-                .filter((item) => item.section === section.name)
+                .filter(item => item.section === section.name && item.dataSet === section.dataSet)
                 .map(({ name }) => ({ id: getByName(sheetDataElements, name).id }));
 
             const translations = processTranslations(sheets, section.name, "section");
@@ -52,23 +76,6 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         .values()
         .flatten()
         .value();
-
-    const dataElements = sheetDataElements.map(dataElement => {
-        const categoryCombo =
-            sheetCategoryCombos.find(({ name }) => name === dataElement.categoryCombo)?.id ?? defaultCC;
-
-        const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
-
-        const translations = processTranslations(sheets, dataElement.name, "dataElement");
-
-        return {
-            ...dataElement,
-            categoryCombo: { id: categoryCombo },
-            optionSet: optionSet ? { id: optionSet } : undefined,
-            domainType: "AGGREGATE",
-            translations: translations,
-        };
-    });
 
     const categories = sheetCategories.map(category => {
         const categoryOptions = sheetCategoryOptions
@@ -104,22 +111,9 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         return { ...categoryOption, translations };
     });
 
-    const programDataElements = sheetProgramDataElements.map(dataElement => {
-        const optionSet = sheetOptionSets.find(({ name }) => name === dataElement.optionSet)?.id;
-
-        const translations = processTranslations(sheets, dataElement.name, "programDataElement");
-
-        return {
-            ...dataElement,
-            domainType: "TRACKER",
-            optionSet: optionSet ? { id: optionSet } : undefined,
-            translations: translations,
-        };
-    });
-
     return {
         dataSets: buildDataSets(sheets),
-        dataElements: [...dataElements, ...programDataElements],
+        dataElements: buildDataElements(sheets),
         dataElementGroups: buildDataElementGroups(sheets),
         dataElementGroupSets: buildDataElementGroupSets(sheets),
         options,
@@ -138,6 +132,7 @@ export function buildMetadata(sheets: Sheet[], defaultCC: string) {
         programRuleActions: buildProgramRuleActions(sheets),
         programRuleVariables: buildProgramRuleVariables(sheets),
         legendSets: buildLegendSets(sheets),
+        attributes: buildAttributes(sheets),
     };
 }
 
@@ -149,46 +144,48 @@ function buildDataSets(sheets: Sheet[]) {
     const dataSetElements = get("dataSetElements");
     const dataSetInputPeriods = get("dataSetInputPeriods");
     const dataSetSections = get("sections");
-    const dataSetLegends = get("dataSetLegends");
     const categoryCombos = get("categoryCombos");
 
     return dataSets.map(dataSet => {
         let data: MetadataItem = JSON.parse(JSON.stringify(dataSet));
 
-        data.dataSetElements = dataSetElements.filter(dseToFilter => {
-            return dseToFilter.dataSet === data.name;
-        }).map(elements => {
-            return {
-                dataSet: { id: data.id },
-                dataElement: { id: getByName(dataElements, elements.name).id },
-                categoryCombo: elements.categoryCombo ?
-                    { id: getByName(categoryCombos, elements.categoryCombo).id } : undefined,
-            };
-        });
+        data.dataSetElements = dataSetElements
+            .filter(dseToFilter => {
+                return dseToFilter.dataSet === data.name;
+            })
+            .map(elements => {
+                return {
+                    dataSet: { id: data.id },
+                    dataElement: { id: getByName(dataElements, elements.name).id },
+                    categoryCombo: elements.categoryCombo
+                        ? { id: getByName(categoryCombos, elements.categoryCombo).id }
+                        : undefined,
+                };
+            });
 
-        data.sections = dataSetSections.filter(dssToFilter => {
-            return dssToFilter.dataSet === data.name;
-        }).map(section => {
-            return { id: section.id };
-        });
+        data.sections = dataSetSections
+            .filter(dssToFilter => {
+                return dssToFilter.dataSet === data.name;
+            })
+            .map(section => {
+                return { id: section.id };
+            });
 
-        data.dataInputPeriods = dataSetInputPeriods.filter(dsipToFilter => {
-            return dsipToFilter.name === data.name;
-        }).map(inputPeriod => {
-            return {
-                period: { id: inputPeriod.period },
-                openingDate: inputPeriod.openingDate,
-                closingDate: inputPeriod.closingDate,
-            };
-        });
+        data.dataInputPeriods = dataSetInputPeriods
+            .filter(dsipToFilter => {
+                return dsipToFilter.name === data.name;
+            })
+            .map(inputPeriod => {
+                return {
+                    period: { id: inputPeriod.period },
+                    openingDate: inputPeriod.openingDate,
+                    closingDate: inputPeriod.closingDate,
+                };
+            });
 
-        data.legendSets = dataSetLegends.filter(dslToFilter => {
-            return dslToFilter.dataSet === data.name;
-        }).map(legend => {
-            return { id: legend.id };
-        });
-
+        data.legendSets = processItemLegendSets(sheets, data.name, "dataSet");
         data.translations = processTranslations(sheets, data.name, "dataSet");
+        data.attributeValues = processItemAttributes(sheets, data, "dataSet");
 
         replaceById(data, "categoryCombo", categoryCombos);
 
@@ -196,6 +193,43 @@ function buildDataSets(sheets: Sheet[]) {
 
         return { ...data };
     });
+}
+
+function buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "programDataElements") {
+    const get = (name: string) => getItems(sheets, name);
+
+    const dataElements = get(deType);
+    const categoryCombos = get("categoryCombos");
+    const optionSets = get("optionSets");
+
+    return dataElements.map(dataElement => {
+        let data: MetadataItem = JSON.parse(JSON.stringify(dataElement));
+
+        const domainType = deType === "dataElements" ? "AGGREGATE" : "TRACKER";
+
+        const categoryCombo = getByName(categoryCombos, data.categoryCombo)?.id;
+        const optionSet = getByName(optionSets, data.optionSet)?.id;
+        const commentOptionSet = getByName(optionSets, data.commentOptionSet)?.id;
+
+        const translations = processTranslations(sheets, data.name, "dataElement");
+        const attributeValues = processItemAttributes(sheets, data, "dataElement");
+        const legendSets = processItemLegendSets(sheets, data.name, "dataElement");
+
+        return {
+            ...data,
+            categoryCombo: categoryCombo ? { id: categoryCombo } : undefined,
+            optionSet: optionSet ? { id: optionSet } : undefined,
+            commentOptionSet: commentOptionSet ? { id: commentOptionSet } : undefined,
+            domainType: domainType,
+            translations: translations,
+            attributeValues: attributeValues,
+            legendSets: legendSets,
+        };
+    });
+}
+
+function buildDataElements(sheets: Sheet[]) {
+    return [...buildDataElementsType(sheets, "dataElements"), ...buildDataElementsType(sheets, "programDataElements")];
 }
 
 function buildDataElementGroups(sheets: Sheet[]) {
@@ -208,13 +242,15 @@ function buildDataElementGroups(sheets: Sheet[]) {
     return dataElementGroups.map(degGroup => {
         let data: MetadataItem = JSON.parse(JSON.stringify(degGroup));
 
-        data.dataElements = dataElementGroupElements.filter(degeToFilter => {
-            return degeToFilter.dataElementGroup === data.name;
-        }).map(elements => {
-            return {
-                id: getByName(dataElements, elements.name).id,
-            };
-        });
+        data.dataElements = dataElementGroupElements
+            .filter(degeToFilter => {
+                return degeToFilter.dataElementGroup === data.name;
+            })
+            .map(elements => {
+                return {
+                    id: getByName(dataElements, elements.name).id,
+                };
+            });
 
         data.translations = processTranslations(sheets, data.name, "dataElementGroup");
 
@@ -232,17 +268,43 @@ function buildDataElementGroupSets(sheets: Sheet[]) {
     return dataElementGroupSets.map(degsGroup => {
         let data: MetadataItem = JSON.parse(JSON.stringify(degsGroup));
 
-        data.dataElementGroups = dataElementGroupSetGroups.filter(degsgToFilter => {
-            return degsgToFilter.dataElementGroupSet === data.name;
-        }).map(groups => {
-            return {
-                id: getByName(dataElementGroups, groups.name).id,
-            };
-        });
+        data.dataElementGroups = dataElementGroupSetGroups
+            .filter(degsgToFilter => {
+                return degsgToFilter.dataElementGroupSet === data.name;
+            })
+            .map(groups => {
+                return {
+                    id: getByName(dataElementGroups, groups.name).id,
+                };
+            });
 
         data.translations = processTranslations(sheets, data.name, "dataElementGroupSet");
 
         return { ...data };
+    });
+}
+
+function buildAttributes(sheets: Sheet[]) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const attributes = get("attributes");
+    const optionSets = get("optionSets");
+
+    return attributes.map(attribute => {
+        let data: MetadataItem = JSON.parse(JSON.stringify(attribute));
+
+        const optionSetId = optionSets.find(osToFilter => {
+            return osToFilter.name === data.optionSet;
+        })?.id;
+        const optionSet = optionSetId
+            ? {
+                  id: optionSetId,
+              }
+            : undefined;
+
+        data.translation = processTranslations(sheets, data.name, "attribute");
+
+        return { ...data, optionSet };
     });
 }
 
@@ -261,12 +323,14 @@ function buildPrograms(sheets: Sheet[]) {
         let data = { ...program } as MetadataItem;
 
         const trackedEntityType = {
-            id: getByName(trackedEntityTypes, program.trackedEntityType)?.id
+            id: getByName(trackedEntityTypes, program.trackedEntityType)?.id,
         };
 
-        const programStages = pStages.filter((pStageToFilter) => {
-            return pStageToFilter.program === program.name;
-        }).map(programStage => ({ id: programStage.id }));
+        const programStages = pStages
+            .filter(pStageToFilter => {
+                return pStageToFilter.program === program.name;
+            })
+            .map(programStage => ({ id: programStage.id }));
 
         replaceById(data, "categoryCombo", categoryCombos);
 
@@ -279,16 +343,27 @@ function buildPrograms(sheets: Sheet[]) {
             replaceById(data, "relatedProgram", programs);
 
             // Event Program Stages belong to programStageSections
-            const programSections = pSections.filter((pSectionToFilter) => {
-                return pSectionToFilter?.program === program.name;
-            }).map(programSection => ({ id: programSection.id }));
+            const programSections = pSections
+                .filter(pSectionToFilter => {
+                    return pSectionToFilter?.program === program.name;
+                })
+                .map(programSection => ({ id: programSection.id }));
 
-            const programTrackedEntityAttributes = programTeas.filter(pTeasToFilter => {
-                return pTeasToFilter.program === program.name;
-            }).map(pTea => buildProgTEA(program, pTea, trackedEntityAttributes));
+            const programTrackedEntityAttributes = programTeas
+                .filter(pTeasToFilter => {
+                    return pTeasToFilter.program === program.name;
+                })
+                .map(pTea => buildProgTEA(program, pTea, trackedEntityAttributes));
             addSortOrder(programTrackedEntityAttributes);
 
-            return { ...data, programType, trackedEntityType, programStages, programSections, programTrackedEntityAttributes };
+            return {
+                ...data,
+                programType,
+                trackedEntityType,
+                programStages,
+                programSections,
+                programTrackedEntityAttributes,
+            };
         } else {
             // WITHOUT_REGISTRATION == Event Program
             const programType = "WITHOUT_REGISTRATION";
@@ -306,31 +381,37 @@ function buildprogramSections(sheets: Sheet[]) {
 
     const sectionsAttributes = get("programSectionsTrackedEntityAttributes").map(psTrackedEntityAttribute => {
         const programSection = programSections.find(pSectionToFind => {
-            return pSectionToFind.name === psTrackedEntityAttribute.programSection &&
+            return (
+                pSectionToFind.name === psTrackedEntityAttribute.programSection &&
                 pSectionToFind.program === psTrackedEntityAttribute.program
+            );
         })?.id;
 
         const trackedEntityAttribute = getByName(teAttributes, psTrackedEntityAttribute.name)?.id;
 
-        return { programSection, trackedEntityAttribute }
+        return { programSection, trackedEntityAttribute };
     });
 
     return programSections.map(programSection => {
         if (programSection.sortOrder === undefined) {
-            addSortOrder(programSections.filter((pSectionToFilter) => {
-                return pSectionToFilter.program === programSection.program;
-            }));
+            addSortOrder(
+                programSections.filter(pSectionToFilter => {
+                    return pSectionToFilter.program === programSection.program;
+                })
+            );
         }
 
-        replaceById(programSection, "program", programs)
+        replaceById(programSection, "program", programs);
 
         const renderType = addRenderType(programSection, "LISTING");
 
-        const trackedEntityAttributes = sectionsAttributes.filter((sectionsAttributeToFilter) => {
-            return sectionsAttributeToFilter?.programSection === programSection.id;
-        }).map(sectionsAttribute => ({ id: sectionsAttribute.trackedEntityAttribute }));
+        const trackedEntityAttributes = sectionsAttributes
+            .filter(sectionsAttributeToFilter => {
+                return sectionsAttributeToFilter?.programSection === programSection.id;
+            })
+            .map(sectionsAttribute => ({ id: sectionsAttribute.trackedEntityAttribute }));
 
-        return { ...programSection, renderType, trackedEntityAttributes }
+        return { ...programSection, renderType, trackedEntityAttributes };
     });
 }
 
@@ -344,36 +425,44 @@ function buildProgramStages(sheets: Sheet[]) {
     const programDataElements = get("programDataElements");
 
     return programStages.map(programStage => {
-        const programStageSections = psSections.filter((psSectionToFilter) => {
-            return psSectionToFilter?.programStage === programStage.name &&
-                psSectionToFilter?.program === programStage.program;
-        }).map(psSection => ({ id: psSection.id }));
+        const programStageSections = psSections
+            .filter(psSectionToFilter => {
+                return (
+                    psSectionToFilter?.programStage === programStage.name &&
+                    psSectionToFilter?.program === programStage.program
+                );
+            })
+            .map(psSection => ({ id: psSection.id }));
 
-        const programStageDataElements = psDataElements.filter((psDataElementToFilter) => {
-            return psDataElementToFilter?.program === programStage.program &&
-                psDataElementToFilter?.programStage === programStage.name;
-        }).map((data, index) => ({
-            id: data.id,
-            programStage: {
-                id: programStage.id
-            },
-            sortOrder: index,
-            compulsory: data.compulsory,
-            allowProvidedElsewhere: data.allowProvidedElsewhere,
-            displayInReports: data.displayInReports,
-            allowFutureDate: data.allowFutureDate,
-            skipSynchronization: data.skipSynchronization,
-            renderType: addRenderType(data, "DEFAULT"),
-            dataElement: {
-                id: getByName(programDataElements, data.name)?.id
-            },
-        }));
+        const programStageDataElements = psDataElements
+            .filter(psDataElementToFilter => {
+                return (
+                    psDataElementToFilter?.program === programStage.program &&
+                    psDataElementToFilter?.programStage === programStage.name
+                );
+            })
+            .map((data, index) => ({
+                id: data.id,
+                programStage: {
+                    id: programStage.id,
+                },
+                sortOrder: index,
+                compulsory: data.compulsory,
+                allowProvidedElsewhere: data.allowProvidedElsewhere,
+                displayInReports: data.displayInReports,
+                allowFutureDate: data.allowFutureDate,
+                skipSynchronization: data.skipSynchronization,
+                renderType: addRenderType(data, "DEFAULT"),
+                dataElement: {
+                    id: getByName(programDataElements, data.name)?.id,
+                },
+            }));
 
         replaceById(programStage, "program", programs);
 
         const translations = processTranslations(sheets, programStage.name, "programStage");
 
-        return { ...programStage, programStageDataElements, programStageSections, translations }
+        return { ...programStage, programStageDataElements, programStageSections, translations };
     });
 }
 
@@ -386,38 +475,44 @@ function buildProgramStageSections(sheets: Sheet[]) {
     const programDataElements = get("programDataElements");
 
     const programStageSectionsDataElements = pssDataElements.map(pssDataElement => {
-        const programStageSectionId = programStageSections.find(
-            psSectionToFind => {
-                return psSectionToFind.name === pssDataElement.programStageSection &&
-                    psSectionToFind.programStage === pssDataElement.programStage &&
-                    psSectionToFind.program === pssDataElement.program
-            }
-        )?.id;
+        const programStageSectionId = programStageSections.find(psSectionToFind => {
+            return (
+                psSectionToFind.name === pssDataElement.programStageSection &&
+                psSectionToFind.programStage === pssDataElement.programStage &&
+                psSectionToFind.program === pssDataElement.program
+            );
+        })?.id;
 
         const dataElementId = getByName(programDataElements, pssDataElement.name)?.id;
 
-        return { programStageSectionId, dataElementId }
+        return { programStageSectionId, dataElementId };
     });
 
     return programStageSections.map(programStageSection => {
-        if (typeof programStageSection.sortOrder === 'undefined') {
-            addSortOrder(programStageSections.filter((psSectionToFilter) => {
-                return psSectionToFilter.program === programStageSection.program &&
-                    psSectionToFilter.programStage === programStageSection.programStage
-            }));
+        if (typeof programStageSection.sortOrder === "undefined") {
+            addSortOrder(
+                programStageSections.filter(psSectionToFilter => {
+                    return (
+                        psSectionToFilter.program === programStageSection.program &&
+                        psSectionToFilter.programStage === programStageSection.programStage
+                    );
+                })
+            );
         }
 
         replaceById(programStageSection, "programStage", programStages);
 
         const renderType = addRenderType(programStageSection, "LISTING");
 
-        const dataElements = programStageSectionsDataElements.filter((pssDataElementToFilter) => {
-            return pssDataElementToFilter?.programStageSectionId === programStageSection?.id;
-        }).map(pssDataElement => ({ id: pssDataElement.dataElementId }));
+        const dataElements = programStageSectionsDataElements
+            .filter(pssDataElementToFilter => {
+                return pssDataElementToFilter?.programStageSectionId === programStageSection?.id;
+            })
+            .map(pssDataElement => ({ id: pssDataElement.dataElementId }));
 
         delete programStageSection.program;
 
-        return { ...programStageSection, renderType, dataElements }
+        return { ...programStageSection, renderType, dataElements };
     });
 }
 
@@ -439,7 +534,7 @@ function buildProgTEA(program: MetadataItem, pTea: MetadataItem, trackedEntityAt
             valueType: tea.valueType,
             unique: tea?.unique,
         },
-    }
+    };
 }
 
 function buildLegendSets(sheets: Sheet[]) {
@@ -449,16 +544,18 @@ function buildLegendSets(sheets: Sheet[]) {
     const legendsArray = get("legends");
 
     return legendSets.map(legendSet => {
-        const legends = legendsArray.filter(legendToFilter => {
-            return legendToFilter.legendSet === legendSet.name;
-        }).map(legend => ({
-            id: legend.id,
-            name: legend.name,
-            startValue: legend.startValue,
-            endValue: legend.endValue,
-        }));
+        const legends = legendsArray
+            .filter(legendToFilter => {
+                return legendToFilter.legendSet === legendSet.name;
+            })
+            .map(legend => ({
+                id: legend.id,
+                name: legend.name,
+                startValue: legend.startValue,
+                endValue: legend.endValue,
+            }));
 
-        return { ...legendSet, legends }
+        return { ...legendSet, legends };
     });
 }
 
@@ -467,25 +564,17 @@ function buildTrackedEntityAttributes(sheets: Sheet[]) {
 
     const trackedEntityAttributes = get("trackedEntityAttributes");
     const optionSets = get("optionSets");
-    const legendSetsArray = get("legendSets");
-    const teasLegends = get("trackedEntityAttributesLegends").map(teasLegend => {
-        let data = { ...teasLegend } as MetadataItem;
-        data.id = getByName(legendSetsArray, teasLegend.name).id;
-        return data;
-    })
 
     return trackedEntityAttributes.map(trackedEntityAttribute => {
         let data = { ...trackedEntityAttribute } as MetadataItem;
 
         replaceById(data, "optionSet", optionSets);
 
-        const legendSets = teasLegends.filter(teasLegendToFilter => {
-            return teasLegendToFilter.trackedEntityAttribute === trackedEntityAttribute.name;
-        }).map(teasLegend => ({ id: teasLegend.id }));
+        const legendSets = processItemLegendSets(sheets, data.name, "trackedEntityAttribute");
 
         const translations = processTranslations(sheets, trackedEntityAttribute.name, "trackedEntityAttribute");
 
-        return { ...data, legendSets, translations }
+        return { ...data, legendSets, translations };
     });
 }
 
@@ -500,34 +589,38 @@ function buildTrackedEntityTypes(sheets: Sheet[]) {
     return trackedEntityTypes.map(trackedEntityType => {
         let data = { ...trackedEntityType } as MetadataItem;
 
-        const trackedEntityTypeAttributes = teaAttributes.filter(teaAttributeToFilter => {
-            return teaAttributeToFilter.trackedEntityType === trackedEntityType.name;
-        }).map(trackedEntityTypeAttribute => {
-            const displayName = trackedEntityTypeAttribute.name;
-            const trackedEntityAttribute = getByName(trackedEntityAttributes, displayName);
-            const optionSetId = getByName(optionSets, trackedEntityAttribute.optionSet)?.id;
+        const trackedEntityTypeAttributes = teaAttributes
+            .filter(teaAttributeToFilter => {
+                return teaAttributeToFilter.trackedEntityType === trackedEntityType.name;
+            })
+            .map(trackedEntityTypeAttribute => {
+                const displayName = trackedEntityTypeAttribute.name;
+                const trackedEntityAttribute = getByName(trackedEntityAttributes, displayName);
+                const optionSetId = getByName(optionSets, trackedEntityAttribute.optionSet)?.id;
 
-            return {
-                displayName,
-                text: displayName,
-                value: trackedEntityAttribute.id,
-                valueType: trackedEntityAttribute.valueType,
-                unique: trackedEntityAttribute?.unique,
-                displayInList: trackedEntityTypeAttribute.displayInList,
-                mandatory: trackedEntityTypeAttribute.mandatory,
-                searchable: trackedEntityTypeAttribute.searchable,
-                optionSet: optionSetId ? {
-                    id: optionSetId,
-                } : undefined,
-                trackedEntityAttribute: {
-                    id: trackedEntityAttribute.id,
-                }
-            };
-        });
+                return {
+                    displayName,
+                    text: displayName,
+                    value: trackedEntityAttribute.id,
+                    valueType: trackedEntityAttribute.valueType,
+                    unique: trackedEntityAttribute?.unique,
+                    displayInList: trackedEntityTypeAttribute.displayInList,
+                    mandatory: trackedEntityTypeAttribute.mandatory,
+                    searchable: trackedEntityTypeAttribute.searchable,
+                    optionSet: optionSetId
+                        ? {
+                              id: optionSetId,
+                          }
+                        : undefined,
+                    trackedEntityAttribute: {
+                        id: trackedEntityAttribute.id,
+                    },
+                };
+            });
 
         const translations = processTranslations(sheets, trackedEntityType.name, "trackedEntityType");
 
-        return { ...data, trackedEntityTypeAttributes, translations }
+        return { ...data, trackedEntityTypeAttributes, translations };
     });
 }
 
@@ -632,18 +725,63 @@ function processTranslations(sheets: Sheet[], parentDataName: string, metadataTy
     const get = (name: string) => getItems(sheets, name);
     const translations = get(`${metadataType}Translations`);
 
-    return translations.filter(translationsToFilter => {
-        return translationsToFilter[metadataType] === parentDataName;
-    }).map(translation => {
-        const localeKey: localeKey = translation.locale ?? "default";
-        const locale: string | undefined = localeDictionary[localeKey];
+    return translations
+        .filter(translationsToFilter => {
+            return translationsToFilter[metadataType] === parentDataName;
+        })
+        .map(translation => {
+            const localeKey: localeKey = translation.locale ?? "default";
+            const locale: string | undefined = localeDictionary[localeKey];
 
-        return locale ? {
-            property: translation.name,
-            locale: locale,
-            value: translation.value,
-        } : {};
-    });
+            return locale
+                ? {
+                      property: translation.name,
+                      locale: locale,
+                      value: translation.value,
+                  }
+                : {};
+        });
+}
+
+function processItemAttributes(sheets: Sheet[], parentData: MetadataItem, metadataType: string) {
+    const get = (name: string) => getItems(sheets, name);
+    const attributes = get("attributes");
+
+    return attributes
+        .filter(attribute => {
+            return attribute[`${metadataType}Attribute`] === "TRUE";
+        })
+        .flatMap(atribute => {
+            const value = parentData[atribute.name];
+            delete parentData[atribute.name];
+
+            return value
+                ? {
+                      value: value,
+                      attribute: {
+                          id: atribute.id,
+                          name: atribute.name,
+                      },
+                  }
+                : [];
+        });
+}
+
+function processItemLegendSets(sheets: Sheet[], parentDataName: string, metadataType: string) {
+    const get = (name: string) => getItems(sheets, name);
+
+    const legendSets = get("legendSets");
+    const itemLegends = get(`${metadataType}Legends`);
+
+    return itemLegends
+        .filter(itemLegendToFilter => {
+            return itemLegendToFilter[metadataType] === parentDataName;
+        })
+        .map(legend => {
+            const legendId = getByName(legendSets, legend.name)?.id;
+
+            return { id: legendId };
+        });
 }
 
 // Add sortOrder to filteredMetadataItems, these items belong to the same 'group'.
@@ -658,7 +796,7 @@ function addSortOrder(filteredMetadataItems: MetadataItem[]) {
 function addRenderType(metadataItem: MetadataItem, defaultValue: string) {
     const renderType = {
         DESKTOP: { type: metadataItem.renderTypeDesktop ?? defaultValue },
-        MOBILE: { type: metadataItem.renderTypeMobile ?? defaultValue }
+        MOBILE: { type: metadataItem.renderTypeMobile ?? defaultValue },
     };
     delete metadataItem.renderTypeDesktop;
     delete metadataItem.renderTypeMobile;
