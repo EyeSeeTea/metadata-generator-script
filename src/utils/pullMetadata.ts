@@ -18,16 +18,21 @@ const allowedTypesArray = [
     "trackedEntityTypes",
     "trackedEntityAttributes",
     "programRules",
-    "programRuleActions",
+    // programRuleActions doesn't have a name field but its present in the spreadsheet
+    // "programRuleActions",
     "programRuleVariables",
     "dataElements",
+    "dataElementGroups",
+    "dataElementGroupSets",
     "dataSets",
     "sections",
-    "Categories",
+    "categories",
     "categoryCombos",
     "categoryOptions",
-    "optionSets",
     "options",
+    "optionSets",
+    "legendSets",
+    "attributes",
 ];
 
 // Get names from spreadsheet data
