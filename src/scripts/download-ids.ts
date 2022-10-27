@@ -4,7 +4,7 @@ import { D2Api } from "@eyeseetea/d2-api/2.34";
 import { config } from "dotenv-flow";
 import { google } from "googleapis";
 import _ from "lodash";
-import { loadSheet } from "../utils/mainUtils";
+import { loadSheet } from "../utils/utils";
 import { pullMetadata } from "../utils/pullMetadata";
 
 async function downloadIds() {

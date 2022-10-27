@@ -5,7 +5,7 @@ import { D2Api } from "@eyeseetea/d2-api/2.34";
 import { config } from "dotenv-flow";
 import { google } from "googleapis";
 import _ from "lodash";
-import { loadSheet, uploadMetadata } from "../utils/mainUtils";
+import { loadSheet, uploadMetadata } from "../utils/utils";
 import { buildMetadata } from "../utils/buildMetadata";
 
 async function main() {
