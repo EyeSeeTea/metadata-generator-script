@@ -660,8 +660,10 @@ function buildProgramRuleActions(sheets: Sheet[]) {
         replaceById(data, "trackedEntityAttribute", attrs);
         replaceById(data, "programStage", stages);
         replaceById(data, "programStageSection", sections);
+        const programRuleActionType = data.name;
+        delete data.name;
 
-        return data;
+        return { programRuleActionType, ...data };
     });
 }
 
