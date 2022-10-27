@@ -3,11 +3,13 @@ import _ from "lodash";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { createObjectCsvWriter } from "csv-writer";
+import { getItems } from "./utils";
 
 const log = console.log,
     env = process.env;
 
 type MetadataQuery = { [key: string]: any };
+type Query = { type: string; value: MetadataQuery };
 type FilterNames = { [key: string]: string[] };
 
 const allowedTypesArray = [
@@ -18,8 +20,6 @@ const allowedTypesArray = [
     "trackedEntityTypes",
     "trackedEntityAttributes",
     "programRules",
-    // programRuleActions doesn't have a name field but its present in the spreadsheet
-    // "programRuleActions",
     "programRuleVariables",
     "dataElements",
     "dataElementGroups",
@@ -40,7 +40,7 @@ function getNamesFromSpreadsheet(sheets: Sheet[]) {
     let filterNames: FilterNames = {};
 
     sheets.forEach(sheet => {
-        if (sheet.items.length !== 0) {
+        if (!_.isEmpty(sheet.items)) {
             filterNames[sheet.name] = [];
             sheet.items.forEach(item => {
                 filterNames[sheet.name].push(item["name"]);
@@ -60,7 +60,7 @@ function makeMetadataItemQuery(itemType: string, namesToFilter?: string[]) {
         },
     };
 
-    if (typeof namesToFilter !== undefined || namesToFilter?.length !== 0) {
+    if (!_.isEmpty(namesToFilter)) {
         query[itemType]["filter"] = { name: { in: namesToFilter } };
     }
     return query;
@@ -68,7 +68,7 @@ function makeMetadataItemQuery(itemType: string, namesToFilter?: string[]) {
 
 // Make filtered query for each type present in names
 function makeQueries(allowedTypesArray: string[], names: FilterNames) {
-    let queries: { type: string; value: MetadataQuery }[] = [];
+    let queries: Query[] = [];
 
     Object.entries(names).forEach(([metadataItemType, nameArray]) => {
         if (allowedTypesArray.includes(metadataItemType)) {
@@ -92,18 +92,16 @@ function makeCsvHeader(element: object) {
     ];
 
     keys.forEach(headerItem => {
-        if (keys.includes(headerItem)) {
-            csvHeaders.push({
-                id: headerItem,
-                title: headerItem,
-            });
-        }
+        csvHeaders.push({
+            id: headerItem,
+            title: headerItem,
+        });
     });
 
     return csvHeaders;
 }
 
-function writeCsv(metadataType: string, metadata: [object]) {
+function writeCsv(metadataType: string, metadata: MetadataItem[]) {
     const filePath = `${env.PULL_METADATA_CSV_PATH}${metadataType}.csv`;
 
     const header = makeCsvHeader(metadata[0]);
@@ -114,22 +112,72 @@ function writeCsv(metadataType: string, metadata: [object]) {
     console.debug(`Written: ${filePath}`);
 }
 
+async function pullGenericMetadata(api: D2Api, query: Query) {
+    const metadata: MetadataItem[] = await api.metadata
+        .get(query.value)
+        .getData()
+        .then(results => {
+            let resultsAsMetadataItem = _.omit(results, "system") as MetadataItem;
+            return resultsAsMetadataItem[query.type];
+        });
+
+    return metadata;
+}
+
+async function pullProgramRulesMetadata(api: D2Api, query: Query, praSheet: MetadataItem[]) {
+    const prQuery = { ...query };
+    prQuery.value.programRules.fields.name = true;
+    prQuery.value.programRules.fields.programRuleActions = true;
+
+    const metadata = await pullGenericMetadata(api, prQuery);
+
+    const prMetadata = metadata.map(item => ({ id: item.id }));
+    if (!_.isEmpty(prMetadata)) {
+        writeCsv(query.type, prMetadata);
+    }
+
+    const praQuerys: Query = {
+        type: "programRuleActions",
+        value: {
+            programRuleActions: {
+                fields: { id: true, programRuleActionType: true, programRule: true },
+                filter: {
+                    id: {
+                        in: metadata.flatMap(prItem => prItem.programRuleActions.map((item: { id: any }) => item.id)),
+                    },
+                },
+            },
+        },
+    };
+
+    const praMetadata = await pullGenericMetadata(api, praQuerys);
+
+    const praMetadataIds = praSheet.map(praSheetItem => {
+        const praMetadataItem = praMetadata.find(praMetaToFilter => {
+            const prName = metadata.find(item => item.id === praMetaToFilter.programRule.id)?.name;
+            return prName === praSheetItem.programRule && praMetaToFilter.programRuleActionType === praSheetItem.name;
+        });
+        return { id: praMetadataItem?.id };
+    });
+
+    if (!_.isEmpty(praMetadataIds)) {
+        writeCsv("programRuleActions", praMetadataIds);
+    }
+}
+
 export async function pullMetadata(api: D2Api, sheets: Sheet[]) {
     const filterNames = getNamesFromSpreadsheet(sheets);
 
     const queries = makeQueries(allowedTypesArray, filterNames);
 
     queries.forEach(async query => {
-        const metadata = await api.metadata
-            .get(query.value)
-            .getData()
-            .then(results => {
-                let resultsAsMetadataItem = _.omit(results, "system") as MetadataItem;
-                return resultsAsMetadataItem[query.type];
-            });
-
-        if (metadata.length !== 0) {
-            writeCsv(query.type, metadata);
+        if (query.type === "programRules") {
+            await pullProgramRulesMetadata(api, query, getItems(sheets, "programRuleActions"));
+        } else {
+            const metadata = await pullGenericMetadata(api, query);
+            if (!_.isEmpty(metadata)) {
+                writeCsv(query.type, metadata);
+            }
         }
     });
 }
