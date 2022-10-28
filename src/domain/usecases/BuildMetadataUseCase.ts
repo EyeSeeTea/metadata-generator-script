@@ -1,6 +1,7 @@
 import _ from "lodash";
-import { MetadataItem } from "../entities/MetadataItem";
-import { Sheet } from "../entities/Sheet";
+import { MetadataItem } from "../domain/entities/MetadataItem";
+import { Sheet } from "../domain/entities/Sheet";
+import { getItems } from "./utils";
 
 type localeKey =
     | "Afrikaans"
@@ -660,8 +661,10 @@ function buildProgramRuleActions(sheets: Sheet[]) {
         replaceById(data, "trackedEntityAttribute", attrs);
         replaceById(data, "programStage", stages);
         replaceById(data, "programStageSection", sections);
+        const programRuleActionType = data.name;
+        delete data.name;
 
-        return data;
+        return { programRuleActionType, ...data };
     });
 }
 
@@ -802,11 +805,6 @@ function addRenderType(metadataItem: MetadataItem, defaultValue: string) {
     delete metadataItem.renderTypeMobile;
 
     return renderType;
-}
-
-// Return all the items (rows) from the sheet with the given name.
-function getItems(sheets: Sheet[], name: string) {
-    return sheets.find(sheet => sheet.name === name)?.items ?? [];
 }
 
 // Return the item from the list that has the given name.

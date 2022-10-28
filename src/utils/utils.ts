@@ -38,6 +38,7 @@ function makeSeed(item: MetadataItem, sheetName: string) {
     if (sheetName === "sections") return `${seed0}-${item.dataSet}`;
     if (sheetName === "programStages") return `${seed0}-${item.program}`;
     if (sheetName === "programSections") return `${seed0}-${item.program}`;
+    if (sheetName === "programRuleActions") return `${seed0}-${item.programRule}`;
     if (sheetName === "programTrackedEntityAttributes") return `${seed0}-${item.program}`;
     if (sheetName === "programStageSections") return `${seed0}-${item.program}-${item.programStage}`;
     if (sheetName === "programStageDataElements") return `${seed0}-${item.program}-${item.programStage}`;
@@ -60,4 +61,9 @@ export async function uploadMetadata(api: D2Api, metadata: any) {
         ) ?? [];
 
     console.log([result?.status, ...messages].join("\n"));
+}
+
+// Return all the items (rows) from the sheet with the given name.
+export function getItems(sheets: Sheet[], name: string) {
+    return sheets.find(sheet => sheet.name === name)?.items ?? [];
 }
