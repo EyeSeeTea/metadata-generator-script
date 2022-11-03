@@ -4,10 +4,10 @@ import { Sheet } from "domain/entities/Sheet";
 import { sheets_v4 } from "googleapis";
 import { getUid } from "utils/uid";
 import { MetadataItem } from "domain/entities/MetadataItem";
-import { SheetsReposirory } from "domain/repositories/SheetsReposirory";
+import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import log from "utils/log";
 
-export class GoogleSheetsRepository implements SheetsReposirory {
+export class GoogleSheetsRepository implements SheetsRepository {
     constructor(private spreadsheets: sheets_v4.Resource$Spreadsheets) {}
 
     async getSpreadsheet(googleSheetId: string): Promise<Sheet[]> {
