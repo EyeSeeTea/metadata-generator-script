@@ -1,7 +1,20 @@
 import _ from "lodash";
-import { command, string, option, restPositionals, optional, subcommands, boolean, flag } from "cmd-ts";
-import { getApiUrlOption, getD2Api, GoogleApiKey, SpreadsheetId, filePath } from "../common";
-import log from "../../utils/log";
+import { command, option, optional, subcommands, boolean, flag } from "cmd-ts";
+import {
+    getApiUrlOption,
+    getD2Api,
+    GoogleApiKey,
+    SpreadsheetId,
+    FilePath,
+    getGoogleSheetsApi,
+    DirPath,
+} from "../common";
+import log from "utils/log";
+import { GoogleSheetsRepository } from "data/GoogleSheetsRepository";
+import { MetadataD2Repository } from "data/MetadataD2Repository";
+import { BuildMetadataUseCase } from "domain/usecases/BuildMetadataUseCase";
+import { DownloadIdsUseCase } from "domain/usecases/DownloadIdsUseCase";
+import { makeUploadMetadataLog, writeToJSON } from "utils/utils";
 
 const defaultArgs = {
     url: getApiUrlOption({ long: "dhis-url" }),
@@ -26,63 +39,58 @@ export function getCommand() {
         args: {
             ...defaultArgs,
             path: option({
-                type: optional(filePath),
+                type: optional(FilePath),
                 long: "path",
                 short: "p",
                 description: "JSON output path (file or directory)",
+                defaultValue: () => "out.json",
             }),
-            UpdateServer: flag({
+            LocalRun: flag({
                 type: boolean,
-                long: "update-server",
+                long: "local-run",
                 short: "l",
-                description: "Upload metadata to DHIS2 instance",
-                defaultValue: () => true,
+                description: "Don't upload metadata to DHIS2 instance",
+            }),
+            UpdateCategoryOptionCombos: flag({
+                type: boolean,
+                long: "update-coc",
+                short: "c",
+                description: "Update category option combos",
             }),
         },
         handler: async args => {
-            // Upload Server script.
+            try {
+                const sheetsApi = getGoogleSheetsApi(args.gKey);
+                const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
+                log.info(`Reading https://docs.google.com/spreadsheets/d/${args.sheetId} ...`);
 
-            import fs from "fs";
-            import { D2Api } from "@eyeseetea/d2-api/2.34";
-            import { config } from "dotenv-flow";
-            import { google } from "googleapis";
-            import _ from "lodash";
-            import { loadSheet, uploadMetadata } from "../../utils/mainUtils";
-            import { buildMetadata } from "../../utils/buildMetadata";
+                log.info("Converting to metadata...");
+                const buildMetadata = new BuildMetadataUseCase(sheetsRepository);
+                const metadata = await buildMetadata.execute(args.sheetId);
 
-            async function uploadServer() {
-                config(); // fill variable process.env from ".env.*" files
-                const log = console.log,
-                    env = process.env; // shortcuts
+                log.info(`Writing metadata to ${args.path} ...`);
+                writeToJSON(metadata, args.path);
 
-                log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
-                const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
+                if (args.LocalRun === false) {
+                    log.info(`Updating it on server at ${args.url} ...`);
+                    const api = getD2Api(args.url);
+                    const MetadataRepository = new MetadataD2Repository(api);
+                    const result = await MetadataRepository.uploadMetadata(metadata);
+                    const messages = makeUploadMetadataLog(result);
 
-                const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
-                const sheets = data.sheets?.filter(sheet => sheet.properties?.title != "DHIS2").map(loadSheet) ?? [];
+                    log.info([result?.status, ...messages].join("\n"));
 
-                log("Converting to metadata...");
-                const metadata = buildMetadata(sheets, env.DEFAULT_CATEGORY_COMBO_ID ?? "");
-
-                log("Writing it to out.json ...");
-                fs.writeFileSync("out.json", JSON.stringify(metadata, null, 4));
-
-                if (env.UPDATE_SERVER === "true") {
-                    log(`Updating it on server at ${env.DHIS2_BASE_URL} ...`);
-                    const api = new D2Api({
-                        baseUrl: env.DHIS2_BASE_URL,
-                        auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
-                    });
-                    await uploadMetadata(api, metadata);
-
-                    if (env.UPDATE_CATEGORY_OPTION_COMBOS === "true") {
-                        log("Updating category option combos...");
-                        await api.maintenance.categoryOptionComboUpdate().getData();
+                    if (args.UpdateCategoryOptionCombos === true) {
+                        log.info("Updating category option combos...");
+                        await MetadataRepository.updateCategoryOptionCombos();
                     }
                 }
-            }
 
-            uploadServer();
+                process.exit(0);
+            } catch (error: any) {
+                log.error(error);
+                process.exit(1);
+            }
         },
     });
 
@@ -92,44 +100,30 @@ export function getCommand() {
         args: {
             ...defaultArgs,
             path: option({
-                type: optional(filePath),
+                type: optional(DirPath),
                 long: "path",
                 short: "p",
-                description: "JSON output path (file or directory)",
+                description: "CSV output path (file or directory)",
             }),
         },
-        handler: async () => {
-            // Pull IDs from DHIS2 Instance script.
+        handler: async args => {
+            try {
+                const sheetsApi = getGoogleSheetsApi(args.gKey);
+                const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
 
-            import { D2Api } from "@eyeseetea/d2-api/2.34";
-            import { config } from "dotenv-flow";
-            import { google } from "googleapis";
-            import _ from "lodash";
-            import { loadSheet } from "../../utils/mainUtils";
-            import { pullMetadata } from "../../utils/pullMetadata";
+                log.info(`Getting IDs from server at ${args.url} ...`);
+                const api = getD2Api(args.url);
+                const MetadataRepository = new MetadataD2Repository(api);
 
-            async function download_ids() {
-                config(); // fill variable process.env from ".env.*" files
-                const log = console.log,
-                    env = process.env; // shortcuts
+                log.info("Writing CSVs...");
+                const downloadIds = new DownloadIdsUseCase(sheetsRepository, MetadataRepository, args.path);
+                await downloadIds.execute(args.sheetId);
 
-                log(`Reading https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID} ...`);
-                const { spreadsheets } = google.sheets({ version: "v4", auth: env.GOOGLE_API_KEY });
-
-                const { data } = await spreadsheets.get({ spreadsheetId: env.GOOGLE_SHEET_ID, includeGridData: true });
-                const sheets = data.sheets?.filter(sheet => sheet.properties?.title != "DHIS2").map(loadSheet) ?? [];
-
-                const api = new D2Api({
-                    baseUrl: env.DHIS2_BASE_URL,
-                    auth: { username: env.DHIS2_USERNAME ?? "", password: env.DHIS2_PASSWORD ?? "" },
-                });
-
-                pullMetadata(api, sheets);
+                process.exit(0);
+            } catch (error) {
+                log.error(error);
+                process.exit(1);
             }
-
-            download_ids();
-
-            process.exit(0);
         },
     });
 
