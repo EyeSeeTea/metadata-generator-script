@@ -1,22 +1,18 @@
 {
     "compilerOptions": {
-        "target": "es2015",
-        "allowJs": true,
-        "skipLibCheck": true,
-        "esModuleInterop": true,
-        "allowSyntheticDefaultImports": true,
         "strict": true,
-        "forceConsistentCasingInFileNames": true,
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "noEmit": true,
-        "jsx": "preserve",
-        "noUnusedParameters": false,
-        "noUnusedLocals": false,
-        "experimentalDecorators": true,
-        "lib": ["dom", "dom.iterable", "esnext"]
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "noUncheckedIndexedAccess": true,
+        "target": "esnext"
     },
+    "extends": "./tsconfig.base.json",
+    "exclude": [
+        "node_modules",
+        "test",
+        "tests",
+        "__test__",
+        "dist"
+    ],
     "include": ["src"]
 }

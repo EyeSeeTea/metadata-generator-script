@@ -4,29 +4,49 @@ Script to generate dhis2 metadata from google sheets.
 
 ## Usage
 
-To use this script we need to create a `.env.local` file in the root
-directory of the project. This file will be ignored by git, but
-**please be careful with your credentials**.
-
-It should look like this:
-
-```ini
-# common
-GOOGLE_API_KEY=...
-GOOGLE_SHEET_ID=...
-DHIS2_BASE_URL=...
-DHIS2_USERNAME=...
-DHIS2_PASSWORD=...
-# build-metadata only
-UPDATE_CATEGORY_OPTION_COMBOS=false # true or false
-UPDATE_SERVER=false # true or false
-# download-ids only
-PULL_METADATA_CSV_PATH=...
-```
-
 The first time, we have to run `yarn install` to install all the dependencies.
 After that, you can run `yarn build-metadata` to generate and update the metadata
 or `yarn download-ids` to get the metadata IDs.
+
+### build-metadata:
+
+Build metadata JSON from a spreadsheet and upload it to DHIS2 instance:
+
+```
+OPTIONS:
+  --dhis-url <str>         - http://USERNAME:PASSWORD@HOST:PORT
+  --google-key, -g <value> - Google Api key
+  --sheet-id, -s <value>   - Google Spreadsheet ID
+  --path, -p <value>       - JSON output path (file or directory) [optional]
+
+FLAGS:
+  --local-run, -l  - Don't upload metadata to DHIS2 instance
+  --update-coc, -c - Update category option combos
+  --help, -h       - show help
+```
+Example:
+```bash
+  yarn start metadata build-metadata --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/metadata.json
+```
+
+### download-ids:
+
+```sh
+Gets the IDs of the sheet metadata from DHIS2 instance and exports to CSV file.
+
+OPTIONS:
+  --dhis-url <str>         - http://USERNAME:PASSWORD@HOST:PORT
+  --google-key, -g <value> - Google Api key
+  --sheet-id, -s <value>   - Google Spreadsheet ID
+  --path, -p <value>       - CSV output path (file or directory) [optional]
+
+FLAGS:
+  --help, -h - show help
+```
+Example:
+```bash
+  yarn start metadata download-ids --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/
+```
 
 ## Description
 
@@ -43,7 +63,7 @@ The script will generate a json file containing all the
 information that dhis2 needs to update the metadata, and also
 connect to a dhis2 server to update the metadata directly.
 
-If you need to generate only the json set the `UPDATE_SERVER` option to `false`.
+If you need to generate only the json use the `local-run` flag.
 
 If you want to manually upload the generated json file to a dhis2 instance,
 use its `Import/Export` app, go to `Metadata import` and use `Merge` as
@@ -53,15 +73,14 @@ If dhis2 fails to automatically update all the category option
 combinations (which happens occassionally and is a dhis2 issue), you
 can use the `Data Administration` app, go to `Maintenance`, select
 `Update category option combinations` and click on the
-`Perform Maintenance` button. Alternatively, you can just set in the
-`.env.local` file the `UPDATE_CATEGORY_OPTION_COMBOS` option to `true`.
+`Perform Maintenance` button. Alternatively, you can just use the `update-coc` flag.
 
 ### download-ids:
 
 With this tool we can get the IDs of a spreadsheet's metadata from a DHIS2 instance.
 For now, two elements can't have the same name, which is possible in DHIS2.
 
-The `PULL_METADATA_CSV_PATH` variable will store the path where the CSV files will
+The `path` option will store the path where the CSV files will
 be written. If empty, the current working directory will be used.
 
 ## Accessing google spreadsheets
@@ -156,3 +175,7 @@ cat metadata.json \
 
 For more information on how to use `jq`, see
 https://stedolan.github.io/jq/manual/ .
+
+yarn start metadata build-metadata --dhis-url='http://admin:distrcit@localhost:8080' \
+--google-key=AIzaSyA5N9tgblL0dP8nOtPKzJ8CwpwPHrddkkk \
+--sheet-id="1-iGyeOkF4LO8j5gPXgwsXA_6gwOI9yBYM9NajiqAwEA" -l
