@@ -8,10 +8,10 @@ const level = isElementOfUnion(levelFromEnv, logLevels) ? levelFromEnv : "info";
 const levelIndex = logLevels.indexOf(level);
 
 function getLogger(logLevelIndex: number, level: LogLevel) {
-    return function writer(message: string) {
+    return function writer(message: any) {
         if (logLevelIndex >= levelIndex) {
             const ts = new Date().toISOString();
-            process.stderr.write(`[${level}] [${ts}] ${message}\n`);
+            process.stderr.write(`[${level}] [${ts}] ${String(message)}\n`);
         }
     };
 }
