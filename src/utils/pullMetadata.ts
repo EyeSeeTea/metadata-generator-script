@@ -152,15 +152,17 @@ async function pullProgramRulesMetadata(api: D2Api, query: Query, praSheet: Meta
 
     const praMetadata = await pullGenericMetadata(api, praQuerys);
 
-    const praMetadataIds = praSheet.map(praSheetItem => {
-        const praMetadataItem = praMetadata.find(praMetaToFilter => {
-            const prName = metadata.find(item => item.id === praMetaToFilter.programRule.id)?.name;
-            return prName === praSheetItem.programRule && praMetaToFilter.programRuleActionType === praSheetItem.name;
+    if (!_.isEmpty(praMetadata)) {
+        const praMetadataIds = praSheet.flatMap(praSheetItem => {
+            const praMetadataItem = praMetadata.find(praMetaToFilter => {
+                const prName = metadata.find(item => item.id === praMetaToFilter.programRule.id)?.name;
+                return (
+                    prName === praSheetItem.programRule && praMetaToFilter.programRuleActionType === praSheetItem.name
+                );
+            });
+            return { id: praMetadataItem?.id };
         });
-        return { id: praMetadataItem?.id };
-    });
 
-    if (!_.isEmpty(praMetadataIds)) {
         writeCsv("programRuleActions", praMetadataIds);
     }
 }
