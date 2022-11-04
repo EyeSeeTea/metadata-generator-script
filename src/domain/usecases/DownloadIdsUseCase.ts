@@ -116,7 +116,7 @@ export class DownloadIdsUseCase {
     }
 
     private writeCsv(metadataType: string, metadata: MetadataItem[]) {
-        const filePath = `${this.path}${metadataType}.csv`;
+        const filePath = `${this.path ? this.path : ""}${metadataType}.csv`;
 
         if (!metadata[0]) throw new Error("writeCsv metadata item empty.");
         const header = this.makeCsvHeader(metadata[0]);
@@ -157,17 +157,18 @@ export class DownloadIdsUseCase {
 
         const praMetadata = await this.metadataRepository.getMetadata(praQuerys);
 
-        const praMetadataIds = praSheet.map(praSheetItem => {
-            const praMetadataItem = praMetadata.find(praMetaToFilter => {
-                const prName = metadata.find(item => item.id === praMetaToFilter.programRule.id)?.name;
-                return (
-                    prName === praSheetItem.programRule && praMetaToFilter.programRuleActionType === praSheetItem.name
-                );
+        if (!_.isEmpty(praMetadata)) {
+            const praMetadataIds = praSheet.flatMap(praSheetItem => {
+                const praMetadataItem = praMetadata.find(praMetaToFilter => {
+                    const prName = metadata.find(item => item.id === praMetaToFilter.programRule.id)?.name;
+                    return (
+                        prName === praSheetItem.programRule &&
+                        praMetaToFilter.programRuleActionType === praSheetItem.name
+                    );
+                });
+                return { id: praMetadataItem?.id };
             });
-            return { id: praMetadataItem?.id };
-        });
 
-        if (!_.isEmpty(praMetadataIds)) {
             this.writeCsv("programRuleActions", praMetadataIds);
         }
     }
@@ -177,15 +178,17 @@ export class DownloadIdsUseCase {
 
         const queries = this.makeQueries(filterNames);
 
-        queries.forEach(async query => {
-            if (query.type === "programRules") {
-                await this.pullProgramRulesMetadata(query, getItems(sheets, "programRuleActions"));
-            } else {
-                const metadata = await this.metadataRepository.getMetadata(query);
-                if (!_.isEmpty(metadata)) {
-                    this.writeCsv(query.type, metadata);
+        return new Promise(() => {
+            queries.forEach(async query => {
+                if (query.type === "programRules") {
+                    await this.pullProgramRulesMetadata(query, getItems(sheets, "programRuleActions"));
+                } else {
+                    const metadata = await this.metadataRepository.getMetadata(query);
+                    if (!_.isEmpty(metadata)) {
+                        this.writeCsv(query.type, metadata);
+                    }
                 }
-            }
+            });
         });
     }
 }

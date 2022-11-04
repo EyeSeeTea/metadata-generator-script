@@ -60,10 +60,7 @@ export function groupedPairsBy<Obj, Key>(objs: Obj[], mapper: (obj: Obj) => Key)
     return Array.from(result);
 }
 
-export function isElementOfUnion<Union extends string>(
-    value: string,
-    values: readonly Union[]
-): value is Union {
+export function isElementOfUnion<Union extends string>(value: string, values: readonly Union[]): value is Union {
     return (values as readonly string[]).includes(value);
 }
 
