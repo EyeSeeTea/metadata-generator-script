@@ -16,7 +16,6 @@ export class MetadataD2Repository implements MetadataRepository {
                 return resultsAsMetadataItem[query.type];
             });
 
-        console.debug(`metadata: ${JSON.stringify(metadata)}`);
         return metadata;
     }
 
