@@ -4,7 +4,7 @@ Script to generate dhis2 metadata from google sheets.
 
 ## Usage
 
-The first time, we have to run `yarn install` to install all the dependencies.
+The first time, we have to run `yarn install` and `yarn build` to install all the dependencies.
 After that, you can run `yarn build-metadata` to generate and update the metadata
 or `yarn download-ids` to get the metadata IDs.
 
