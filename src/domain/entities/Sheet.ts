@@ -1,3 +1,4 @@
+import { PeriodType, AggregationType, ValueType, domainType, dataDimensionType } from "./Base";
 import { MetadataItem } from "./MetadataItem";
 
 export interface Sheet {
@@ -63,4 +64,79 @@ export interface CellValue {
      * Represents a string value. Leading single quotes are not included. For example, if the user typed `'123` into the UI, this would be represented as a `stringValue` of `"123"`.
      */
     stringValue?: string | null;
+}
+
+export interface DataSetsSheetRow {
+    id: string;
+    name: string;
+    code?: string;
+    shortName?: string;
+    description?: string;
+    expiryDays?: number;
+    openFuturePeriods?: number;
+    timelyDays?: number;
+    periodType: PeriodType;
+    categoryCombo?: string;
+    notifyCompletingUser?: string;
+    workflow?: string;
+    mobile?: string;
+    fieldCombinationRequired?: string;
+    validCompleteOnly?: string;
+    noValueRequiresComment?: string;
+    skipOffline?: string;
+    dataElementDecoration?: string;
+    renderAsTabs?: string;
+    renderHorizontally?: string;
+    compulsoryFieldsCompleteOnly?: string;
+}
+
+export interface DataSetElementsSheetRow {
+    dataSet: string;
+    name: string;
+    categoryCombo?: string;
+}
+
+export interface DataElementsSheetRow {
+    id?: string;
+    name: string;
+    shortName?: string;
+    formName?: string;
+    code?: string;
+    categoryCombo?: string;
+    valueType?: ValueType;
+    aggregationType?: AggregationType;
+    domainType?: domainType;
+    description?: string;
+    optionSet?: string;
+    commentOptionSet?: string;
+    zeroIsSignificant?: string;
+    url?: string;
+    fieldMask?: string;
+}
+
+export interface CategoryCombosSheetRow {
+    id: string;
+    name: string;
+    code: string;
+    dataDimensionType: dataDimensionType;
+    description: string;
+}
+
+export interface CategoriesSheetRow {
+    id: string;
+    name: string;
+    shortName: string;
+    code: string;
+    categoryCombo: string;
+    dataDimensionType: dataDimensionType;
+    description: string;
+}
+
+export interface CategoryOptionsSheetRow {
+    id: string;
+    name: string;
+    code: string;
+    shortName: string;
+    description: string;
+    category: string;
 }
