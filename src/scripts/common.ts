@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { option, string, Type } from "cmd-ts";
-import { D2Api } from "@eyeseetea/d2-api/2.34";
+import { D2Api } from "@eyeseetea/d2-api/2.36";
 import { google, sheets_v4 } from "googleapis";
 import log from "../utils/log";
 import path from "path";

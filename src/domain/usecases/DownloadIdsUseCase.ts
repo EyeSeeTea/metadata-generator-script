@@ -5,12 +5,10 @@ import { createObjectCsvWriter } from "csv-writer";
 import { getItems } from "utils/utils";
 import log from "utils/log";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
-import { MetadataRepository } from "domain/repositories/MetadataRepository";
+import { MetadataRepository, Query, MetadataQuery } from "domain/repositories/MetadataRepository";
 
 const env = process.env;
 
-type MetadataQuery = { [key: string]: any };
-type Query = { type: string; value: MetadataQuery };
 type FilterNames = { [key: string]: string[] };
 
 export class DownloadIdsUseCase {

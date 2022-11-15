@@ -1,6 +1,5 @@
-// REPO FOR METADATA GET/POST CODE
 import _ from "lodash";
-import { D2Api, MetadataResponse } from "@eyeseetea/d2-api/2.34";
+import { D2Api, MetadataResponse } from "@eyeseetea/d2-api/2.36";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { MetadataRepository, Query } from "domain/repositories/MetadataRepository";
 
@@ -32,6 +31,6 @@ export class MetadataD2Repository implements MetadataRepository {
     }
 
     async updateCategoryOptionCombos(): Promise<void> {
-        await this.api.maintenance.categoryOptionComboUpdate().getData();
+        await this.api.maintenance.categoryOptionComboSingleUpdate("categoryOptionComboUpdate").getData();
     }
 }

@@ -1,4 +1,3 @@
-// sheets interface def
 import { Sheet } from "domain/entities/Sheet";
 
 export interface SheetsRepository {

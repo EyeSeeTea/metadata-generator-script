@@ -1,4 +1,3 @@
-// REPO FOR SHEETS GET CODE
 import _ from "lodash";
 import { Sheet } from "domain/entities/Sheet";
 import { sheets_v4 } from "googleapis";

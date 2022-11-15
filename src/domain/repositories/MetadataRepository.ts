@@ -1,4 +1,3 @@
-// METADATA INTERFACE DEF
 import { MetadataItem, MetadataResponse } from "domain/entities/MetadataItem";
 
 export interface MetadataRepository {
@@ -7,5 +6,5 @@ export interface MetadataRepository {
     updateCategoryOptionCombos(): Promise<void>;
 }
 
-type MetadataQuery = { [key: string]: any };
+export type MetadataQuery = { [key: string]: any };
 export type Query = { type: string; value: MetadataQuery };
