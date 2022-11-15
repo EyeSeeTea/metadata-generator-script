@@ -73,6 +73,34 @@ const categoryOptionsHeaders = [
     { id: "description", title: "description" },
 ];
 
+const ProgramsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "shortName", title: "shortName" },
+    { id: "code", title: "code" },
+    { id: "description", title: "description" },
+    { id: "trackedEntityType", title: "trackedEntityType" },
+    { id: "categoryCombo", title: "categoryCombo" },
+    { id: "version", title: "version" },
+    { id: "expiryPeriodType: PeriodTypeexpiryPeriodType" },
+    { id: "expiryDays: numberexpiryDays" },
+    { id: "completeEventsExpiryDays: numbercompleteEventsExpiryDays" },
+    { id: "displayFrontPageList", title: "displayFrontPageList" },
+    { id: "useFirstStageDuringRegistration", title: "useFirstStageDuringRegistration" },
+    { id: "accessLevel: AccessLevelTypeaccessLevel" },
+    { id: "minAttributesRequiredToSearch: numberminAttributesRequiredToSearch" },
+    { id: "maxTeiCountToReturn: numbermaxTeiCountToReturn" },
+    { id: "selectIncidentDatesInFuture", title: "selectIncidentDatesInFuture" },
+    { id: "selectEnrollmentDatesInFuture", title: "selectEnrollmentDatesInFuture" },
+    { id: "onlyEnrollOnce", title: "onlyEnrollOnce" },
+    { id: "displayIncidentDate", title: "displayIncidentDate" },
+    { id: "incidentDateLabel", title: "incidentDateLabel" },
+    { id: "enrollmentDateLabel", title: "enrollmentDateLabel" },
+    { id: "ignoreOverdueEvents", title: "ignoreOverdueEvents" },
+    { id: "featureType: FeatureTypefeatureType" },
+    { id: "relatedProgram", title: "relatedProgram" },
+];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
@@ -80,4 +108,5 @@ export const headers = {
     categoryCombosHeaders: categoryCombosHeaders,
     categoriesHeaders: categoriesHeaders,
     categoryOptionsHeaders: categoryOptionsHeaders,
+    ProgramsHeaders: ProgramsHeaders,
 };

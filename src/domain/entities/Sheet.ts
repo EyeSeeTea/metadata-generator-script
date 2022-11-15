@@ -1,4 +1,12 @@
-import { PeriodType, AggregationType, ValueType, domainType, dataDimensionType } from "./Base";
+import {
+    PeriodType,
+    AggregationType,
+    ValueType,
+    domainType,
+    dataDimensionType,
+    AccessLevelType,
+    FeatureType,
+} from "./Base";
 import { MetadataItem } from "./MetadataItem";
 
 export interface Sheet {
@@ -139,4 +147,32 @@ export interface CategoryOptionsSheetRow {
     shortName: string;
     description: string;
     category: string;
+}
+
+export interface ProgramsSheetRow {
+    id: string;
+    name: string;
+    shortName: string;
+    code: string;
+    description: string;
+    trackedEntityType: string;
+    categoryCombo: string;
+    version: string;
+    expiryPeriodType: PeriodType;
+    expiryDays: number;
+    completeEventsExpiryDays: number;
+    displayFrontPageList: string;
+    useFirstStageDuringRegistration: string;
+    accessLevel: AccessLevelType;
+    minAttributesRequiredToSearch: number;
+    maxTeiCountToReturn: number;
+    selectIncidentDatesInFuture: string;
+    selectEnrollmentDatesInFuture: string;
+    onlyEnrollOnce: string;
+    displayIncidentDate: string;
+    incidentDateLabel: string;
+    enrollmentDateLabel: string;
+    ignoreOverdueEvents: string;
+    featureType: FeatureType;
+    relatedProgram: string;
 }

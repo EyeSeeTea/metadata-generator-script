@@ -73,6 +73,10 @@ export type PeriodType =
     | "FinancialNovember"
     | "";
 
+export type AccessLevelType = "OPEN" | "AUDITED" | "PROTECTED" | "CLOSED";
+
+export type FeatureType = "NONE" | "POINT" | "POLYGON";
+
 export type dataDimensionType = "DISAGGREGATION" | "ATTRIBUTE";
 
 export type domainType = "TRACKER" | "AGGREGATE";
