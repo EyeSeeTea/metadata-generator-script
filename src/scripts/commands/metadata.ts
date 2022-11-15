@@ -8,6 +8,7 @@ import {
     FilePath,
     getGoogleSheetsApi,
     DirPath,
+    IDString,
 } from "../common";
 import log from "utils/log";
 import { GoogleSheetsRepository } from "data/GoogleSheetsRepository";
@@ -15,9 +16,10 @@ import { MetadataD2Repository } from "data/MetadataD2Repository";
 import { BuildMetadataUseCase } from "domain/usecases/BuildMetadataUseCase";
 import { DownloadIdsUseCase } from "domain/usecases/DownloadIdsUseCase";
 import { makeUploadMetadataLog, writeToJSON } from "utils/utils";
+import { PullDataSetUseCase } from "domain/usecases/PullDataSetUseCase";
 
-const defaultArgs = {
-    url: getApiUrlOption({ long: "dhis-url" }),
+const dhis2UrlArg = { url: getApiUrlOption({ long: "dhis-url" }) };
+const googleArgs = {
     gKey: option({
         type: GoogleApiKey,
         long: "google-key",
@@ -37,13 +39,13 @@ export function getCommand() {
         name: "build-metadata",
         description: "Build metadata JSON from a spreadsheet and upload it to DHIS2 instance",
         args: {
-            ...defaultArgs,
+            ...dhis2UrlArg,
+            ...googleArgs,
             path: option({
                 type: optional(FilePath),
                 long: "path",
                 short: "p",
                 description: "JSON output path (file or directory)",
-                defaultValue: () => "out.json",
             }),
             LocalRun: flag({
                 type: boolean,
@@ -88,7 +90,7 @@ export function getCommand() {
 
                 process.exit(0);
             } catch (error: any) {
-                log.error(error);
+                log.error(error.stack);
                 process.exit(1);
             }
         },
@@ -98,12 +100,13 @@ export function getCommand() {
         name: "download-ids",
         description: "Gets the IDs of the sheet metadata from DHIS2 instance and exports to CSV file.",
         args: {
-            ...defaultArgs,
+            ...dhis2UrlArg,
+            ...googleArgs,
             path: option({
                 type: optional(DirPath),
                 long: "path",
                 short: "p",
-                description: "CSV output path (file or directory)",
+                description: "CSV output path (directory)",
             }),
         },
         handler: async args => {
@@ -120,8 +123,44 @@ export function getCommand() {
                 await downloadIds.execute(args.sheetId);
 
                 process.exit(0);
-            } catch (error) {
-                log.error(error);
+            } catch (error: any) {
+                log.error(error.stack);
+                process.exit(1);
+            }
+        },
+    });
+
+    const pullMetadata = command({
+        name: "pull-dataSet",
+        description: "Gets the dataSet metadata from DHIS2 instance and exports to CSV file.",
+        args: {
+            ...dhis2UrlArg,
+            dataSetToPull: option({
+                type: IDString,
+                long: "data-set",
+                short: "d",
+                description: "dataSet to pull ID",
+            }),
+            path: option({
+                type: optional(DirPath),
+                long: "path",
+                short: "p",
+                description: "CSV output path (directory)",
+            }),
+        },
+        handler: async args => {
+            try {
+                log.info(`Getting metadata from server at ${args.url} ...`);
+                const api = getD2Api(args.url);
+                const MetadataRepository = new MetadataD2Repository(api);
+
+                log.info("Writing CSVs...");
+                const downloadIds = new PullDataSetUseCase(MetadataRepository);
+                await downloadIds.execute(args.dataSetToPull, args.path);
+
+                process.exit(0);
+            } catch (error: any) {
+                log.error(error.stack);
                 process.exit(1);
             }
         },
@@ -129,6 +168,6 @@ export function getCommand() {
 
     return subcommands({
         name: "metadata",
-        cmds: { "build-metadata": buildMetadata, "download-ids": downloadIds },
+        cmds: { "build-metadata": buildMetadata, "download-ids": downloadIds, "pull-dataSet": pullMetadata },
     });
 }

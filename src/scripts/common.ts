@@ -44,6 +44,14 @@ export const SpreadsheetId: Type<string, string> = {
     },
 };
 
+export const IDString: Type<string, string> = {
+    async from(str) {
+        if (_(str).isEmpty()) throw new Error("Value cannot be empty");
+        if (str.length !== 11) throw new Error("ID must be 11 char long");
+        return str;
+    },
+};
+
 function isDir(str: string): boolean {
     const stat = fs.statSync(str);
 
