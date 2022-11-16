@@ -21,6 +21,8 @@ import { ProgramStage } from "../entities/ProgramStage";
 import { ProgramStageSection } from "../entities/ProgramStageSection";
 import { headers } from "utils/csvHeaders";
 import { fieldsType, metadataFields } from "utils/metadataFields";
+import { ProgramRuleVariablesSheetRow } from "../entities/Sheet";
+import { ProgramRuleVariable } from "domain/entities/ProgramRuleVariable";
 
 export class PullEventProgramUseCase {
     constructor(private metadataRepository: MetadataRepository) {}
@@ -46,6 +48,16 @@ export class PullEventProgramUseCase {
                 async ids => await this.getProgramStageSectionData(ids)
             )
         ).then(programStageSectionsDataArray => programStageSectionsDataArray.flat());
+
+        const programRuleVariablesIds = programData
+            .flatMap(pd => pd.programRuleVariables)
+            .flatMap(prv => (prv?.id ? prv.id : []));
+
+        const programRuleVariablesData = await Promise.all(
+            this.chunkUniqueIdsArray(programRuleVariablesIds).map(
+                async ids => await this.getProgramRuleVariablesData(ids)
+            )
+        ).then(programRuleVariablesDataArray => programRuleVariablesDataArray.flat());
 
         // DATA ELEMENTS GET
         const chunkedUniqueDEIds = this.chunkUniqueIdsArray(
@@ -113,6 +125,10 @@ export class PullEventProgramUseCase {
         const programStageSectionsRows = pssRows.map(pssr => pssr.pssRow);
         const programStageSectionsDataElementRow = pssRows.flatMap(pssr => pssr.pssdeRows);
 
+        const programRuleVariablesRows = programRuleVariablesData.map(prv =>
+            this.buildProgramRuleVariableRow(prv, programName, dataElementsData, programStagesData)
+        );
+
         // DATA ELEMENTS ROWS BUILD
         const dataElementsRows = dataElementsData.map(dataElement => this.buildDataElementRow(dataElement));
 
@@ -123,34 +139,43 @@ export class PullEventProgramUseCase {
             this.buildCategoryOptionRow(categoryOption, categoriesData)
         );
 
+        //
         // PRINT CSVs
-        await this.metadataRepository.exportMetadataToCSV(programRows, headers.ProgramsHeaders, "program", path);
+        //
+        await this.metadataRepository.exportMetadataToCSV(programRows, headers.programsHeaders, "program", path);
 
         await this.metadataRepository.exportMetadataToCSV(
             programStagesRows,
-            headers.ProgramStagesHeaders,
+            headers.programStagesHeaders,
             "programStages",
             path
         );
 
         await this.metadataRepository.exportMetadataToCSV(
             programStagesDataElementsRows,
-            headers.ProgramStageDataElementsSheetRow,
+            headers.programStageDataElementsSheetRow,
             "programStageDataElements",
             path
         );
 
         await this.metadataRepository.exportMetadataToCSV(
             programStageSectionsRows,
-            headers.ProgramStageSectionsSheetRow,
+            headers.programStageSectionsSheetRow,
             "programStageSections",
             path
         );
 
         await this.metadataRepository.exportMetadataToCSV(
             programStageSectionsDataElementRow,
-            headers.ProgramStageSectionsDataElementsSheetRow,
+            headers.programStageSectionsDataElementsSheetRow,
             "programStageSectionsDataElements",
+            path
+        );
+
+        await this.metadataRepository.exportMetadataToCSV(
+            programRuleVariablesRows,
+            headers.programRuleVariablesSheetRow,
+            "programRuleVariables",
             path
         );
 
@@ -181,6 +206,9 @@ export class PullEventProgramUseCase {
         );
     }
 
+    //
+    // GETS
+    //
     private async getProgramData(programId: Id[]): Promise<Program[]> {
         const programsQuery: Query = this.makeQuery("programs", metadataFields.programsFields, programId);
         return (await this.metadataRepository.getMetadata(programsQuery)) as Program[];
@@ -237,6 +265,18 @@ export class PullEventProgramUseCase {
         return (await this.metadataRepository.getMetadata(categoryOptionsQuery)) as CategoryOption[];
     }
 
+    private async getProgramRuleVariablesData(programRuleVariablesIds: Id[]): Promise<ProgramRuleVariable[]> {
+        const programRuleVariablesQuery: Query = this.makeQuery(
+            "programRuleVariables",
+            metadataFields.programRuleVariablesFields,
+            programRuleVariablesIds
+        );
+        return (await this.metadataRepository.getMetadata(programRuleVariablesQuery)) as ProgramRuleVariable[];
+    }
+
+    //
+    // BUILD
+    //
     private buildProgramRow(program: Program): ProgramsSheetRow {
         return {
             id: program.id,
@@ -357,6 +397,36 @@ export class PullEventProgramUseCase {
         });
     }
 
+    private buildProgramRuleVariableRow(
+        prv: ProgramRuleVariable,
+        programName: string,
+        dataElements: DataElement[],
+        programStages: ProgramStage[]
+    ): ProgramRuleVariablesSheetRow {
+        const baseRow: ProgramRuleVariablesSheetRow = {
+            id: prv.id,
+            name: prv.name,
+            displayName: prv.displayName,
+            program: programName,
+            useCodeForOptionSet: prv.useCodeForOptionSet,
+            programRuleVariableSourceType: prv.programRuleVariableSourceType,
+        };
+
+        if (prv.programRuleVariableSourceType !== "TEI_ATTRIBUTE") {
+            baseRow.dataElement = dataElements.find(deToFind => deToFind.id === prv.dataElement?.id)?.name;
+        }
+        // TODO: add trackedEntityAttributes
+        // else {
+        //     baseRow.trackedEntityAttribute = trackedEntityAttributes.find(teaToFind => teaToFind.id === prv.dataElement?.id)?.name;
+        // }
+
+        if (prv.programRuleVariableSourceType === "DATAELEMENT_NEWEST_EVENT_PROGRAM_STAGE") {
+            baseRow.programStage = programStages.find(psToFind => psToFind.id === prv.programStage?.id)?.name;
+        }
+
+        return baseRow;
+    }
+
     private buildDataElementRow(dataElement: DataElement): DataElementsSheetRow {
         return {
             id: dataElement.id,
@@ -416,6 +486,10 @@ export class PullEventProgramUseCase {
             category: categoryComboName,
         };
     }
+
+    //
+    // UTILS
+    //
 
     private booleanToString(bool: boolean | undefined) {
         if (!bool) return undefined;

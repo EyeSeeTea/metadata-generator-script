@@ -27,4 +27,5 @@ export interface Program {
     featureType?: FeatureType;
     relatedProgram?: Ref;
     programStages?: Ref[];
+    programRuleVariables?: Ref[];
 }

@@ -113,6 +113,7 @@ const programsFields = {
     featureType: true,
     relatedProgram: true,
     programStages: true,
+    programRuleVariables: true,
 };
 
 const programStagesFields = {
@@ -154,6 +155,18 @@ const programStageSectionFields = {
     dataElements: true,
 };
 
+const programRuleVariablesFields = {
+    id: true,
+    name: true,
+    displayName: true,
+    program: true,
+    useCodeForOptionSet: true,
+    programRuleVariableSourceType: true,
+    dataElement: true,
+    trackedEntityAttribute: true,
+    programStage: true,
+};
+
 export const metadataFields = {
     dataSetFieds: dataSetFieds,
     dataElementFieds: dataElementFieds,
@@ -163,4 +176,5 @@ export const metadataFields = {
     programsFields: programsFields,
     programStagesFields: programStagesFields,
     programStageSectionFields: programStageSectionFields,
+    programRuleVariablesFields: programRuleVariablesFields,
 };

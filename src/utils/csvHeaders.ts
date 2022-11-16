@@ -73,7 +73,7 @@ const categoryOptionsHeaders = [
     { id: "description", title: "description" },
 ];
 
-const ProgramsHeaders = [
+const programsHeaders = [
     { id: "id", title: "id" },
     { id: "name", title: "name" },
     { id: "shortName", title: "shortName" },
@@ -101,7 +101,7 @@ const ProgramsHeaders = [
     { id: "relatedProgram", title: "relatedProgram" },
 ];
 
-const ProgramStagesHeaders = [
+const programStagesHeaders = [
     { id: "id", title: "id" },
     { id: "name", title: "name" },
     { id: "program", title: "program" },
@@ -127,7 +127,7 @@ const ProgramStagesHeaders = [
     { id: "dueDateLabel", title: "dueDateLabel" },
 ];
 
-const ProgramStagesSheetRow = [
+const programStagesSheetRow = [
     { id: "id", title: "id" },
     { id: "name", title: "name" },
     { id: "program", title: "program" },
@@ -153,7 +153,7 @@ const ProgramStagesSheetRow = [
     { id: "dueDateLabel", title: "dueDateLabel" },
 ];
 
-const ProgramStageDataElementsSheetRow = [
+const programStageDataElementsSheetRow = [
     { id: "id", title: "id" },
     { id: "program", title: "program" },
     { id: "programStage", title: "programStage" },
@@ -167,7 +167,7 @@ const ProgramStageDataElementsSheetRow = [
     { id: "renderTypeDesktop", title: "renderTypeDesktop" },
 ];
 
-const ProgramStageSectionsSheetRow = [
+const programStageSectionsSheetRow = [
     { id: "id", title: "id" },
     { id: "program", title: "program" },
     { id: "programStage", title: "programStage" },
@@ -177,11 +177,23 @@ const ProgramStageSectionsSheetRow = [
     { id: "description", title: "description" },
 ];
 
-const ProgramStageSectionsDataElementsSheetRow = [
+const programStageSectionsDataElementsSheetRow = [
     { id: "program", title: "program" },
     { id: "programStage", title: "programStage" },
     { id: "programStageSection", title: "programStageSection" },
     { id: "name", title: "name" },
+];
+
+const programRuleVariablesSheetRow = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "displayName", title: "displayName" },
+    { id: "program", title: "program" },
+    { id: "useCodeForOptionSet", title: "useCodeForOptionSet" },
+    { id: "programRuleVariableSourceType", title: "programRuleVariableSourceType" },
+    { id: "dataElement", title: "dataElement" },
+    { id: "trackedEntityAttribute", title: "trackedEntityAttribute" },
+    { id: "programStage", title: "programStage" },
 ];
 
 export const headers = {
@@ -191,10 +203,11 @@ export const headers = {
     categoryCombosHeaders: categoryCombosHeaders,
     categoriesHeaders: categoriesHeaders,
     categoryOptionsHeaders: categoryOptionsHeaders,
-    ProgramsHeaders: ProgramsHeaders,
-    ProgramStagesHeaders: ProgramStagesHeaders,
-    ProgramStagesSheetRow: ProgramStagesSheetRow,
-    ProgramStageDataElementsSheetRow: ProgramStageDataElementsSheetRow,
-    ProgramStageSectionsSheetRow: ProgramStageSectionsSheetRow,
-    ProgramStageSectionsDataElementsSheetRow: ProgramStageSectionsDataElementsSheetRow,
+    programsHeaders: programsHeaders,
+    programStagesHeaders: programStagesHeaders,
+    programStagesSheetRow: programStagesSheetRow,
+    programStageDataElementsSheetRow: programStageDataElementsSheetRow,
+    programStageSectionsSheetRow: programStageSectionsSheetRow,
+    programStageSectionsDataElementsSheetRow: programStageSectionsDataElementsSheetRow,
+    programRuleVariablesSheetRow: programRuleVariablesSheetRow,
 };

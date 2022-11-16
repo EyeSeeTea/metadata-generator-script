@@ -7,6 +7,7 @@ import {
     AccessLevelType,
     FeatureType,
     ValidationStrategyType,
+    ProgramRuleVariableSourceType,
 } from "./Base";
 import { MetadataItem } from "./MetadataItem";
 
@@ -233,4 +234,16 @@ export interface ProgramStageSectionsDataElementsSheetRow {
     programStage: string;
     programStageSection: string;
     name: string;
+}
+
+export interface ProgramRuleVariablesSheetRow {
+    id: string;
+    name: string;
+    displayName: string;
+    program: string;
+    useCodeForOptionSet: string;
+    programRuleVariableSourceType: ProgramRuleVariableSourceType;
+    dataElement?: string;
+    trackedEntityAttribute?: string;
+    programStage?: string;
 }
