@@ -1,5 +1,3 @@
-import _ from "lodash";
-
 export type Id = string;
 export type Ref = { id: Id };
 export type NamedRef = { id: Id; name: string };
@@ -109,6 +107,25 @@ export type RenderType = {
         type: DataElementRenderType | ProgramStageSectionRenderType;
     };
 };
+
+export type ProgramRuleActionType =
+    | "ASSIGN"
+    | "CREATEEVENT"
+    | "DISPLAYKEYVALUEPAIR"
+    | "DISPLAYTEXT"
+    | "ERRORONCOMPLETE"
+    | "HIDEFIELD"
+    | "HIDEOPTION"
+    | "HIDEOPTIONGROUP"
+    | "HIDEPROGRAMSTAGE"
+    | "HIDESECTION"
+    | "SCHEDULEMESSAGE"
+    | "SENDMESSAGE"
+    | "SETMANDATORYFIELD"
+    | "SHOWERROR"
+    | "SHOWOPTIONGROUP"
+    | "SHOWWARNING"
+    | "WARNINGONCOMPLETE";
 
 export type ProgramRuleVariableSourceType =
     | "DATAELEMENT_NEWEST_EVENT_PROGRAM_STAGE"

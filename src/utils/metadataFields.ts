@@ -1,13 +1,5 @@
 export type fieldsType = Record<string, boolean>;
 
-interface metadataFieldsType {
-    dataSetFieds: true;
-    dataElementFieds: true;
-    categoryComboFields: true;
-    categoriesFields: true;
-    categoryOptionsFields: true;
-}
-
 const dataSetFieds = {
     id: true,
     name: true,
@@ -37,9 +29,6 @@ const dataSetFieds = {
     legendSets: true,
     sections: true,
 };
-// attributeValues: true,
-// userAccesses: true,
-// userGroupAccesses: true,
 
 const dataElementFieds = {
     id: true,
@@ -156,6 +145,28 @@ const programStageSectionFields = {
     dataElements: true,
 };
 
+const programRulesFields = {
+    id: true,
+    name: true,
+    program: true,
+    condition: true,
+    description: true,
+    programRuleActions: true,
+};
+
+const programRuleActionsFields = {
+    id: true,
+    programRule: true,
+    name: true,
+    content: true,
+    data: true,
+    location: true,
+    dataElement: true,
+    trackedEntityAttribute: true,
+    programStage: true,
+    programStageSection: true,
+};
+
 const programRuleVariablesFields = {
     id: true,
     name: true,
@@ -191,6 +202,8 @@ export const metadataFields = {
     programsFields: programsFields,
     programStagesFields: programStagesFields,
     programStageSectionFields: programStageSectionFields,
+    programRulesFields: programRulesFields,
+    programRuleActionsFields: programRuleActionsFields,
     programRuleVariablesFields: programRuleVariablesFields,
     LegendSetsFields: LegendSetsFields,
     LegendsFields: LegendsFields,

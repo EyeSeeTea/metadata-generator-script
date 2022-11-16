@@ -1,4 +1,4 @@
-import { Id, Ref } from "./Base";
+import { Id } from "./Base";
 export interface LegendSet {
     id: Id;
     name: string;

@@ -163,6 +163,27 @@ const programStageSectionsDataElementsHeaders = [
     { id: "name", title: "name" },
 ];
 
+const programRulesHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "program", title: "program" },
+    { id: "condition", title: "condition" },
+    { id: "description", title: "description" },
+];
+
+const programRuleActionsHeaders = [
+    { id: "id", title: "id" },
+    { id: "programRule", title: "programRule" },
+    { id: "name", title: "name" },
+    { id: "content", title: "content" },
+    { id: "data", title: "data" },
+    { id: "location", title: "location" },
+    { id: "dataElement", title: "dataElement" },
+    { id: "trackedEntityAttribute", title: "trackedEntityAttribute" },
+    { id: "programStage", title: "programStage" },
+    { id: "programStageSection", title: "programStageSection" },
+];
+
 const programRuleVariablesHeaders = [
     { id: "id", title: "id" },
     { id: "name", title: "name" },
@@ -202,6 +223,8 @@ export const headers = {
     programStageDataElementsHeaders: programStageDataElementsHeaders,
     programStageSectionsHeaders: programStageSectionsHeaders,
     programStageSectionsDataElementsHeaders: programStageSectionsDataElementsHeaders,
+    programRulesHeaders: programRulesHeaders,
+    programRuleActionsHeaders: programRuleActionsHeaders,
     programRuleVariablesHeaders: programRuleVariablesHeaders,
     legendSetsHeaders: legendSetsHeaders,
     legendsHeaders: legendsHeaders,
