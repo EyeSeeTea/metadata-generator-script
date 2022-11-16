@@ -1,11 +1,11 @@
 export type fieldsType = Record<string, boolean>;
 
 interface metadataFieldsType {
-    dataSetFieds: fieldsType;
-    dataElementFieds: fieldsType;
-    categoryComboFields: fieldsType;
-    categoriesFields: fieldsType;
-    categoryOptionsFields: fieldsType;
+    dataSetFieds: true;
+    dataElementFieds: true;
+    categoryComboFields: true;
+    categoriesFields: true;
+    categoryOptionsFields: true;
 }
 
 const dataSetFieds = {
@@ -86,10 +86,81 @@ const categoryOptionsFields = {
     description: true,
 };
 
+const programsFields = {
+    id: true,
+    name: true,
+    shortName: true,
+    code: true,
+    description: true,
+    trackedEntityType: true,
+    categoryCombo: true,
+    version: true,
+    expiryPeriodType: true,
+    expiryDays: true,
+    completeEventsExpiryDays: true,
+    displayFrontPageList: true,
+    useFirstStageDuringRegistration: true,
+    accessLevel: true,
+    minAttributesRequiredToSearch: true,
+    maxTeiCountToReturn: true,
+    selectIncidentDatesInFuture: true,
+    selectEnrollmentDatesInFuture: true,
+    onlyEnrollOnce: true,
+    displayIncidentDate: true,
+    incidentDateLabel: true,
+    enrollmentDateLabel: true,
+    ignoreOverdueEvents: true,
+    featureType: true,
+    relatedProgram: true,
+    programStages: true,
+};
+
+const programStagesFields = {
+    id: true,
+    name: true,
+    program: true,
+    enableUserAssignment: true,
+    blockEntryForm: true,
+    featureType: true,
+    preGenerateUID: true,
+    executionDateLabel: true,
+    validationStrategy: true,
+    description: true,
+    minDaysFromStart: true,
+    repeatable: true,
+    periodType: true,
+    displayGenerateEventBox: true,
+    standardInterval: true,
+    autoGenerateEvent: true,
+    openAfterEnrollment: true,
+    reportDateToUse: true,
+    remindCompleted: true,
+    allowGenerateNextVisit: true,
+    generatedByEnrollmentDate: true,
+    hideDueDate: true,
+    dueDateLabel: true,
+    sortOrder: true,
+    programStageSections: true,
+    programStageDataElements: true,
+};
+
+const programStageSectionFields = {
+    id: true,
+    programStage: true,
+    name: true,
+    renderType: true,
+    description: true,
+    sortOrder: true,
+    dataElements: true,
+};
+
 export const metadataFields = {
     dataSetFieds: dataSetFieds,
     dataElementFieds: dataElementFieds,
     categoryComboFields: categoryComboFields,
     categoriesFields: categoriesFields,
     categoryOptionsFields: categoryOptionsFields,
+    programsFields: programsFields,
+    programStagesFields: programStagesFields,
+    programStageSectionFields: programStageSectionFields,
 };

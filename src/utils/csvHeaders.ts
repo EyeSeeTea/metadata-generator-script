@@ -101,6 +101,89 @@ const ProgramsHeaders = [
     { id: "relatedProgram", title: "relatedProgram" },
 ];
 
+const ProgramStagesHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "program", title: "program" },
+    { id: "enableUserAssignment", title: "enableUserAssignment" },
+    { id: "blockEntryForm", title: "blockEntryForm" },
+    { id: "featureType", title: "featureType" },
+    { id: "preGenerateUID", title: "preGenerateUID" },
+    { id: "executionDateLabel", title: "executionDateLabel" },
+    { id: "validationStrategy", title: "validationStrategy" },
+    { id: "description", title: "description" },
+    { id: "minDaysFromStart", title: "minDaysFromStart" },
+    { id: "repeatable", title: "repeatable" },
+    { id: "periodType", title: "periodType" },
+    { id: "displayGenerateEventBox", title: "displayGenerateEventBox" },
+    { id: "standardInterval", title: "standardInterval" },
+    { id: "autoGenerateEvent", title: "autoGenerateEvent" },
+    { id: "openAfterEnrollment", title: "openAfterEnrollment" },
+    { id: "reportDateToUse", title: "reportDateToUse" },
+    { id: "remindCompleted", title: "remindCompleted" },
+    { id: "allowGenerateNextVisit", title: "allowGenerateNextVisit" },
+    { id: "generatedByEnrollmentDate", title: "generatedByEnrollmentDate" },
+    { id: "hideDueDate", title: "hideDueDate" },
+    { id: "dueDateLabel", title: "dueDateLabel" },
+];
+
+const ProgramStagesSheetRow = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "program", title: "program" },
+    { id: "enableUserAssignment", title: "enableUserAssignment" },
+    { id: "blockEntryForm", title: "blockEntryForm" },
+    { id: "featureType", title: "featureType" },
+    { id: "preGenerateUID", title: "preGenerateUID" },
+    { id: "executionDateLabel", title: "executionDateLabel" },
+    { id: "validationStrategy", title: "validationStrategy" },
+    { id: "description", title: "description" },
+    { id: "minDaysFromStart", title: "minDaysFromStart" },
+    { id: "repeatable", title: "repeatable" },
+    { id: "periodType", title: "periodType" },
+    { id: "displayGenerateEventBox", title: "displayGenerateEventBox" },
+    { id: "standardInterval", title: "standardInterval" },
+    { id: "autoGenerateEvent", title: "autoGenerateEvent" },
+    { id: "openAfterEnrollment", title: "openAfterEnrollment" },
+    { id: "reportDateToUse", title: "reportDateToUse" },
+    { id: "remindCompleted", title: "remindCompleted" },
+    { id: "allowGenerateNextVisit", title: "allowGenerateNextVisit" },
+    { id: "generatedByEnrollmentDate", title: "generatedByEnrollmentDate" },
+    { id: "hideDueDate", title: "hideDueDate" },
+    { id: "dueDateLabel", title: "dueDateLabel" },
+];
+
+const ProgramStageDataElementsSheetRow = [
+    { id: "id", title: "id" },
+    { id: "program", title: "program" },
+    { id: "programStage", title: "programStage" },
+    { id: "name", title: "name" },
+    { id: "compulsory", title: "compulsory" },
+    { id: "allowProvidedElsewhere", title: "allowProvidedElsewhere" },
+    { id: "displayInReports", title: "displayInReports" },
+    { id: "allowFutureDate", title: "allowFutureDate" },
+    { id: "skipSynchronization", title: "skipSynchronization" },
+    { id: "renderTypeMobile", title: "renderTypeMobile" },
+    { id: "renderTypeDesktop", title: "renderTypeDesktop" },
+];
+
+const ProgramStageSectionsSheetRow = [
+    { id: "id", title: "id" },
+    { id: "program", title: "program" },
+    { id: "programStage", title: "programStage" },
+    { id: "name", title: "name" },
+    { id: "renderTypeMobile", title: "renderTypeMobile" },
+    { id: "renderTypeDesktop", title: "renderTypeDesktop" },
+    { id: "description", title: "description" },
+];
+
+const ProgramStageSectionsDataElementsSheetRow = [
+    { id: "program", title: "program" },
+    { id: "programStage", title: "programStage" },
+    { id: "programStageSection", title: "programStageSection" },
+    { id: "name", title: "name" },
+];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
@@ -109,4 +192,9 @@ export const headers = {
     categoriesHeaders: categoriesHeaders,
     categoryOptionsHeaders: categoryOptionsHeaders,
     ProgramsHeaders: ProgramsHeaders,
+    ProgramStagesHeaders: ProgramStagesHeaders,
+    ProgramStagesSheetRow: ProgramStagesSheetRow,
+    ProgramStageDataElementsSheetRow: ProgramStageDataElementsSheetRow,
+    ProgramStageSectionsSheetRow: ProgramStageSectionsSheetRow,
+    ProgramStageSectionsDataElementsSheetRow: ProgramStageSectionsDataElementsSheetRow,
 };
