@@ -9,7 +9,7 @@ export interface ProgramRule {
     programRuleActions?: Ref[];
 }
 
-export interface programRuleAction {
+export interface ProgramRuleAction {
     id: Id;
     programRule: Ref;
     programRuleActionType: ProgramRuleActionType;

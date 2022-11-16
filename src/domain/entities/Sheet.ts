@@ -8,6 +8,7 @@ import {
     FeatureType,
     ValidationStrategyType,
     ProgramRuleVariableSourceType,
+    ProgramRuleActionType,
 } from "./Base";
 import { MetadataItem } from "./MetadataItem";
 
@@ -252,14 +253,14 @@ export interface ProgramRulesSheetRow {
 export interface programRuleActionsSheetRow {
     id: string;
     programRule: string;
-    name: string;
-    content: string;
-    data: string;
-    location: string;
-    dataElement: string;
-    trackedEntityAttribute: string;
-    programStage: string;
-    programStageSection: string;
+    name: ProgramRuleActionType;
+    content?: string;
+    data?: string;
+    location?: string;
+    dataElement?: string;
+    trackedEntityAttribute?: string;
+    programStage?: string;
+    programStageSection?: string;
 }
 
 export interface ProgramRuleVariablesSheetRow {

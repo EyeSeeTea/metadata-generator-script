@@ -14,6 +14,8 @@ import {
     LegendsSheetRow,
     DataElementLegendsSheetRow,
     ProgramRuleVariablesSheetRow,
+    ProgramRulesSheetRow,
+    programRuleActionsSheetRow,
 } from "domain/entities/Sheet";
 import { DataElement } from "domain/entities/DataElement";
 import { Id, Ref, RenderType } from "../entities/Base";
@@ -27,6 +29,8 @@ import { headers } from "utils/csvHeaders";
 import { fieldsType, metadataFields } from "utils/metadataFields";
 import { ProgramRuleVariable } from "domain/entities/ProgramRuleVariable";
 import { Legend, LegendSet } from "../entities/LegendSet";
+import { ProgramRule, ProgramRuleAction } from "domain/entities/ProgramRule";
+import { MetadataItem } from "../entities/MetadataItem";
 
 export class PullEventProgramUseCase {
     constructor(private metadataRepository: MetadataRepository) {}
@@ -52,6 +56,18 @@ export class PullEventProgramUseCase {
                 async ids => await this.getProgramStageSectionData(ids)
             )
         ).then(programStageSectionsDataArray => programStageSectionsDataArray.flat());
+
+        const programRulesData = (await this.metadataRepository.getProgramRulesofPrograms([
+            eventProgramId,
+        ])) as ProgramRule[];
+
+        const programRuleActionsIds = programRulesData.flatMap(pr =>
+            pr.programRuleActions ? pr.programRuleActions.flatMap(ref => ref.id) : []
+        );
+
+        const programRuleActionData = await Promise.all(
+            this.chunkUniqueIdsArray(programRuleActionsIds).map(async ids => await this.getProgramRuleActionsData(ids))
+        ).then(programRuleActionsDataArray => programRuleActionsDataArray.flat());
 
         const programRuleVariablesIds = programData
             .flatMap(pd => pd.programRuleVariables)
@@ -136,6 +152,33 @@ export class PullEventProgramUseCase {
         const programStageSectionsRows = pssRows.map(pssr => pssr.pssRow);
         const programStageSectionsDataElementRow = pssRows.flatMap(pssr => pssr.pssdeRows);
 
+        const programRulesRows = programRulesData.map(pr => this.buildProgramRuleRow(pr, programName));
+
+        const programRuleActionsRows = programRuleActionData.map(pra => {
+            const programRuleName = this.findById(programRulesData, pra.programRule.id)?.name;
+            if (!programRuleName) throw new Error(`programRule id: ${pra.programRule.id} name not found`);
+
+            const dataElementName = pra.dataElement
+                ? this.findById(dataElementsData, pra.dataElement.id)?.name
+                : undefined;
+
+            const programStageName = pra.programStage
+                ? this.findById(programStagesData, pra.programStage.id)?.name
+                : undefined;
+
+            const programStageSectionsName = pra.programStageSection
+                ? this.findById(programStageSectionsData, pra.programStageSection.id)?.name
+                : undefined;
+
+            this.buildProgramRuleActionsRows(
+                pra,
+                programRuleName,
+                dataElementName,
+                programStageName,
+                programStageSectionsName
+            );
+        });
+
         const programRuleVariablesRows = programRuleVariablesData.map(prv =>
             this.buildProgramRuleVariableRow(prv, programName, dataElementsData, programStagesData)
         );
@@ -194,6 +237,20 @@ export class PullEventProgramUseCase {
             programStageSectionsDataElementRow,
             headers.programStageSectionsDataElementsHeaders,
             "programStageSectionsDataElements",
+            path
+        );
+
+        await this.metadataRepository.exportMetadataToCSV(
+            programRulesData,
+            headers.programRulesHeaders,
+            "programRules",
+            path
+        );
+
+        await this.metadataRepository.exportMetadataToCSV(
+            programRuleActionData,
+            headers.programRuleActionsHeaders,
+            "programRuleActions",
             path
         );
 
@@ -266,6 +323,15 @@ export class PullEventProgramUseCase {
             programStageSectionId
         );
         return (await this.metadataRepository.getMetadata(programStageSectionQuery)) as ProgramStageSection[];
+    }
+
+    private async getProgramRuleActionsData(programRuleActionsIds: Id[]): Promise<ProgramRuleAction[]> {
+        const programRuleActionsQuery: Query = this.makeQuery(
+            "programRuleActions",
+            metadataFields.programRuleActionsFields,
+            programRuleActionsIds
+        );
+        return (await this.metadataRepository.getMetadata(programRuleActionsQuery)) as ProgramRuleAction[];
     }
 
     private async getProgramRuleVariablesData(programRuleVariablesIds: Id[]): Promise<ProgramRuleVariable[]> {
@@ -438,6 +504,38 @@ export class PullEventProgramUseCase {
         });
     }
 
+    private buildProgramRuleRow(programRule: ProgramRule, programName: string): ProgramRulesSheetRow {
+        return {
+            id: programRule.id,
+            name: programRule.name,
+            program: programName,
+            condition: programRule.condition,
+            description: programRule.description,
+        };
+    }
+
+    private buildProgramRuleActionsRows(
+        programRuleAction: ProgramRuleAction,
+        programRuleName: string,
+        dataElementName?: string,
+        programStage?: string,
+        programStageSection?: string
+    ): programRuleActionsSheetRow {
+        return {
+            id: programRuleAction.id,
+            programRule: programRuleName,
+            name: programRuleAction.programRuleActionType,
+            content: programRuleAction.content,
+            data: programRuleAction.data,
+            location: programRuleAction.location,
+            dataElement: dataElementName,
+            // TODO: add trackedEntityAttributes
+            trackedEntityAttribute: undefined,
+            programStage: programStage,
+            programStageSection: programStageSection,
+        };
+    }
+
     private buildProgramRuleVariableRow(
         prv: ProgramRuleVariable,
         programName: string,
@@ -583,5 +681,9 @@ export class PullEventProgramUseCase {
 
     private chunkUniqueIdsArray(array: string[]) {
         return _(array).uniq().chunk(500).value();
+    }
+
+    private findById(object: MetadataItem[], id: string) {
+        return object.find(item => item.id === id) ?? undefined;
     }
 }

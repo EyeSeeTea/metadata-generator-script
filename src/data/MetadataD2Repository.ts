@@ -3,6 +3,7 @@ import { D2Api, MetadataResponse } from "@eyeseetea/d2-api/2.36";
 import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Header, MetadataRepository, Query } from "domain/repositories/MetadataRepository";
 import * as CsvWriter from "csv-writer";
+import { metadataFields } from "utils/metadataFields";
 
 export class MetadataD2Repository implements MetadataRepository {
     constructor(private api: D2Api) {}
@@ -15,6 +16,20 @@ export class MetadataD2Repository implements MetadataRepository {
                 let resultsAsMetadataItem = _.omit(results, "system") as MetadataItem;
                 return resultsAsMetadataItem[query.type];
             });
+
+        return metadata;
+    }
+
+    // TODO: Needs debuging/cleanup/alternative
+    async getProgramRulesofPrograms(programIds: string[]): Promise<MetadataItem[]> {
+        const metadata: MetadataItem[] = await this.api
+            .get<any>("programRules", {
+                fields: _(metadataFields.programRulesFields).keys().value(),
+                filter: `program.id:in:[${programIds}]`,
+                pageSize: 200,
+            })
+            .getData()
+            .then(data => data.programRules);
 
         return metadata;
     }
