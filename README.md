@@ -6,13 +6,15 @@ Script to generate dhis2 metadata from google sheets.
 
 The first time, we have to run `yarn install` and `yarn build` to install all the dependencies.
 After that, you can run `yarn build-metadata` to generate and update the metadata
-or `yarn download-ids` to get the metadata IDs.
+, `yarn download-ids` to get the metadata IDs, `yarn pull-data-set` to pull a dataSet metadata or `yarn pull-ev-program` to pull a event program metadata.
+
+In case of doubt use `yarn start metadata --help` or `yarn start metadata <subcommand> --help`.
 
 ### build-metadata:
 
 Build metadata JSON from a spreadsheet and upload it to DHIS2 instance:
 
-```
+```console
 OPTIONS:
   --dhis-url <str>         - http://USERNAME:PASSWORD@HOST:PORT
   --google-key, -g <value> - Google Api key
@@ -25,13 +27,13 @@ FLAGS:
   --help, -h       - show help
 ```
 Example:
-```bash
-  yarn start metadata build-metadata --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/metadata.json
+```console
+  shell:~$ yarn start metadata build-metadata --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/metadata.json
 ```
 
 ### download-ids:
 
-```sh
+```console
 Gets the IDs of the sheet metadata from DHIS2 instance and exports to CSV file.
 
 OPTIONS:
@@ -44,8 +46,44 @@ FLAGS:
   --help, -h - show help
 ```
 Example:
-```bash
-  yarn start metadata download-ids --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/
+```console
+  shell:~$ yarn start metadata download-ids --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/
+```
+
+### pull-data-set:
+
+```console
+Gets the dataSet metadata from DHIS2 instance and exports to CSV file.
+
+OPTIONS:
+  --dhis-url <str>       - http://USERNAME:PASSWORD@HOST:PORT
+  --data-set, -d <value> - dataSet to pull ID
+  --path, -p <value>     - CSV output path (directory) [optional]
+
+FLAGS:
+  --help, -h - show help
+```
+Example:
+```console
+  shell:~$ yarn start metadata pull-data-set --dhis-url='http://admin:district@localhost:8080' --data-set=AAAAAAAAAAA --path=./foo/
+```
+
+### pull-ev-program:
+
+```console
+Gets the Event Program metadata from DHIS2 instance and exports to CSV file.
+
+OPTIONS:
+  --dhis-url <str>            - http://USERNAME:PASSWORD@HOST:PORT
+  --event-program, -d <value> - eventProgram to pull ID
+  --path, -p <value>          - CSV output path (directory) [optional]
+
+FLAGS:
+  --help, -h - show help
+```
+Example:
+```console
+  shell:~$ yarn start metadata pull-ev-program --dhis-url='http://admin:district@localhost:8080' --event-program=AAAAAAAAAAA --path=./foo/
 ```
 
 ## Description

@@ -132,7 +132,7 @@ export function getCommand() {
     });
 
     const pullDataSet = command({
-        name: "pull-dataSet",
+        name: "pull-data-set",
         description: "Gets the dataSet metadata from DHIS2 instance and exports to CSV file.",
         args: {
             ...dhis2UrlArg,
@@ -208,7 +208,7 @@ export function getCommand() {
         cmds: {
             "build-metadata": buildMetadata,
             "download-ids": downloadIds,
-            "pull-dataSet": pullDataSet,
+            "pull-data-set": pullDataSet,
             "pull-ev-program": pullEvProgram,
         },
     });
