@@ -153,28 +153,28 @@ export class PullEventProgramUseCase {
 
         await this.metadataRepository.exportMetadataToCSV(
             programStagesDataElementsRows,
-            headers.programStageDataElementsSheetRow,
+            headers.programStageDataElementsHeaders,
             "programStageDataElements",
             path
         );
 
         await this.metadataRepository.exportMetadataToCSV(
             programStageSectionsRows,
-            headers.programStageSectionsSheetRow,
+            headers.programStageSectionsHeaders,
             "programStageSections",
             path
         );
 
         await this.metadataRepository.exportMetadataToCSV(
             programStageSectionsDataElementRow,
-            headers.programStageSectionsDataElementsSheetRow,
+            headers.programStageSectionsDataElementsHeaders,
             "programStageSectionsDataElements",
             path
         );
 
         await this.metadataRepository.exportMetadataToCSV(
             programRuleVariablesRows,
-            headers.programRuleVariablesSheetRow,
+            headers.programRuleVariablesHeaders,
             "programRuleVariables",
             path
         );

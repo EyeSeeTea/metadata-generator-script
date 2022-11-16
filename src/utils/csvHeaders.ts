@@ -127,33 +127,7 @@ const programStagesHeaders = [
     { id: "dueDateLabel", title: "dueDateLabel" },
 ];
 
-const programStagesSheetRow = [
-    { id: "id", title: "id" },
-    { id: "name", title: "name" },
-    { id: "program", title: "program" },
-    { id: "enableUserAssignment", title: "enableUserAssignment" },
-    { id: "blockEntryForm", title: "blockEntryForm" },
-    { id: "featureType", title: "featureType" },
-    { id: "preGenerateUID", title: "preGenerateUID" },
-    { id: "executionDateLabel", title: "executionDateLabel" },
-    { id: "validationStrategy", title: "validationStrategy" },
-    { id: "description", title: "description" },
-    { id: "minDaysFromStart", title: "minDaysFromStart" },
-    { id: "repeatable", title: "repeatable" },
-    { id: "periodType", title: "periodType" },
-    { id: "displayGenerateEventBox", title: "displayGenerateEventBox" },
-    { id: "standardInterval", title: "standardInterval" },
-    { id: "autoGenerateEvent", title: "autoGenerateEvent" },
-    { id: "openAfterEnrollment", title: "openAfterEnrollment" },
-    { id: "reportDateToUse", title: "reportDateToUse" },
-    { id: "remindCompleted", title: "remindCompleted" },
-    { id: "allowGenerateNextVisit", title: "allowGenerateNextVisit" },
-    { id: "generatedByEnrollmentDate", title: "generatedByEnrollmentDate" },
-    { id: "hideDueDate", title: "hideDueDate" },
-    { id: "dueDateLabel", title: "dueDateLabel" },
-];
-
-const programStageDataElementsSheetRow = [
+const programStageDataElementsHeaders = [
     { id: "id", title: "id" },
     { id: "program", title: "program" },
     { id: "programStage", title: "programStage" },
@@ -167,7 +141,7 @@ const programStageDataElementsSheetRow = [
     { id: "renderTypeDesktop", title: "renderTypeDesktop" },
 ];
 
-const programStageSectionsSheetRow = [
+const programStageSectionsHeaders = [
     { id: "id", title: "id" },
     { id: "program", title: "program" },
     { id: "programStage", title: "programStage" },
@@ -177,14 +151,14 @@ const programStageSectionsSheetRow = [
     { id: "description", title: "description" },
 ];
 
-const programStageSectionsDataElementsSheetRow = [
+const programStageSectionsDataElementsHeaders = [
     { id: "program", title: "program" },
     { id: "programStage", title: "programStage" },
     { id: "programStageSection", title: "programStageSection" },
     { id: "name", title: "name" },
 ];
 
-const programRuleVariablesSheetRow = [
+const programRuleVariablesHeaders = [
     { id: "id", title: "id" },
     { id: "name", title: "name" },
     { id: "displayName", title: "displayName" },
@@ -196,6 +170,12 @@ const programRuleVariablesSheetRow = [
     { id: "programStage", title: "programStage" },
 ];
 
+const legendSetsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "code", title: "code" },
+];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
@@ -205,9 +185,9 @@ export const headers = {
     categoryOptionsHeaders: categoryOptionsHeaders,
     programsHeaders: programsHeaders,
     programStagesHeaders: programStagesHeaders,
-    programStagesSheetRow: programStagesSheetRow,
-    programStageDataElementsSheetRow: programStageDataElementsSheetRow,
-    programStageSectionsSheetRow: programStageSectionsSheetRow,
-    programStageSectionsDataElementsSheetRow: programStageSectionsDataElementsSheetRow,
-    programRuleVariablesSheetRow: programRuleVariablesSheetRow,
+    programStageDataElementsHeaders: programStageDataElementsHeaders,
+    programStageSectionsHeaders: programStageSectionsHeaders,
+    programStageSectionsDataElementsHeaders: programStageSectionsDataElementsHeaders,
+    programRuleVariablesHeaders: programRuleVariablesHeaders,
+    legendSetsHeaders: legendSetsHeaders,
 };
