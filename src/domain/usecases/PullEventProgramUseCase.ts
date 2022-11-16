@@ -73,6 +73,9 @@ export class PullEventProgramUseCase {
                 _(programStageSectionsData)
                     .flatMap(pss => pss.dataElements)
                     .map(de => de.id)
+                    .value(),
+                _(programRuleVariablesData)
+                    .flatMap(prv => prv.dataElement?.id ?? [])
                     .value()
             )
         );
@@ -579,6 +582,6 @@ export class PullEventProgramUseCase {
     }
 
     private chunkUniqueIdsArray(array: string[]) {
-        return _(array).chunk(500).uniq().value();
+        return _(array).uniq().chunk(500).value();
     }
 }
