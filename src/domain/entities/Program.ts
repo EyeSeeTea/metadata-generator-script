@@ -10,13 +10,13 @@ export interface Program {
     categoryCombo: Ref;
     version?: string;
     expiryPeriodType?: PeriodType;
-    expiryDays?: number;
-    completeEventsExpiryDays?: number;
+    expiryDays?: string;
+    completeEventsExpiryDays?: string;
     displayFrontPageList?: boolean;
     useFirstStageDuringRegistration?: boolean;
     accessLevel?: AccessLevelType;
-    minAttributesRequiredToSearch?: number;
-    maxTeiCountToReturn?: number;
+    minAttributesRequiredToSearch?: string;
+    maxTeiCountToReturn?: string;
     selectIncidentDatesInFuture?: boolean;
     selectEnrollmentDatesInFuture?: boolean;
     onlyEnrollOnce?: boolean;

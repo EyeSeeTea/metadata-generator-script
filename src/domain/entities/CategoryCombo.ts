@@ -1,10 +1,10 @@
-import { dataDimensionType, Id, Ref } from "./Base";
+import { DataDimensionType, Id, Ref } from "./Base";
 
 export interface CategoryCombo {
     id: Id;
     name: string;
     code: string;
     description: string;
-    dataDimensionType: dataDimensionType;
+    dataDimensionType: DataDimensionType;
     categories: Ref[];
 }

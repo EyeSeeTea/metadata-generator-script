@@ -73,10 +73,39 @@ export type PeriodType =
     | "FinancialNovember"
     | "";
 
-export type AccessLevelType = "OPEN" | "AUDITED" | "PROTECTED" | "CLOSED";
+export type AccessLevelType = "OPEN" | "AUDITED" | "PROTECTED" | "CLOSED" | "";
 
-export type FeatureType = "NONE" | "POINT" | "POLYGON";
+export type FeatureType = "NONE" | "POINT" | "POLYGON" | "";
 
-export type dataDimensionType = "DISAGGREGATION" | "ATTRIBUTE";
+export type ValidationStrategyType = "ON_COMPLETE" | "ON_UPDATE_AND_INSERT";
 
-export type domainType = "TRACKER" | "AGGREGATE";
+export type DataDimensionType = "DISAGGREGATION" | "ATTRIBUTE";
+
+export type DomainType = "TRACKER" | "AGGREGATE";
+
+export type DataElementRenderType =
+    | "DEFAULT"
+    | "DROPDOWN"
+    | "VERTICAL_RADIOBUTTONS"
+    | "HORIZONTAL_RADIOBUTTONS"
+    | "VERTICAL_CHECKBOXES"
+    | "HORIZONTAL_CHECKBOXES"
+    | "SHARED_HEADER_RADIOBUTTONS"
+    | "ICONS_AS_BUTTONS"
+    | "SPINNER"
+    | "ICON"
+    | "TOGGLE"
+    | "VALUE"
+    | "SLIDER"
+    | "LINEAR_SCALE";
+
+export type ProgramStageSectionRenderType = "LISTING" | "SEQUENTIAL" | "MATRIX";
+
+export type RenderType = {
+    MOBILE: {
+        type: DataElementRenderType | ProgramStageSectionRenderType;
+    };
+    DESKTOP: {
+        type: DataElementRenderType | ProgramStageSectionRenderType;
+    };
+};

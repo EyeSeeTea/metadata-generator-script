@@ -1,4 +1,4 @@
-import { AggregationType, ValueType, domainType, Id, Ref } from "./Base";
+import { AggregationType, ValueType, DomainType, Id, Ref } from "./Base";
 
 export interface DataElement {
     id: Id;
@@ -9,7 +9,7 @@ export interface DataElement {
     categoryCombo: Ref;
     valueType: ValueType;
     aggregationType: AggregationType;
-    domainType: domainType;
+    domainType: DomainType;
     description: string;
     optionSet: string;
     commentOptionSet: string;

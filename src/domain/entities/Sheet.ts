@@ -2,10 +2,11 @@ import {
     PeriodType,
     AggregationType,
     ValueType,
-    domainType,
-    dataDimensionType,
+    DomainType,
+    DataDimensionType,
     AccessLevelType,
     FeatureType,
+    ValidationStrategyType,
 } from "./Base";
 import { MetadataItem } from "./MetadataItem";
 
@@ -113,7 +114,7 @@ export interface DataElementsSheetRow {
     categoryCombo?: string;
     valueType?: ValueType;
     aggregationType?: AggregationType;
-    domainType?: domainType;
+    domainType?: DomainType;
     description?: string;
     optionSet?: string;
     commentOptionSet?: string;
@@ -126,7 +127,7 @@ export interface CategoryCombosSheetRow {
     id: string;
     name: string;
     code: string;
-    dataDimensionType: dataDimensionType;
+    dataDimensionType: DataDimensionType;
     description: string;
 }
 
@@ -136,7 +137,7 @@ export interface CategoriesSheetRow {
     shortName: string;
     code: string;
     categoryCombo: string;
-    dataDimensionType: dataDimensionType;
+    dataDimensionType: DataDimensionType;
     description: string;
 }
 
@@ -153,26 +154,83 @@ export interface ProgramsSheetRow {
     id: string;
     name: string;
     shortName: string;
-    code: string;
-    description: string;
-    trackedEntityType: string;
+    code?: string;
+    description?: string;
+    trackedEntityType?: string;
     categoryCombo: string;
-    version: string;
-    expiryPeriodType: PeriodType;
-    expiryDays: number;
-    completeEventsExpiryDays: number;
-    displayFrontPageList: string;
-    useFirstStageDuringRegistration: string;
-    accessLevel: AccessLevelType;
-    minAttributesRequiredToSearch: number;
-    maxTeiCountToReturn: number;
-    selectIncidentDatesInFuture: string;
-    selectEnrollmentDatesInFuture: string;
-    onlyEnrollOnce: string;
-    displayIncidentDate: string;
-    incidentDateLabel: string;
-    enrollmentDateLabel: string;
-    ignoreOverdueEvents: string;
-    featureType: FeatureType;
-    relatedProgram: string;
+    version?: string;
+    expiryPeriodType?: PeriodType;
+    expiryDays?: string;
+    completeEventsExpiryDays?: string;
+    displayFrontPageList?: string;
+    useFirstStageDuringRegistration?: string;
+    accessLevel?: AccessLevelType;
+    minAttributesRequiredToSearch?: string;
+    maxTeiCountToReturn?: string;
+    selectIncidentDatesInFuture?: string;
+    selectEnrollmentDatesInFuture?: string;
+    onlyEnrollOnce?: string;
+    displayIncidentDate?: string;
+    incidentDateLabel?: string;
+    enrollmentDateLabel?: string;
+    ignoreOverdueEvents?: string;
+    featureType?: FeatureType;
+    relatedProgram?: string;
+}
+
+export interface ProgramStagesSheetRow {
+    id: string;
+    name: string;
+    program: string;
+    enableUserAssignment?: string;
+    blockEntryForm?: string;
+    featureType?: FeatureType;
+    preGenerateUID?: string;
+    executionDateLabel?: string;
+    validationStrategy: ValidationStrategyType;
+    description?: string;
+    minDaysFromStart?: string;
+    repeatable?: string;
+    periodType?: string;
+    displayGenerateEventBox?: string;
+    standardInterval?: string;
+    autoGenerateEvent?: string;
+    openAfterEnrollment?: string;
+    reportDateToUse?: string;
+    remindCompleted?: string;
+    allowGenerateNextVisit?: string;
+    generatedByEnrollmentDate?: string;
+    hideDueDate?: string;
+    dueDateLabel?: string;
+}
+
+export interface ProgramStageDataElementsSheetRow {
+    id: string;
+    program: string;
+    programStage: string;
+    name: string;
+    compulsory?: string;
+    allowProvidedElsewhere?: string;
+    displayInReports?: string;
+    allowFutureDate?: string;
+    skipSynchronization?: string;
+    renderTypeMobile?: string;
+    renderTypeDesktop?: string;
+}
+
+export interface ProgramStageSectionsSheetRow {
+    id: string;
+    program: string;
+    programStage: string;
+    name: string;
+    renderTypeMobile?: string;
+    renderTypeDesktop?: string;
+    description?: string;
+}
+
+export interface ProgramStageSectionsDataElementsSheetRow {
+    program: string;
+    programStage: string;
+    programStageSection: string;
+    name: string;
 }

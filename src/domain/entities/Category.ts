@@ -1,4 +1,4 @@
-import { dataDimensionType, Id, Ref } from "./Base";
+import { DataDimensionType, Id, Ref } from "./Base";
 
 export interface Category {
     id: Id;
@@ -7,5 +7,5 @@ export interface Category {
     code: string;
     description: string;
     categoryOptions: Ref[];
-    dataDimensionType: dataDimensionType;
+    dataDimensionType: DataDimensionType;
 }
