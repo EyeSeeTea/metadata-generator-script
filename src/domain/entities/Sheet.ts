@@ -124,6 +124,11 @@ export interface DataElementsSheetRow {
     fieldMask?: string;
 }
 
+export interface DataElementLegendsSheetRow {
+    dataElement: string;
+    name: string;
+}
+
 export interface CategoryCombosSheetRow {
     id: string;
     name: string;
@@ -246,4 +251,18 @@ export interface ProgramRuleVariablesSheetRow {
     dataElement?: string;
     trackedEntityAttribute?: string;
     programStage?: string;
+}
+
+export interface LegendSetsSheetRow {
+    id: string;
+    name: string;
+    code?: string;
+}
+
+export interface LegendsSheetRow {
+    id: string;
+    name: string;
+    legendSet: string;
+    startValue: string;
+    endValue: string;
 }

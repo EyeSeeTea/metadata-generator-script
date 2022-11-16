@@ -16,12 +16,10 @@ export interface DataElement {
     zeroIsSignificant: boolean;
     url: string;
     fieldMask: string;
-    //     attributeValues: D2AttributeValueGeneric<D2Attribute>[];
-
-    //     legendSet: D2LegendSet;
-    //     legendSets: D2LegendSet[];
-
-    //     optionSetValue: boolean;
-
-    //     translations: D2Translation[];
+    legendSets: Ref[];
 }
+
+//     attributeValues: D2AttributeValueGeneric<D2Attribute>[];
+//     legendSet: D2LegendSet;
+//     optionSetValue: boolean;
+//     translations: D2Translation[];

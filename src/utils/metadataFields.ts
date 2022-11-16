@@ -57,6 +57,7 @@ const dataElementFieds = {
     zeroIsSignificant: true,
     url: true,
     fieldMask: true,
+    legendSets: true,
 };
 
 const categoryComboFields = {
@@ -167,6 +168,20 @@ const programRuleVariablesFields = {
     programStage: true,
 };
 
+const LegendSetsFields = {
+    id: true,
+    name: true,
+    code: true,
+    legends: true,
+};
+
+const LegendsFields = {
+    id: true,
+    name: true,
+    startValue: true,
+    endValue: true,
+};
+
 export const metadataFields = {
     dataSetFieds: dataSetFieds,
     dataElementFieds: dataElementFieds,
@@ -177,4 +192,6 @@ export const metadataFields = {
     programStagesFields: programStagesFields,
     programStageSectionFields: programStageSectionFields,
     programRuleVariablesFields: programRuleVariablesFields,
+    LegendSetsFields: LegendSetsFields,
+    LegendsFields: LegendsFields,
 };

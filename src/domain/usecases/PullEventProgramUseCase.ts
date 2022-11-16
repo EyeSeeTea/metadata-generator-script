@@ -10,6 +10,10 @@ import {
     ProgramStageSectionsDataElementsSheetRow,
     ProgramStageDataElementsSheetRow,
     ProgramStageSectionsSheetRow,
+    LegendSetsSheetRow,
+    LegendsSheetRow,
+    DataElementLegendsSheetRow,
+    ProgramRuleVariablesSheetRow,
 } from "domain/entities/Sheet";
 import { DataElement } from "domain/entities/DataElement";
 import { Id, Ref, RenderType } from "../entities/Base";
@@ -21,8 +25,8 @@ import { ProgramStage } from "../entities/ProgramStage";
 import { ProgramStageSection } from "../entities/ProgramStageSection";
 import { headers } from "utils/csvHeaders";
 import { fieldsType, metadataFields } from "utils/metadataFields";
-import { ProgramRuleVariablesSheetRow } from "../entities/Sheet";
 import { ProgramRuleVariable } from "domain/entities/ProgramRuleVariable";
+import { Legend, LegendSet } from "../entities/LegendSet";
 
 export class PullEventProgramUseCase {
     constructor(private metadataRepository: MetadataRepository) {}
@@ -92,6 +96,10 @@ export class PullEventProgramUseCase {
         const categoryOptionsIds = _.uniq(categoriesData.flatMap(c => c.categoryOptions).flatMap(ref => ref.id));
         const categoryOptionsData = await this.getCategoryOptionsData(categoryOptionsIds);
 
+        // LEGEND SETS GET
+        const legendSetsIds = dataElementsData.flatMap(de => de.legendSets).map(ref => ref.id);
+        const legendSetsData = await this.getLegendSetsData(legendSetsIds);
+
         // PROGRAMS ROWS BUILD
         const programRows = programData.map(program => this.buildProgramRow(program));
 
@@ -139,10 +147,24 @@ export class PullEventProgramUseCase {
             this.buildCategoryOptionRow(categoryOption, categoriesData)
         );
 
+        // LEGEND SETS BUILD
+
+        const legendSetRows = legendSetsData.map(ls => this.buildLegendSetRow(ls));
+        const legendsRows = legendSetsData.flatMap(ls => this.buildLegendsRows(ls.legends, ls.name));
+
+        const dataElementLegendsRows = dataElementsData.flatMap(de => {
+            return de.legendSets.flatMap(dels => {
+                const legendSetName = legendSetsData.find(lsToFind => lsToFind.id === dels.id)?.name;
+                if (!legendSetName) return [];
+
+                return this.buildDataElementLegendsRow(de.name, legendSetName);
+            });
+        });
+
         //
         // PRINT CSVs
         //
-        await this.metadataRepository.exportMetadataToCSV(programRows, headers.programsHeaders, "program", path);
+        await this.metadataRepository.exportMetadataToCSV(programRows, headers.programsHeaders, "programs", path);
 
         await this.metadataRepository.exportMetadataToCSV(
             programStagesRows,
@@ -187,6 +209,13 @@ export class PullEventProgramUseCase {
         );
 
         await this.metadataRepository.exportMetadataToCSV(
+            dataElementLegendsRows,
+            headers.dataElementLegendsHeaders,
+            "dataElementLegends",
+            path
+        );
+
+        await this.metadataRepository.exportMetadataToCSV(
             categoryCombosRows,
             headers.categoryCombosHeaders,
             "categoryCombos",
@@ -204,6 +233,10 @@ export class PullEventProgramUseCase {
             "categoryOptions",
             path
         );
+
+        await this.metadataRepository.exportMetadataToCSV(legendSetRows, headers.legendSetsHeaders, "legendSets", path);
+
+        await this.metadataRepository.exportMetadataToCSV(legendsRows, headers.legendsHeaders, "legends", path);
     }
 
     //
@@ -230,6 +263,15 @@ export class PullEventProgramUseCase {
             programStageSectionId
         );
         return (await this.metadataRepository.getMetadata(programStageSectionQuery)) as ProgramStageSection[];
+    }
+
+    private async getProgramRuleVariablesData(programRuleVariablesIds: Id[]): Promise<ProgramRuleVariable[]> {
+        const programRuleVariablesQuery: Query = this.makeQuery(
+            "programRuleVariables",
+            metadataFields.programRuleVariablesFields,
+            programRuleVariablesIds
+        );
+        return (await this.metadataRepository.getMetadata(programRuleVariablesQuery)) as ProgramRuleVariable[];
     }
 
     private async getDataElementsData(dataElementsIds: Id[]): Promise<DataElement[]> {
@@ -265,13 +307,9 @@ export class PullEventProgramUseCase {
         return (await this.metadataRepository.getMetadata(categoryOptionsQuery)) as CategoryOption[];
     }
 
-    private async getProgramRuleVariablesData(programRuleVariablesIds: Id[]): Promise<ProgramRuleVariable[]> {
-        const programRuleVariablesQuery: Query = this.makeQuery(
-            "programRuleVariables",
-            metadataFields.programRuleVariablesFields,
-            programRuleVariablesIds
-        );
-        return (await this.metadataRepository.getMetadata(programRuleVariablesQuery)) as ProgramRuleVariable[];
+    private async getLegendSetsData(legendSetsIds: Id[]): Promise<LegendSet[]> {
+        const legendSetsQuery: Query = this.makeQuery("legendSets", metadataFields.LegendSetsFields, legendSetsIds);
+        return (await this.metadataRepository.getMetadata(legendSetsQuery)) as LegendSet[];
     }
 
     //
@@ -487,10 +525,36 @@ export class PullEventProgramUseCase {
         };
     }
 
+    private buildLegendSetRow(legendSet: LegendSet): LegendSetsSheetRow {
+        return {
+            id: legendSet.id,
+            name: legendSet.name,
+            code: legendSet.code,
+        };
+    }
+
+    private buildLegendsRows(legends: Legend[], legendSetName: string): LegendsSheetRow[] {
+        return legends.map(legend => {
+            return {
+                id: legend.id,
+                name: legend.name,
+                legendSet: legendSetName,
+                startValue: legend.startValue,
+                endValue: legend.endValue,
+            };
+        });
+    }
+
+    private buildDataElementLegendsRow(dataElementName: string, legendSetName: string): DataElementLegendsSheetRow {
+        return {
+            dataElement: dataElementName,
+            name: legendSetName,
+        };
+    }
+
     //
     // UTILS
     //
-
     private booleanToString(bool: boolean | undefined) {
         if (!bool) return undefined;
         return bool ? "TRUE" : "FALSE";

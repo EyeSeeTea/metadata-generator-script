@@ -46,6 +46,11 @@ const dataElementsHeaders = [
     { id: "fieldMask", title: "fieldMask" },
 ];
 
+const dataElementLegendsHeaders = [
+    { id: "dataElement", title: "dataElement" },
+    { id: "name", title: "name" },
+];
+
 const categoryCombosHeaders = [
     { id: "id", title: "id" },
     { id: "name", title: "name" },
@@ -176,10 +181,19 @@ const legendSetsHeaders = [
     { id: "code", title: "code" },
 ];
 
+const legendsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "legendSet", title: "legendSet" },
+    { id: "startValue", title: "startValue" },
+    { id: "endValue", title: "endValue" },
+];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
     dataElementsHeaders: dataElementsHeaders,
+    dataElementLegendsHeaders: dataElementLegendsHeaders,
     categoryCombosHeaders: categoryCombosHeaders,
     categoriesHeaders: categoriesHeaders,
     categoryOptionsHeaders: categoryOptionsHeaders,
@@ -190,4 +204,5 @@ export const headers = {
     programStageSectionsDataElementsHeaders: programStageSectionsDataElementsHeaders,
     programRuleVariablesHeaders: programRuleVariablesHeaders,
     legendSetsHeaders: legendSetsHeaders,
+    legendsHeaders: legendsHeaders,
 };
