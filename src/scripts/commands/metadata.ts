@@ -17,6 +17,7 @@ import { BuildMetadataUseCase } from "domain/usecases/BuildMetadataUseCase";
 import { DownloadIdsUseCase } from "domain/usecases/DownloadIdsUseCase";
 import { makeUploadMetadataLog, writeToJSON } from "utils/utils";
 import { PullDataSetUseCase } from "domain/usecases/PullDataSetUseCase";
+import { PullEventProgramUseCase } from "domain/usecases/PullEventProgramUseCase";
 
 const dhis2UrlArg = { url: getApiUrlOption({ long: "dhis-url" }) };
 const googleArgs = {
@@ -130,7 +131,7 @@ export function getCommand() {
         },
     });
 
-    const pullMetadata = command({
+    const pullDataSet = command({
         name: "pull-dataSet",
         description: "Gets the dataSet metadata from DHIS2 instance and exports to CSV file.",
         args: {
@@ -166,8 +167,49 @@ export function getCommand() {
         },
     });
 
+    const pullEvProgram = command({
+        name: "pull-ev-program",
+        description: "Gets the Event Program metadata from DHIS2 instance and exports to CSV file.",
+        args: {
+            ...dhis2UrlArg,
+            eventProgramToPull: option({
+                type: IDString,
+                long: "event-program",
+                short: "d",
+                description: "eventProgram to pull ID",
+            }),
+            path: option({
+                type: optional(DirPath),
+                long: "path",
+                short: "p",
+                description: "CSV output path (directory)",
+            }),
+        },
+        handler: async args => {
+            try {
+                log.info(`Getting metadata from server at ${args.url} ...`);
+                const api = getD2Api(args.url);
+                const MetadataRepository = new MetadataD2Repository(api);
+
+                log.info("Writing CSVs...");
+                const downloadIds = new PullEventProgramUseCase(MetadataRepository);
+                await downloadIds.execute(args.eventProgramToPull, args.path);
+
+                process.exit(0);
+            } catch (error: any) {
+                log.error(error.stack);
+                process.exit(1);
+            }
+        },
+    });
+
     return subcommands({
         name: "metadata",
-        cmds: { "build-metadata": buildMetadata, "download-ids": downloadIds, "pull-dataSet": pullMetadata },
+        cmds: {
+            "build-metadata": buildMetadata,
+            "download-ids": downloadIds,
+            "pull-dataSet": pullDataSet,
+            "pull-ev-program": pullEvProgram,
+        },
     });
 }

@@ -9,7 +9,8 @@
         "build:dev": "webpack --mode development --watch",
         "build": "webpack --mode production",
         "prettify": "prettier \"./**/*.{js,jsx,json,css,ts,tsx}\" --write",
-        "start": "node dist/index.js"
+        "start": "node dist/index.js",
+        "start:dev": "ts-node src/index.ts"
     },
     "devDependencies": {
         "@types/dotenv-flow": "3.2.0",
