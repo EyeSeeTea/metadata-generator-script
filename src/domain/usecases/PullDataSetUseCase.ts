@@ -41,7 +41,7 @@ export class PullDataSetUseCase {
             })
         ).then(dataElementsDataArray => dataElementsDataArray.flat());
 
-        const categoryCombosIds = _.merge(
+        const categoryCombosIds = _.concat(
             _.uniq(dataSetData.map(dataSet => dataSet.categoryCombo.id)),
             _.uniq(dataElementsData.map(dataElement => dataElement.categoryCombo.id))
         );
