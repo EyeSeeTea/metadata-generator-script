@@ -40,7 +40,7 @@ export const GoogleApiKey: Type<string, string> = {
 
 export const SpreadsheetId: Type<string, string> = {
     async from(str) {
-        return fixedLengthString(str, 44);
+        return str;
     },
 };
 
