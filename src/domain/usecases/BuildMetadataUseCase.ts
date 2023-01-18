@@ -63,6 +63,7 @@ export class BuildMetadataUseCase {
         const options = _(sheetOptions)
             .map(option => {
                 const optionSet = sheetOptionSets.find(({ name }) => name === option.optionSet)?.id;
+                option.sharing = option.sharing ? JSON.parse(JSON.stringify(option.sharing)) : undefined;
 
                 return { ...option, optionSet: { id: optionSet } };
             })
@@ -80,6 +81,7 @@ export class BuildMetadataUseCase {
                     .map(({ name }) => ({ id: this.getByName(sheetDataElements, name).id }));
 
                 const translations = this.processTranslations(sheets, section.name, "section");
+                section.sharing = section.sharing ? JSON.parse(JSON.stringify(section.sharing)) : undefined;
 
                 return { ...section, dataSet: { id: dataSet }, dataElements, translations };
             })
@@ -95,6 +97,7 @@ export class BuildMetadataUseCase {
                 .map(({ id }) => ({ id }));
 
             const translations = this.processTranslations(sheets, category.name, "category");
+            category.sharing = category.sharing ? JSON.parse(JSON.stringify(category.sharing)) : undefined;
 
             return { ...category, categoryOptions, translations };
         });
@@ -105,6 +108,9 @@ export class BuildMetadataUseCase {
                 .map(({ id }) => ({ id }));
 
             const translations = this.processTranslations(sheets, categoryCombo.name, "categoryCombo");
+            categoryCombo.sharing = categoryCombo.sharing
+                ? JSON.parse(JSON.stringify(categoryCombo.sharing))
+                : undefined;
 
             return { ...categoryCombo, categories, translations };
         });
@@ -114,12 +120,17 @@ export class BuildMetadataUseCase {
                 .filter(option => option.optionSet === optionSet.name)
                 .map(({ id }) => ({ id }));
 
+            optionSet.sharing = optionSet.sharing ? JSON.parse(JSON.stringify(optionSet.sharing)) : undefined;
             const translations = this.processTranslations(sheets, optionSet.name, "optionSet");
 
             return { ...optionSet, options, translations };
         });
 
         const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
+            categoryOption.sharing = categoryOption.sharing
+                ? JSON.parse(JSON.stringify(categoryOption.sharing))
+                : undefined;
+
             const translations = this.processTranslations(sheets, categoryOption.name, "categoryOption");
 
             return { ...categoryOption, translations };
@@ -204,6 +215,7 @@ export class BuildMetadataUseCase {
             this.replaceById(data, "categoryCombo", categoryCombos);
 
             data.workflow = data.workflow ? { id: data.workflow } : undefined;
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
 
             return { ...data };
         });
@@ -228,6 +240,8 @@ export class BuildMetadataUseCase {
             const translations = this.processTranslations(sheets, data.name, "dataElement");
             const attributeValues = this.processItemAttributes(sheets, data, "dataElement");
             const legendSets = this.processItemLegendSets(sheets, data.name, "dataElement");
+
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
 
             return {
                 ...data,
@@ -270,6 +284,7 @@ export class BuildMetadataUseCase {
                 });
 
             data.translations = this.processTranslations(sheets, data.name, "dataElementGroup");
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
 
             return { ...data };
         });
@@ -295,6 +310,7 @@ export class BuildMetadataUseCase {
                     };
                 });
 
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
             data.translations = this.processTranslations(sheets, data.name, "dataElementGroupSet");
 
             return { ...data };
@@ -319,6 +335,7 @@ export class BuildMetadataUseCase {
                   }
                 : undefined;
 
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
             data.translation = this.processTranslations(sheets, data.name, "attribute");
 
             return { ...data, optionSet };
@@ -351,6 +368,7 @@ export class BuildMetadataUseCase {
 
             this.replaceById(data, "categoryCombo", categoryCombos);
 
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
             data.translations = this.processTranslations(sheets, data.name, "program");
 
             if (trackedEntityType.id) {
@@ -421,6 +439,9 @@ export class BuildMetadataUseCase {
             this.replaceById(programSection, "program", programs);
 
             const renderType = this.addRenderType(programSection, "LISTING");
+            programSection.sharing = programSection.sharing
+                ? JSON.parse(JSON.stringify(programSection.sharing))
+                : undefined;
 
             const trackedEntityAttributes = sectionsAttributes
                 .filter(sectionsAttributeToFilter => {
@@ -477,6 +498,7 @@ export class BuildMetadataUseCase {
 
             this.replaceById(programStage, "program", programs);
 
+            programStage.sharing = programStage.sharing ? JSON.parse(JSON.stringify(programStage.sharing)) : undefined;
             const translations = this.processTranslations(sheets, programStage.name, "programStage");
 
             return { ...programStage, programStageDataElements, programStageSections, translations };
@@ -518,6 +540,9 @@ export class BuildMetadataUseCase {
             }
 
             this.replaceById(programStageSection, "programStage", programStages);
+            programStageSection.sharing = programStageSection.sharing
+                ? JSON.parse(JSON.stringify(programStageSection.sharing))
+                : undefined;
 
             const renderType = this.addRenderType(programStageSection, "LISTING");
 
@@ -639,6 +664,7 @@ export class BuildMetadataUseCase {
                     };
                 });
 
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
             const translations = this.processTranslations(sheets, trackedEntityType.name, "trackedEntityType");
 
             return { ...data, trackedEntityTypeAttributes, translations };
@@ -657,6 +683,7 @@ export class BuildMetadataUseCase {
                 .filter(action => action.programRule === rule.name)
                 .map(action => ({ id: action.id }));
 
+            rule.sharing = rule.sharing ? JSON.parse(JSON.stringify(rule.sharing)) : undefined;
             const translations = this.processTranslations(sheets, rule.name, "programRule");
 
             return { ...rule, program: { id: program.id }, programRuleActions, translations };
@@ -681,6 +708,8 @@ export class BuildMetadataUseCase {
             this.replaceById(data, "trackedEntityAttribute", attrs);
             this.replaceById(data, "programStage", stages);
             this.replaceById(data, "programStageSection", sections);
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
+
             const programRuleActionType = data.name;
             delete data.name;
 
@@ -705,6 +734,7 @@ export class BuildMetadataUseCase {
             this.replaceById(data, "trackedEntityAttribute", attrs);
             this.replaceById(data, "programStage", stages);
 
+            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
             data.translations = this.processTranslations(sheets, variable.name, "programRuleVariable");
 
             return data;
