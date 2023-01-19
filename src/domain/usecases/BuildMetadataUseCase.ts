@@ -63,7 +63,7 @@ export class BuildMetadataUseCase {
         const options = _(sheetOptions)
             .map(option => {
                 const optionSet = sheetOptionSets.find(({ name }) => name === option.optionSet)?.id;
-                option.sharing = option.sharing ? JSON.parse(JSON.stringify(option.sharing)) : undefined;
+                this.addSharingSetting(optionSet);
 
                 return { ...option, optionSet: { id: optionSet } };
             })
@@ -81,7 +81,7 @@ export class BuildMetadataUseCase {
                     .map(({ name }) => ({ id: this.getByName(sheetDataElements, name).id }));
 
                 const translations = this.processTranslations(sheets, section.name, "section");
-                section.sharing = section.sharing ? JSON.parse(JSON.stringify(section.sharing)) : undefined;
+                this.addSharingSetting(section);
 
                 return { ...section, dataSet: { id: dataSet }, dataElements, translations };
             })
@@ -97,7 +97,7 @@ export class BuildMetadataUseCase {
                 .map(({ id }) => ({ id }));
 
             const translations = this.processTranslations(sheets, category.name, "category");
-            category.sharing = category.sharing ? JSON.parse(JSON.stringify(category.sharing)) : undefined;
+            this.addSharingSetting(category);
 
             return { ...category, categoryOptions, translations };
         });
@@ -107,10 +107,8 @@ export class BuildMetadataUseCase {
                 .filter(category => category.categoryCombo === categoryCombo?.name)
                 .map(({ id }) => ({ id }));
 
+            this.addSharingSetting(categoryCombo);
             const translations = this.processTranslations(sheets, categoryCombo.name, "categoryCombo");
-            categoryCombo.sharing = categoryCombo.sharing
-                ? JSON.parse(JSON.stringify(categoryCombo.sharing))
-                : undefined;
 
             return { ...categoryCombo, categories, translations };
         });
@@ -120,17 +118,14 @@ export class BuildMetadataUseCase {
                 .filter(option => option.optionSet === optionSet.name)
                 .map(({ id }) => ({ id }));
 
-            optionSet.sharing = optionSet.sharing ? JSON.parse(JSON.stringify(optionSet.sharing)) : undefined;
+            this.addSharingSetting(optionSet);
             const translations = this.processTranslations(sheets, optionSet.name, "optionSet");
 
             return { ...optionSet, options, translations };
         });
 
         const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
-            categoryOption.sharing = categoryOption.sharing
-                ? JSON.parse(JSON.stringify(categoryOption.sharing))
-                : undefined;
-
+            this.addSharingSetting(categoryOption);
             const translations = this.processTranslations(sheets, categoryOption.name, "categoryOption");
 
             return { ...categoryOption, translations };
@@ -213,9 +208,9 @@ export class BuildMetadataUseCase {
             data.attributeValues = this.processItemAttributes(sheets, data, "dataSet");
 
             this.replaceById(data, "categoryCombo", categoryCombos);
+            this.addSharingSetting(data);
 
             data.workflow = data.workflow ? { id: data.workflow } : undefined;
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
 
             return { ...data };
         });
@@ -241,7 +236,7 @@ export class BuildMetadataUseCase {
             const attributeValues = this.processItemAttributes(sheets, data, "dataElement");
             const legendSets = this.processItemLegendSets(sheets, data.name, "dataElement");
 
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
+            this.addSharingSetting(data);
 
             return {
                 ...data,
@@ -283,8 +278,8 @@ export class BuildMetadataUseCase {
                     };
                 });
 
+            this.addSharingSetting(data);
             data.translations = this.processTranslations(sheets, data.name, "dataElementGroup");
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
 
             return { ...data };
         });
@@ -310,7 +305,7 @@ export class BuildMetadataUseCase {
                     };
                 });
 
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
+            this.addSharingSetting(data);
             data.translations = this.processTranslations(sheets, data.name, "dataElementGroupSet");
 
             return { ...data };
@@ -335,7 +330,7 @@ export class BuildMetadataUseCase {
                   }
                 : undefined;
 
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
+            this.addSharingSetting(data);
             data.translation = this.processTranslations(sheets, data.name, "attribute");
 
             return { ...data, optionSet };
@@ -368,7 +363,7 @@ export class BuildMetadataUseCase {
 
             this.replaceById(data, "categoryCombo", categoryCombos);
 
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
+            this.addSharingSetting(data);
             data.translations = this.processTranslations(sheets, data.name, "program");
 
             if (trackedEntityType.id) {
@@ -439,9 +434,7 @@ export class BuildMetadataUseCase {
             this.replaceById(programSection, "program", programs);
 
             const renderType = this.addRenderType(programSection, "LISTING");
-            programSection.sharing = programSection.sharing
-                ? JSON.parse(JSON.stringify(programSection.sharing))
-                : undefined;
+            this.addSharingSetting(programSection);
 
             const trackedEntityAttributes = sectionsAttributes
                 .filter(sectionsAttributeToFilter => {
@@ -498,7 +491,7 @@ export class BuildMetadataUseCase {
 
             this.replaceById(programStage, "program", programs);
 
-            programStage.sharing = programStage.sharing ? JSON.parse(JSON.stringify(programStage.sharing)) : undefined;
+            this.addSharingSetting(programStage);
             const translations = this.processTranslations(sheets, programStage.name, "programStage");
 
             return { ...programStage, programStageDataElements, programStageSections, translations };
@@ -540,9 +533,7 @@ export class BuildMetadataUseCase {
             }
 
             this.replaceById(programStageSection, "programStage", programStages);
-            programStageSection.sharing = programStageSection.sharing
-                ? JSON.parse(JSON.stringify(programStageSection.sharing))
-                : undefined;
+            this.addSharingSetting(programStageSection);
 
             const renderType = this.addRenderType(programStageSection, "LISTING");
 
@@ -664,7 +655,7 @@ export class BuildMetadataUseCase {
                     };
                 });
 
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
+            this.addSharingSetting(data);
             const translations = this.processTranslations(sheets, trackedEntityType.name, "trackedEntityType");
 
             return { ...data, trackedEntityTypeAttributes, translations };
@@ -683,7 +674,7 @@ export class BuildMetadataUseCase {
                 .filter(action => action.programRule === rule.name)
                 .map(action => ({ id: action.id }));
 
-            rule.sharing = rule.sharing ? JSON.parse(JSON.stringify(rule.sharing)) : undefined;
+            this.addSharingSetting(rule);
             const translations = this.processTranslations(sheets, rule.name, "programRule");
 
             return { ...rule, program: { id: program.id }, programRuleActions, translations };
@@ -708,7 +699,7 @@ export class BuildMetadataUseCase {
             this.replaceById(data, "trackedEntityAttribute", attrs);
             this.replaceById(data, "programStage", stages);
             this.replaceById(data, "programStageSection", sections);
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
+            this.addSharingSetting(data);
 
             const programRuleActionType = data.name;
             delete data.name;
@@ -734,7 +725,7 @@ export class BuildMetadataUseCase {
             this.replaceById(data, "trackedEntityAttribute", attrs);
             this.replaceById(data, "programStage", stages);
 
-            data.sharing = data.sharing ? JSON.parse(JSON.stringify(data.sharing)) : undefined;
+            this.addSharingSetting(data);
             data.translations = this.processTranslations(sheets, variable.name, "programRuleVariable");
 
             return data;
@@ -855,6 +846,10 @@ export class BuildMetadataUseCase {
         delete metadataItem.renderTypeMobile;
 
         return renderType;
+    }
+
+    private addSharingSetting(data: MetadataItem) {
+        data.sharing = data.sharing ? JSON.parse(data.sharing) : undefined;
     }
 
     // Return the item from the list that has the given name.
