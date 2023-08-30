@@ -22,6 +22,8 @@ PULL_METADATA_CSV_PATH=/path/to/write/csv/files
 PULL_UID_ONLY=false # true or false
 UPDATE_SERVER=false # true or false
 UPDATE_CATEGORY_OPTION_COMBOS=false # true or false
+```
+
 The first time, we have to run `yarn install` and `yarn build` to install all the dependencies.
 After that, you can run `yarn build-metadata` to generate and update the metadata
 , `yarn download-ids` to get the metadata IDs, `yarn pull-data-set` to pull a dataSet metadata or `yarn pull-ev-program` to pull a event program metadata.
@@ -144,19 +146,15 @@ can use the `Data Administration` app, go to `Maintenance`, select
 
 
  
--## Default category combo
+## Default category combo
 
 -To get the default `categoryCombo` used at a dhis2 instance, go to the
 -following endpoint:
 -`/api/categoryCombos.json?filter=name:eq:default&fields=id,name` .
  
--### How the default category combo is used
--
--If you want to understand what is special about the default category
--combination and how it works in dhis2, you can check [this talk by Jim
--Grace](https://youtu.be/EcR9QwJvc7c?t=314) (and maybe [these
--slides](https://drive.google.com/file/d/1MWq-Nx-AcSSuTfF9z7VPq0W9PXyl9IAn/view)).
--
+### How the default category combo is used
+-If you want to understand what is special about the default category-combination and how it works in dhis2, you can check [this talk by Jim-Grace](https://youtu.be/EcR9QwJvc7c?t=314) (and maybe [these -slides](https://drive.google.com/file/d/1MWq-Nx-AcSSuTfF9z7VPq0W9PXyl9IAn/view)).
+
 -It is used at least in `dataElements`, `dataSets`, and `programs`.
 +The `path` option will store the path where the CSV files will
 +be written. If empty, the current working directory will be used.
@@ -262,6 +260,8 @@ cat metadata.json \
 For more information on how to use `jq`, see
 https://stedolan.github.io/jq/manual/ .
 
+```
 yarn start metadata build-metadata --dhis-url='http://admin:distrcit@localhost:8080' \
 --google-key=AIzaSyA5N9tgblL0dP8nOtPKzJ8CwpwPHrddkkk \
 --sheet-id="1-iGyeOkF4LO8j5gPXgwsXA_6gwOI9yBYM9NajiqAwEA" -l
+```
