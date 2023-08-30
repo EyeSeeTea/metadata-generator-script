@@ -1,3 +1,15 @@
+import {
+    PeriodType,
+    AggregationType,
+    ValueType,
+    DomainType,
+    DataDimensionType,
+    AccessLevelType,
+    FeatureType,
+    ValidationStrategyType,
+    ProgramRuleVariableSourceType,
+    ProgramRuleActionType,
+} from "./Base";
 import { MetadataItem } from "./MetadataItem";
 
 export interface Sheet {
@@ -63,4 +75,216 @@ export interface CellValue {
      * Represents a string value. Leading single quotes are not included. For example, if the user typed `'123` into the UI, this would be represented as a `stringValue` of `"123"`.
      */
     stringValue?: string | null;
+}
+
+export interface DataSetsSheetRow {
+    id: string;
+    name: string;
+    code?: string;
+    shortName?: string;
+    description?: string;
+    expiryDays?: number;
+    openFuturePeriods?: number;
+    timelyDays?: number;
+    periodType: PeriodType;
+    categoryCombo?: string;
+    notifyCompletingUser?: string;
+    workflow?: string;
+    mobile?: string;
+    fieldCombinationRequired?: string;
+    validCompleteOnly?: string;
+    noValueRequiresComment?: string;
+    skipOffline?: string;
+    dataElementDecoration?: string;
+    renderAsTabs?: string;
+    renderHorizontally?: string;
+    compulsoryFieldsCompleteOnly?: string;
+}
+
+export interface DataSetElementsSheetRow {
+    dataSet: string;
+    name: string;
+    categoryCombo?: string;
+}
+
+export interface DataElementsSheetRow {
+    id?: string;
+    name: string;
+    shortName?: string;
+    formName?: string;
+    code?: string;
+    categoryCombo?: string;
+    valueType?: ValueType;
+    aggregationType?: AggregationType;
+    domainType?: DomainType;
+    description?: string;
+    optionSet?: string;
+    commentOptionSet?: string;
+    zeroIsSignificant?: string;
+    url?: string;
+    fieldMask?: string;
+}
+
+export interface DataElementLegendsSheetRow {
+    dataElement: string;
+    name: string;
+}
+
+export interface CategoryCombosSheetRow {
+    id: string;
+    name: string;
+    code: string;
+    dataDimensionType: DataDimensionType;
+    description: string;
+}
+
+export interface CategoriesSheetRow {
+    id: string;
+    name: string;
+    shortName: string;
+    code: string;
+    categoryCombo: string;
+    dataDimensionType: DataDimensionType;
+    description: string;
+}
+
+export interface CategoryOptionsSheetRow {
+    id: string;
+    name: string;
+    code: string;
+    shortName: string;
+    description: string;
+    category: string;
+}
+
+export interface ProgramsSheetRow {
+    id: string;
+    name: string;
+    shortName: string;
+    code?: string;
+    description?: string;
+    trackedEntityType?: string;
+    categoryCombo: string;
+    version?: string;
+    expiryPeriodType?: PeriodType;
+    expiryDays?: string;
+    completeEventsExpiryDays?: string;
+    displayFrontPageList?: string;
+    useFirstStageDuringRegistration?: string;
+    accessLevel?: AccessLevelType;
+    minAttributesRequiredToSearch?: string;
+    maxTeiCountToReturn?: string;
+    selectIncidentDatesInFuture?: string;
+    selectEnrollmentDatesInFuture?: string;
+    onlyEnrollOnce?: string;
+    displayIncidentDate?: string;
+    incidentDateLabel?: string;
+    enrollmentDateLabel?: string;
+    ignoreOverdueEvents?: string;
+    featureType?: FeatureType;
+    relatedProgram?: string;
+}
+
+export interface ProgramStagesSheetRow {
+    id: string;
+    name: string;
+    program: string;
+    enableUserAssignment?: string;
+    blockEntryForm?: string;
+    featureType?: FeatureType;
+    preGenerateUID?: string;
+    executionDateLabel?: string;
+    validationStrategy: ValidationStrategyType;
+    description?: string;
+    minDaysFromStart?: string;
+    repeatable?: string;
+    periodType?: string;
+    displayGenerateEventBox?: string;
+    standardInterval?: string;
+    autoGenerateEvent?: string;
+    openAfterEnrollment?: string;
+    reportDateToUse?: string;
+    remindCompleted?: string;
+    allowGenerateNextVisit?: string;
+    generatedByEnrollmentDate?: string;
+    hideDueDate?: string;
+    dueDateLabel?: string;
+}
+
+export interface ProgramStageDataElementsSheetRow {
+    id: string;
+    program: string;
+    programStage: string;
+    name: string;
+    compulsory?: string;
+    allowProvidedElsewhere?: string;
+    displayInReports?: string;
+    allowFutureDate?: string;
+    skipSynchronization?: string;
+    renderTypeMobile?: string;
+    renderTypeDesktop?: string;
+}
+
+export interface ProgramStageSectionsSheetRow {
+    id: string;
+    program: string;
+    programStage: string;
+    name: string;
+    renderTypeMobile?: string;
+    renderTypeDesktop?: string;
+    description?: string;
+}
+
+export interface ProgramStageSectionsDataElementsSheetRow {
+    program: string;
+    programStage: string;
+    programStageSection: string;
+    name: string;
+}
+
+export interface ProgramRulesSheetRow {
+    id: string;
+    name: string;
+    program: string;
+    condition?: string;
+    description?: string;
+}
+
+export interface programRuleActionsSheetRow {
+    id: string;
+    programRule: string;
+    name: ProgramRuleActionType;
+    content?: string;
+    data?: string;
+    location?: string;
+    dataElement?: string;
+    trackedEntityAttribute?: string;
+    programStage?: string;
+    programStageSection?: string;
+}
+
+export interface ProgramRuleVariablesSheetRow {
+    id: string;
+    name: string;
+    displayName: string;
+    program: string;
+    useCodeForOptionSet: string;
+    programRuleVariableSourceType: ProgramRuleVariableSourceType;
+    dataElement?: string;
+    trackedEntityAttribute?: string;
+    programStage?: string;
+}
+
+export interface LegendSetsSheetRow {
+    id: string;
+    name: string;
+    code?: string;
+}
+
+export interface LegendsSheetRow {
+    id: string;
+    name: string;
+    legendSet: string;
+    startValue: string;
+    endValue: string;
 }
