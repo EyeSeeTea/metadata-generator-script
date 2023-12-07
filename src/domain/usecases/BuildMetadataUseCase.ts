@@ -62,10 +62,11 @@ export class BuildMetadataUseCase {
 
         const options = _(sheetOptions)
             .map(option => {
-                const optionSet = sheetOptionSets.find(({ name }) => name === option.optionSet)?.id;
-                this.addSharingSetting(optionSet);
-
-                return { ...option, optionSet: { id: optionSet } };
+                const optionSet = sheetOptionSets.find(({ name }) => name === option.optionSet);
+                if (optionSet) {
+                    this.addSharingSetting(optionSet);
+                }
+                return { ...option, optionSet: { id: optionSet?.id } };
             })
             .groupBy(({ optionSet }) => optionSet.id)
             .mapValues(options => options.map((option, index) => ({ ...option, sortOrder: index + 1 })))

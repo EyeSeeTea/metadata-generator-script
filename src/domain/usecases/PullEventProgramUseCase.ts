@@ -578,7 +578,7 @@ export class PullEventProgramUseCase {
             aggregationType: dataElement.aggregationType,
             domainType: dataElement.domainType,
             description: dataElement.description,
-            optionSet: dataElement.optionSet,
+            optionSet: dataElement.optionSet.id,
             commentOptionSet: dataElement.commentOptionSet,
             zeroIsSignificant: this.booleanToString(dataElement.zeroIsSignificant),
             url: dataElement.url,
