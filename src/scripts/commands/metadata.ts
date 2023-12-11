@@ -65,10 +65,11 @@ export function getCommand() {
             try {
                 const sheetsApi = getGoogleSheetsApi(args.gKey);
                 const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
+                const metadataRepository = new MetadataD2Repository(getD2Api(args.url));
                 log.info(`Reading https://docs.google.com/spreadsheets/d/${args.sheetId} ...`);
 
                 log.info("Converting to metadata...");
-                const buildMetadata = new BuildMetadataUseCase(sheetsRepository);
+                const buildMetadata = new BuildMetadataUseCase(sheetsRepository, metadataRepository);
                 const metadata = await buildMetadata.execute(args.sheetId);
 
                 log.info(`Writing metadata to ${args.path} ...`);

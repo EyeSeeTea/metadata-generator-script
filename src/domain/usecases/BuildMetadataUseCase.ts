@@ -4,6 +4,8 @@ import _ from "lodash";
 import { MetadataItem } from "domain/entities/MetadataItem";
 import { Sheet } from "domain/entities/Sheet";
 import { getItems } from "utils/utils";
+import { MetadataRepository } from "domain/repositories/MetadataRepository";
+import log from "utils/log";
 
 type localeKey =
     | "Afrikaans"
@@ -37,12 +39,373 @@ type localeKey =
     | "default";
 
 export class BuildMetadataUseCase {
-    constructor(private sheetsRepository: SheetsRepository) {}
+    constructor(private sheetsRepository: SheetsRepository, private metadataRepository: MetadataRepository) {}
 
     async execute(sheetId: string): Promise<MetadataOutput> {
         const sheets = await this.sheetsRepository.getSpreadsheet(sheetId);
+        const newSheets = await this.getAllExistingMetadata(sheets);
+        const metadata = this.buildMetadata(newSheets);
+        return metadata;
+    }
 
-        return this.buildMetadata(sheets);
+    private async getAllExistingMetadata(sheets: Sheet[]) {
+        const metadataIds = this.checkDataSetUidsInSheets(sheets);
+
+        const dataSets = await this.getExistingMetadata("dataSets", this.getMetadataDetails(metadataIds, "dataSets"));
+
+        const dataElements = await this.getExistingMetadata(
+            "dataElements",
+            this.getMetadataDetails(metadataIds, "dataElements")
+        );
+
+        const sections = await this.getExistingMetadata("sections", this.getMetadataDetails(metadataIds, "sections"));
+
+        const dataElementGroups = await this.getExistingMetadata(
+            "dataElementGroups",
+            this.getMetadataDetails(metadataIds, "dataElementGroups")
+        );
+
+        const dataElementGroupSets = await this.getExistingMetadata(
+            "dataElementGroupSets",
+            this.getMetadataDetails(metadataIds, "dataElementGroupSets")
+        );
+
+        const categoryCombos = await this.getExistingMetadata(
+            "categoryCombos",
+            this.getMetadataDetails(metadataIds, "categoryCombos")
+        );
+
+        const categories = await this.getExistingMetadata(
+            "categories",
+            this.getMetadataDetails(metadataIds, "categories")
+        );
+
+        const categoryOptions = await this.getExistingMetadata(
+            "categoryOptions",
+            this.getMetadataDetails(metadataIds, "categoryOptions")
+        );
+
+        const optionSets = await this.getExistingMetadata(
+            "optionSets",
+            this.getMetadataDetails(metadataIds, "optionSets")
+        );
+
+        const trackedEntityTypes = await this.getExistingMetadata(
+            "trackedEntityTypes",
+            this.getMetadataDetails(metadataIds, "trackedEntityTypes")
+        );
+
+        const trackedEntityAttributes = await this.getExistingMetadata(
+            "trackedEntityAttributes",
+            this.getMetadataDetails(metadataIds, "trackedEntityAttributes")
+        );
+
+        const programs = await this.getExistingMetadata("programs", this.getMetadataDetails(metadataIds, "programs"));
+
+        const programStages = await this.getExistingMetadata(
+            "programStages",
+            this.getMetadataDetails(metadataIds, "programStages")
+        );
+
+        const newSheets = sheets.map(sheet => {
+            if (sheet.name === "dataSets") {
+                return { ...sheet, items: _(dataSets).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "dataElementGroups") {
+                return { ...sheet, items: _(dataElementGroups).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "dataElementGroupSets") {
+                return { ...sheet, items: _(dataElementGroupSets).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "categoryCombos") {
+                return { ...sheet, items: _(categoryCombos).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "categories") {
+                return { ...sheet, items: _(categories).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "categoryOptions") {
+                return { ...sheet, items: _(categoryOptions).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "optionSets") {
+                return { ...sheet, items: _(optionSets).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "trackedEntityTypes") {
+                return { ...sheet, items: _(trackedEntityTypes).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "trackedEntityAttributes") {
+                return { ...sheet, items: _(trackedEntityAttributes).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "programs") {
+                return { ...sheet, items: _(programs).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "programStages") {
+                return { ...sheet, items: _(programStages).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "sections") {
+                return { ...sheet, items: _(sections).unionBy(sheet.items, "id").value() };
+            } else if (sheet.name === "dataElements") {
+                return { ...sheet, items: _(dataElements).unionBy(sheet.items, "id").value() };
+            }
+            return sheet;
+        });
+        return newSheets;
+    }
+
+    private getMetadataDetails(metadataIds: MetadataIds[], type: MetadataIds["type"]) {
+        return metadataIds.find(metadata => metadata.type === type)?.ids || [];
+    }
+
+    private async getExistingMetadata(type: MetadataIds["type"], dataSetElementsIds: string[]) {
+        return dataSetElementsIds.length
+            ? await this.metadataRepository.getMetadata({
+                  type,
+                  value: { [type]: { fields: { $owner: true }, filter: { id: { in: dataSetElementsIds } } } },
+              })
+            : [];
+    }
+
+    private checkDataSetUidsInSheets(sheets: Sheet[]): MetadataIds[] {
+        const dataSetIds = _(sheets)
+            .flatMap(sheet => {
+                if (
+                    sheet.name === "dataSetElements" ||
+                    sheet.name === "dataSetLegends" ||
+                    sheet.name === "dataSetTranslations" ||
+                    sheet.name === "sections" ||
+                    sheet.name === "sectionDataElements"
+                ) {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.dataSet) ? item.dataSet : undefined;
+                        })
+                        .compact()
+                        .value();
+                } else if (sheet.name === "dataSetInputPeriods") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.name) ? item.name : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const sectionIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "sectionDataElements" || sheet.name === "sectionTranslations") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.section) ? item.section : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const dataElementIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "dataElementLegends" || sheet.name === "dataElementTranslations") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.dataElement) ? item.dataElement : undefined;
+                        })
+                        .compact()
+                        .value();
+                } else if (sheet.name === "dataElementGroupElements" || sheet.name === "dataElementGroupSetGroups") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.name) ? item.name : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const dataElementGroupIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "dataElementGroupElements" || sheet.name === "dataElementGroupTranslations") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.dataElementGroup) ? item.dataElementGroup : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const dataElementGroupSetsIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "dataElementGroupSetGroups" || sheet.name === "dataElementGroupSetTranslations") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.dataElementGroupSet) ? item.dataElementGroupSet : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const categoryCombosIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "categoryComboTranslations" || sheet.name === "categories") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.categoryCombo) ? item.categoryCombo : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const categoryIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "categoryTranslations" || sheet.name === "categoryOptions") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.category) ? item.category : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const categoryOptionsIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "categoryOptionTranslations") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.categoryOption) ? item.categoryOption : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const optionSetIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "optionSetTranslations") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.optionSet) ? item.optionSet : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const trackedEntityTypesIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "trackedEntityTypeAttributes" || sheet.name === "trackedEntityTypeTranslations") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.trackedEntityType) ? item.trackedEntityType : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const trackedEntityAttributesIds = _(sheets)
+            .flatMap(sheet => {
+                if (
+                    sheet.name === "trackedEntityTypeAttributes" ||
+                    sheet.name === "programTrackedEntityAttributes" ||
+                    sheet.name === "programSectionsTrackedEntityAttributes"
+                ) {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.name) ? item.name : undefined;
+                        })
+                        .compact()
+                        .value();
+                } else if (
+                    sheet.name === "trackedEntityAttributeLegends" ||
+                    sheet.name === "trackedEntityAttributeTranslations"
+                ) {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.trackedEntityAttribute)
+                                ? item.trackedEntityAttribute
+                                : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const programIds = _(sheets)
+            .flatMap(sheet => {
+                if (
+                    sheet.name === "programTrackedEntityAttributes" ||
+                    sheet.name === "programTranslations" ||
+                    sheet.name === "programSections" ||
+                    sheet.name === "programSectionsTrackedEntityAttributes" ||
+                    sheet.name === "programStages"
+                ) {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.program) ? item.program : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        const programStagesIds = _(sheets)
+            .flatMap(sheet => {
+                if (sheet.name === "programStageTranslations") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.programStage) ? item.programStage : undefined;
+                        })
+                        .compact()
+                        .value();
+                }
+            })
+            .compact()
+            .uniq()
+            .value();
+
+        return [
+            { type: "dataSets", ids: dataSetIds },
+            { type: "dataElements", ids: dataElementIds },
+            { type: "dataElementGroups", ids: dataElementGroupIds },
+            { type: "dataElementGroupSets", ids: dataElementGroupSetsIds },
+            { type: "categoryCombos", ids: categoryCombosIds },
+            { type: "categories", ids: categoryIds },
+            { type: "categoryOptions", ids: categoryOptionsIds },
+            { type: "optionSets", ids: optionSetIds },
+            { type: "trackedEntityTypes", ids: trackedEntityTypesIds },
+            { type: "trackedEntityAttributes", ids: trackedEntityAttributesIds },
+            { type: "programs", ids: programIds },
+            { type: "programStages", ids: programStagesIds },
+            { type: "sections", ids: sectionIds },
+        ];
     }
 
     // Return an object containing the metadata representation of all the sheets
@@ -62,11 +425,11 @@ export class BuildMetadataUseCase {
 
         const options = _(sheetOptions)
             .map(option => {
-                const optionSet = sheetOptionSets.find(({ name }) => name === option.optionSet);
-                if (optionSet) {
-                    this.addSharingSetting(optionSet);
-                }
-                return { ...option, optionSet: { id: optionSet?.id } };
+                const optionSetId = this.isValidUid(option.optionSet)
+                    ? option.optionSet
+                    : sheetOptionSets.find(({ name }) => name === option.optionSet)?.id;
+
+                return { ...option, optionSet: { id: optionSetId } };
             })
             .groupBy(({ optionSet }) => optionSet.id)
             .mapValues(options => options.map((option, index) => ({ ...option, sortOrder: index + 1 })))
@@ -76,15 +439,29 @@ export class BuildMetadataUseCase {
 
         const sections = _(sheetDataSetSections)
             .map(section => {
-                const dataSet = sheetDataSets.find(({ name }) => name === section.dataSet)?.id;
-                const dataElements = sheetSectionDataElements
-                    .filter(item => item.section === section.name && item.dataSet === section.dataSet)
-                    .map(({ name }) => ({ id: this.getByName(sheetDataElements, name).id }));
+                const dataSetId = this.isValidUid(section.dataSet)
+                    ? section.dataSet
+                    : sheetDataSets.find(({ name }) => name === section.dataSet)?.id;
 
-                const translations = this.processTranslations(sheets, section.name, "section");
+                const dataElements = sheetSectionDataElements
+                    .filter(
+                        item =>
+                            (item.section === section.name || item.section === section.id) &&
+                            (item.dataSet === section.dataSet || item.dataSet === section.dataSet?.id)
+                    )
+                    .map(({ name }) => ({
+                        id: this.isValidUid(name) ? name : this.getByName(sheetDataElements, name).id,
+                    }));
+
+                const translations = this.processTranslations(sheets, section.name, section.id, "section");
                 this.addSharingSetting(section);
 
-                return { ...section, dataSet: { id: dataSet }, dataElements, translations };
+                return {
+                    ...section,
+                    dataSet: { id: _.isObjectLike(section.dataSet) ? section.dataSet.id : dataSetId },
+                    dataElements: [...(section.dataElements || []), ...dataElements],
+                    translations: [...(section.translations || []), ...translations],
+                };
             })
             .groupBy(({ dataSet }) => dataSet.id)
             .mapValues(items => items.map((section, index) => ({ ...section, sortOrder: index + 1 })))
@@ -94,42 +471,61 @@ export class BuildMetadataUseCase {
 
         const categories = sheetCategories.map(category => {
             const categoryOptions = sheetCategoryOptions
-                .filter(option => option.category === category.name)
+                .filter(option => this.getByNameOrId(category, option.category))
                 .map(({ id }) => ({ id }));
 
-            const translations = this.processTranslations(sheets, category.name, "category");
+            const translations = [
+                ...(category.translations || []),
+                ...this.processTranslations(sheets, category.name, category.id, "category"),
+            ];
             this.addSharingSetting(category);
 
-            return { ...category, categoryOptions, translations };
+            return {
+                ...category,
+                categoryOptions: [...(category.categoryOptions || []), ...categoryOptions],
+                translations,
+            };
         });
 
         const categoryCombos = sheetCategoryCombos.map(categoryCombo => {
             const categories = sheetCategories
-                .filter(category => category.categoryCombo === categoryCombo?.name)
+                .filter(category => this.getByNameOrId(categoryCombo, category.categoryCombo))
                 .map(({ id }) => ({ id }));
 
             this.addSharingSetting(categoryCombo);
-            const translations = this.processTranslations(sheets, categoryCombo.name, "categoryCombo");
+            const translations = [
+                ...(categoryCombo.translations || []),
+                ...this.processTranslations(sheets, categoryCombo.name, categoryCombo.id, "categoryCombo"),
+            ];
 
-            return { ...categoryCombo, categories, translations };
+            return { ...categoryCombo, categories: [...(categoryCombo.categories || []), ...categories], translations };
         });
 
         const optionSets = sheetOptionSets.map(optionSet => {
             const options = sheetOptions
-                .filter(option => option.optionSet === optionSet.name)
+                .filter(option => option.optionSet === optionSet.name || option.optionSet === optionSet.id)
                 .map(({ id }) => ({ id }));
 
             this.addSharingSetting(optionSet);
-            const translations = this.processTranslations(sheets, optionSet.name, "optionSet");
+            const translations = this.processTranslations(sheets, optionSet.name, optionSet.id, "optionSet");
 
-            return { ...optionSet, options, translations };
+            return {
+                ...optionSet,
+                options: [...(optionSet.options || []), ...options],
+                translations: [...(optionSet.translations || []), ...translations],
+            };
         });
 
         const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
             this.addSharingSetting(categoryOption);
-            const translations = this.processTranslations(sheets, categoryOption.name, "categoryOption");
+            const translations = this.processTranslations(
+                sheets,
+                categoryOption.name,
+                categoryOption.id,
+                "categoryOption"
+            );
 
-            return { ...categoryOption, translations };
+            return { ...categoryOption, translations: [...(categoryOption.translations || []), ...translations] };
         });
 
         return {
@@ -170,31 +566,40 @@ export class BuildMetadataUseCase {
         return dataSets.map(dataSet => {
             let data: MetadataItem = JSON.parse(JSON.stringify(dataSet));
 
-            data.dataSetElements = dataSetElements
+            const newDataSetElements = dataSetElements
                 .filter(dseToFilter => {
-                    return dseToFilter.dataSet === data.name;
+                    return this.getByNameOrId(dataSet, dseToFilter.dataSet);
                 })
                 .map(elements => {
+                    const dataElementId = this.isValidUid(elements.name)
+                        ? elements.name
+                        : this.getByName(dataElements, elements.name)?.id;
+
+                    if (!dataElementId)
+                        throw Error(`Cannot find dataElement: ${elements.name} in sheet dataSetElements`);
+
+                    const categoryComboId = this.isValidUid(elements.categoryCombo)
+                        ? elements.categoryCombo
+                        : this.getByName(categoryCombos, elements.categoryCombo)?.id;
+
                     return {
                         dataSet: { id: data.id },
-                        dataElement: { id: this.getByName(dataElements, elements.name).id },
-                        categoryCombo: elements.categoryCombo
-                            ? { id: this.getByName(categoryCombos, elements.categoryCombo).id }
-                            : undefined,
+                        dataElement: { id: dataElementId },
+                        categoryCombo: categoryComboId ? { id: categoryComboId } : undefined,
                     };
                 });
 
-            data.sections = dataSetSections
+            const newSections = dataSetSections
                 .filter(dssToFilter => {
-                    return dssToFilter.dataSet === data.name;
+                    return this.getByNameOrId(dataSet, dssToFilter.dataSet);
                 })
                 .map(section => {
                     return { id: section.id };
                 });
 
-            data.dataInputPeriods = dataSetInputPeriods
+            const newDataInputPeriods = dataSetInputPeriods
                 .filter(dsipToFilter => {
-                    return dsipToFilter.name === data.name;
+                    return this.getByNameOrId(dataSet, dsipToFilter.name);
                 })
                 .map(inputPeriod => {
                     return {
@@ -204,16 +609,33 @@ export class BuildMetadataUseCase {
                     };
                 });
 
-            data.legendSets = this.processItemLegendSets(sheets, data.name, "dataSet");
-            data.translations = this.processTranslations(sheets, data.name, "dataSet");
-            data.attributeValues = this.processItemAttributes(sheets, data, "dataSet");
+            data.legendSets = [
+                ...(data.legendSets || []),
+                ...this.processItemLegendSets(sheets, data.name, data.id, "dataSet"),
+            ];
+            data.translations = [
+                ...(data.translations || []),
+                ...this.processTranslations(sheets, data.name, data.id, "dataSet"),
+            ];
+            data.attributeValues = [
+                ...(data.attributeValues || []),
+                ...this.processItemAttributes(sheets, data, "dataSet"),
+            ];
 
-            this.replaceById(data, "categoryCombo", categoryCombos);
+            if (!_.isObjectLike(data.categoryCombo)) {
+                this.replaceById(data, "categoryCombo", categoryCombos);
+            }
+
             this.addSharingSetting(data);
 
             data.workflow = data.workflow ? { id: data.workflow } : undefined;
 
-            return { ...data };
+            return {
+                ...data,
+                sections: [...(data.sections || []), ...newSections],
+                dataSetElements: [...(data.dataSetElements || []), ...newDataSetElements],
+                dataInputPeriods: [...(data.dataInputPeriods || []), ...newDataInputPeriods],
+            };
         });
     }
 
@@ -229,27 +651,39 @@ export class BuildMetadataUseCase {
 
             const domainType = deType === "dataElements" ? "AGGREGATE" : "TRACKER";
 
-            const categoryCombo = this.getByName(categoryCombos, data.categoryCombo)?.id;
-            const optionSet = this.getByName(optionSets, data.optionSet)?.id;
-            const commentOptionSet = this.getByName(optionSets, data.commentOptionSet)?.id;
+            const categoryComboId = _.isObjectLike(data.categoryCombo)
+                ? data.categoryCombo.id
+                : this.getRelatedId(data.categoryCombo, categoryCombos);
 
-            const translations = this.processTranslations(sheets, data.name, "dataElement");
+            const optionSetId = _.isObjectLike(data.optionSet)
+                ? data.optionSet.id
+                : this.getRelatedId(data.optionSet, optionSets);
+
+            const commentOptionSetId = _.isObjectLike(data.commentOptionSet)
+                ? data.commentOptionSet.id
+                : this.getRelatedId(data.commentOptionSet, optionSets);
+
+            const translations = this.processTranslations(sheets, data.name, data.id, "dataElement");
             const attributeValues = this.processItemAttributes(sheets, data, "dataElement");
-            const legendSets = this.processItemLegendSets(sheets, data.name, "dataElement");
+            const legendSets = this.processItemLegendSets(sheets, data.name, data.id, "dataElement");
 
             this.addSharingSetting(data);
 
             return {
                 ...data,
-                categoryCombo: categoryCombo ? { id: categoryCombo } : undefined,
-                optionSet: optionSet ? { id: optionSet } : undefined,
-                commentOptionSet: commentOptionSet ? { id: commentOptionSet } : undefined,
+                categoryCombo: categoryComboId ? { id: categoryComboId } : undefined,
+                optionSet: optionSetId ? { id: optionSetId } : undefined,
+                commentOptionSet: commentOptionSetId ? { id: commentOptionSetId } : undefined,
                 domainType: domainType,
-                translations: translations,
-                attributeValues: attributeValues,
-                legendSets: legendSets,
+                translations: [...(data.translations || []), ...translations],
+                attributeValues: [...(data.attributeValues || []), ...attributeValues],
+                legendSets: [...(data.legendSets || []), ...legendSets],
             };
         });
+    }
+
+    private getRelatedId(value: string, items: MetadataItem[]): string | undefined {
+        return this.isValidUid(value) ? value : this.getByName(items, value)?.id;
     }
 
     private buildDataElements(sheets: Sheet[]) {
@@ -269,20 +703,24 @@ export class BuildMetadataUseCase {
         return dataElementGroups.map(degGroup => {
             let data: MetadataItem = JSON.parse(JSON.stringify(degGroup));
 
-            data.dataElements = dataElementGroupElements
+            const newDataElements = dataElementGroupElements
                 .filter(degeToFilter => {
-                    return degeToFilter.dataElementGroup === data.name;
+                    return this.getByNameOrId(data, degeToFilter.dataElementGroup);
                 })
                 .map(elements => {
-                    return {
-                        id: this.getByName(dataElements, elements.name).id,
-                    };
+                    const dataElementId = this.isValidUid(elements.name)
+                        ? elements.name
+                        : this.getByName(dataElements, elements.name).id;
+                    return { id: dataElementId };
                 });
 
             this.addSharingSetting(data);
-            data.translations = this.processTranslations(sheets, data.name, "dataElementGroup");
+            data.translations = [
+                ...(data.translations || []),
+                ...this.processTranslations(sheets, data.name, data.id, "dataElementGroup"),
+            ];
 
-            return { ...data };
+            return { ...data, dataElements: _(data.dataElements).unionBy(newDataElements, "id").value() };
         });
     }
 
@@ -296,20 +734,24 @@ export class BuildMetadataUseCase {
         return dataElementGroupSets.map(degsGroup => {
             let data: MetadataItem = JSON.parse(JSON.stringify(degsGroup));
 
-            data.dataElementGroups = dataElementGroupSetGroups
+            const newGroups = dataElementGroupSetGroups
                 .filter(degsgToFilter => {
-                    return degsgToFilter.dataElementGroupSet === data.name;
+                    return this.getByNameOrId(data, degsgToFilter.dataElementGroupSet);
                 })
                 .map(groups => {
-                    return {
-                        id: this.getByName(dataElementGroups, groups.name).id,
-                    };
+                    const dataElementGroupId = this.isValidUid(groups.name)
+                        ? groups.name
+                        : this.getByName(dataElementGroups, groups.name).id;
+                    return { id: dataElementGroupId };
                 });
 
             this.addSharingSetting(data);
-            data.translations = this.processTranslations(sheets, data.name, "dataElementGroupSet");
+            data.translations = [
+                ...(data.translations || []),
+                ...this.processTranslations(sheets, data.name, data.id, "dataElementGroupSet"),
+            ];
 
-            return { ...data };
+            return { ...data, dataElementGroups: _(data.dataElementGroups).unionBy(newGroups).value() };
         });
     }
 
@@ -332,7 +774,7 @@ export class BuildMetadataUseCase {
                 : undefined;
 
             this.addSharingSetting(data);
-            data.translation = this.processTranslations(sheets, data.name, "attribute");
+            data.translation = this.processTranslations(sheets, data.name, data.id, "attribute");
 
             return { ...data, optionSet };
         });
@@ -352,37 +794,48 @@ export class BuildMetadataUseCase {
         return programs.map(program => {
             let data = { ...program } as MetadataItem;
 
-            const trackedEntityType = {
-                id: this.getByName(trackedEntityTypes, program.trackedEntityType)?.id,
-            };
+            const trackedEntityTypeId = this.isValidUid(program.trackedEntityType)
+                ? program.trackedEntityType
+                : this.getByName(trackedEntityTypes, program.trackedEntityType)?.id;
+
+            const trackedEntityType = _.isObjectLike(program.trackedEntityType)
+                ? { id: program.trackedEntityType.id }
+                : { id: trackedEntityTypeId };
 
             const programStages = pStages
                 .filter(pStageToFilter => {
-                    return pStageToFilter.program === program.name;
+                    return this.getByNameOrId(program, pStageToFilter.program);
                 })
                 .map(programStage => ({ id: programStage.id }));
 
-            this.replaceById(data, "categoryCombo", categoryCombos);
+            if (!_.isObjectLike(data.categoryCombo)) {
+                this.replaceById(data, "categoryCombo", categoryCombos);
+            }
 
             this.addSharingSetting(data);
-            data.translations = this.processTranslations(sheets, data.name, "program");
+            data.translations = [
+                ...(data.translations || []),
+                ...this.processTranslations(sheets, data.name, data.id, "program"),
+            ];
 
             if (trackedEntityType.id) {
                 // WITH_REGISTRATION == Tracker Program
                 const programType = "WITH_REGISTRATION";
 
-                this.replaceById(data, "relatedProgram", programs);
+                if (!_.isObjectLike(data.categoryCombo)) {
+                    this.replaceById(data, "relatedProgram", programs);
+                }
 
                 // Event Program Stages belong to programStageSections
                 const programSections = pSections
                     .filter(pSectionToFilter => {
-                        return pSectionToFilter?.program === program.name;
+                        return this.getByNameOrId(program, pSectionToFilter.program);
                     })
                     .map(programSection => ({ id: programSection.id }));
 
                 const programTrackedEntityAttributes = programTeas
                     .filter(pTeasToFilter => {
-                        return pTeasToFilter.program === program.name;
+                        return this.getByNameOrId(program, pTeasToFilter.program);
                     })
                     .map(pTea => this.buildProgTEA(program, pTea, trackedEntityAttributes));
                 this.addSortOrder(programTrackedEntityAttributes);
@@ -392,8 +845,11 @@ export class BuildMetadataUseCase {
                     programType,
                     trackedEntityType,
                     programStages,
-                    programSections,
-                    programTrackedEntityAttributes,
+                    programSections: [...(data.programSections || []), ...programSections],
+                    programTrackedEntityAttributes: [
+                        ...(data.programTrackedEntityAttributes || []),
+                        ...programTrackedEntityAttributes,
+                    ],
                 };
             } else {
                 // WITHOUT_REGISTRATION == Event Program
@@ -418,7 +874,9 @@ export class BuildMetadataUseCase {
                 );
             })?.id;
 
-            const trackedEntityAttribute = this.getByName(teAttributes, psTrackedEntityAttribute.name)?.id;
+            const trackedEntityAttribute = this.isValidUid(psTrackedEntityAttribute.name)
+                ? psTrackedEntityAttribute.name
+                : this.getByName(teAttributes, psTrackedEntityAttribute.name)?.id;
 
             return { programSection, trackedEntityAttribute };
         });
@@ -490,10 +948,15 @@ export class BuildMetadataUseCase {
                     },
                 }));
 
-            this.replaceById(programStage, "program", programs);
+            if (!_.isObjectLike(programStage.program)) {
+                this.replaceById(programStage, "program", programs);
+            }
 
             this.addSharingSetting(programStage);
-            const translations = this.processTranslations(sheets, programStage.name, "programStage");
+            const translations = [
+                ...(programStage.translations || []),
+                ...this.processTranslations(sheets, programStage.name, programStage.id, "programStage"),
+            ];
 
             return { ...programStage, programStageDataElements, programStageSections, translations };
         });
@@ -551,11 +1014,14 @@ export class BuildMetadataUseCase {
     }
 
     private buildProgTEA(program: MetadataItem, pTea: MetadataItem, trackedEntityAttributes: MetadataItem[]) {
-        const tea = this.getByName(trackedEntityAttributes, pTea.name);
+        // const tea =  this.getByName(trackedEntityAttributes, pTea.name);
+        const tea = trackedEntityAttributes.find(tea => this.getByNameOrId(tea, pTea.name));
+        if (!tea)
+            throw Error(`Cannot get trackedEntityAttribute: ${pTea.name} in sheet programTrackedEntityAttributes`);
         return {
             id: pTea.id,
             program: { id: program.id },
-            displayName: `${program.name} ${pTea.name}`,
+            displayName: `${program.name} ${tea.name}`,
             valueType: pTea.valueType,
             displayInList: pTea.displayInList,
             mandatory: pTea.mandatory,
@@ -604,15 +1070,22 @@ export class BuildMetadataUseCase {
 
             this.replaceById(data, "optionSet", optionSets);
 
-            const legendSets = this.processItemLegendSets(sheets, data.name, "trackedEntityAttribute");
+            // update sheet name from trackedEntityAttributeSLegends to trackedEntityAttributeLegends in
+            // template
+            const legendSets = this.processItemLegendSets(sheets, data.name, data.id, "trackedEntityAttribute");
 
             const translations = this.processTranslations(
                 sheets,
                 trackedEntityAttribute.name,
+                trackedEntityAttribute.id,
                 "trackedEntityAttribute"
             );
 
-            return { ...data, legendSets, translations };
+            return {
+                ...data,
+                legendSets: [...(data.legendSets || []), ...legendSets],
+                translations: [...(data.translations || []), ...translations],
+            };
         });
     }
 
@@ -629,16 +1102,24 @@ export class BuildMetadataUseCase {
 
             const trackedEntityTypeAttributes = teaAttributes
                 .filter(teaAttributeToFilter => {
-                    return teaAttributeToFilter.trackedEntityType === trackedEntityType.name;
+                    return this.getByNameOrId(trackedEntityType, teaAttributeToFilter.trackedEntityType);
                 })
                 .map(trackedEntityTypeAttribute => {
                     const displayName = trackedEntityTypeAttribute.name;
-                    const trackedEntityAttribute = this.getByName(trackedEntityAttributes, displayName);
+                    const trackedEntityAttribute = trackedEntityAttributes.find(tea =>
+                        this.getByNameOrId(tea, displayName)
+                    );
+                    if (!trackedEntityAttribute)
+                        throw Error(
+                            `trackedEntityAttribute not found: ${displayName} in sheet trackedEntityTypeAttributes`
+                        );
                     const optionSetId = this.getByName(optionSets, trackedEntityAttribute.optionSet)?.id;
 
+                    const nameAndText = this.isValidUid(displayName) ? trackedEntityAttribute.name : displayName;
+
                     return {
-                        displayName,
-                        text: displayName,
+                        displayName: nameAndText,
+                        text: nameAndText,
                         value: trackedEntityAttribute.id,
                         valueType: trackedEntityAttribute.valueType,
                         unique: trackedEntityAttribute?.unique,
@@ -657,9 +1138,21 @@ export class BuildMetadataUseCase {
                 });
 
             this.addSharingSetting(data);
-            const translations = this.processTranslations(sheets, trackedEntityType.name, "trackedEntityType");
+            const translations = this.processTranslations(
+                sheets,
+                trackedEntityType.name,
+                trackedEntityType.id,
+                "trackedEntityType"
+            );
 
-            return { ...data, trackedEntityTypeAttributes, translations };
+            return {
+                ...data,
+                trackedEntityTypeAttributes: [
+                    ...(data.trackedEntityTypeAttributes || []),
+                    ...trackedEntityTypeAttributes,
+                ],
+                translations: [...(data.translations || []), ...translations],
+            };
         });
     }
 
@@ -676,7 +1169,7 @@ export class BuildMetadataUseCase {
                 .map(action => ({ id: action.id }));
 
             this.addSharingSetting(rule);
-            const translations = this.processTranslations(sheets, rule.name, "programRule");
+            const translations = this.processTranslations(sheets, rule.name, rule.id, "programRule");
 
             return { ...rule, program: { id: program.id }, programRuleActions, translations };
         });
@@ -727,7 +1220,7 @@ export class BuildMetadataUseCase {
             this.replaceById(data, "programStage", stages);
 
             this.addSharingSetting(data);
-            data.translations = this.processTranslations(sheets, variable.name, "programRuleVariable");
+            data.translations = this.processTranslations(sheets, variable.name, variable.id, "programRuleVariable");
 
             return data;
         });
@@ -766,13 +1259,16 @@ export class BuildMetadataUseCase {
         default: undefined,
     };
 
-    private processTranslations(sheets: Sheet[], parentDataName: string, metadataType: string) {
+    private processTranslations(sheets: Sheet[], parentDataName: string, parentDataId: string, metadataType: string) {
         const get = (name: string) => getItems(sheets, name);
         const translations = get(`${metadataType}Translations`);
 
         return translations
             .filter(translationsToFilter => {
-                return translationsToFilter[metadataType] === parentDataName;
+                return (
+                    translationsToFilter[metadataType] === parentDataName ||
+                    translationsToFilter[metadataType] === parentDataId
+                );
             })
             .map(translation => {
                 const localeKey: localeKey = translation.locale ?? "default";
@@ -812,7 +1308,7 @@ export class BuildMetadataUseCase {
             });
     }
 
-    private processItemLegendSets(sheets: Sheet[], parentDataName: string, metadataType: string) {
+    private processItemLegendSets(sheets: Sheet[], parentDataName: string, parentDataId: string, metadataType: string) {
         const get = (name: string) => getItems(sheets, name);
 
         const legendSets = get("legendSets");
@@ -820,10 +1316,16 @@ export class BuildMetadataUseCase {
 
         return itemLegends
             .filter(itemLegendToFilter => {
-                return itemLegendToFilter[metadataType] === parentDataName;
+                return (
+                    itemLegendToFilter[metadataType] === parentDataName ||
+                    itemLegendToFilter[metadataType] === parentDataId
+                );
             })
             .map(legend => {
-                const legendId = this.getByName(legendSets, legend.name)?.id;
+                const legendId = this.isValidUid(legend.name)
+                    ? legend.name
+                    : this.getByName(legendSets, legend.name)?.id;
+                if (!legendId) throw Error(`Cannot find Legend: ${legend.name} in ${metadataType}Legends sheet`);
 
                 return { id: legendId };
             });
@@ -850,7 +1352,7 @@ export class BuildMetadataUseCase {
     }
 
     private addSharingSetting(data: MetadataItem) {
-        data.sharing = data.sharing ? JSON.parse(data.sharing) : undefined;
+        data.sharing = data.sharing ? data.sharing : undefined;
     }
 
     // Return the item from the list that has the given name.
@@ -863,8 +1365,41 @@ export class BuildMetadataUseCase {
     private replaceById(data: MetadataItem, key: string, items: MetadataItem[]) {
         if (key in data) {
             const name = data[key];
-            const item = this.getByName(items, name);
-            data[key] = { id: item.id };
+            const itemId = this.isValidUid(name) ? name : this.getByName(items, name)?.id;
+            data[key] = { id: itemId };
         }
     }
+
+    private getByNameOrId(item: MetadataItem, nameOrId: string, nameProperty = "name", idProperty = "id"): boolean {
+        return item[nameProperty] === nameOrId || item[idProperty] === nameOrId;
+    }
+
+    private isValidUid(uid: string): boolean {
+        return /^[a-zA-Z][a-zA-Z0-9]{10}$/.test(uid);
+    }
+
+    private logNotFoundItemByIdOrName(metadataName: string, value: string): void {
+        if (value) log.warn(`Cannot find ${metadataName} with ID/NAME: ${value}`);
+    }
 }
+
+type MetadataIds = {
+    type:
+        | "dataSets"
+        | "sections"
+        | "categories"
+        | "categoryCombos"
+        | "categoryOptions"
+        | "dataElementGroups"
+        | "dataSets"
+        | "dataElements"
+        | "dataElementGroupSets"
+        | "optionSets"
+        | "trackedEntityTypes"
+        | "trackedEntityTypeAttributes"
+        | "trackedEntityAttributes"
+        | "programs"
+        | "programStages"
+        | "dataElementGroups";
+    ids: string[];
+};
