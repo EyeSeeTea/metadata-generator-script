@@ -9,6 +9,7 @@ import {
     getGoogleSheetsApi,
     DirPath,
     IDString,
+    getGoogleSheetsApiByCredentials,
 } from "../common";
 import log from "utils/log";
 import { GoogleSheetsRepository } from "data/GoogleSheetsRepository";
@@ -136,13 +137,13 @@ export function getCommand() {
 
     const pullDataSet = command({
         name: "pull-data-set",
-        description: "Gets the dataSet metadata from DHIS2 instance and exports to CSV file.",
+        description: "Gets the dataSet metadata from DHIS2 instance and exports to google spreadsheet and CSV file.",
         args: {
             ...dhis2UrlArg,
             sheetId: sheetIdArg,
-            gKey: option({
+            gCredentials: option({
                 type: string,
-                long: "google-key",
+                long: "google-credentials",
             }),
             dataSetToPull: option({
                 type: IDString,
@@ -150,10 +151,16 @@ export function getCommand() {
                 short: "d",
                 description: "dataSet to pull ID",
             }),
+            path: option({
+                type: optional(DirPath),
+                long: "path",
+                short: "p",
+                description: "CSV output path (directory)",
+            }),
         },
         handler: async args => {
             try {
-                const sheetsApi = await getGoogleSheetsApi(args.gKey);
+                const sheetsApi = await getGoogleSheetsApiByCredentials(args.gCredentials);
                 const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
 
                 log.info(`Getting metadata from server at ${args.url} ...`);
@@ -165,6 +172,7 @@ export function getCommand() {
                 await downloadIds.execute({
                     dataSetId: args.dataSetToPull,
                     spreadSheetId: args.sheetId,
+                    csvPath: args.path,
                 });
 
                 process.exit(0);

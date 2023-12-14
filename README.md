@@ -46,7 +46,9 @@ FLAGS:
   --update-coc, -c - Update category option combos
   --help, -h       - show help
 ```
+
 Example:
+
 ```console
   shell:~$ yarn start metadata build-metadata --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/metadata.json
 ```
@@ -68,7 +70,9 @@ OPTIONS:
 FLAGS:
   --help, -h - show help
 ```
+
 Example:
+
 ```console
   shell:~$ yarn start metadata download-ids --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/
 ```
@@ -76,19 +80,23 @@ Example:
 ### pull-data-set:
 
 ```console
-Gets the dataSet metadata from DHIS2 instance and exports to CSV file.
+Gets the dataSet metadata from DHIS2 instance and exports to google spreadsheet and CSV file.
 
 OPTIONS:
   --dhis-url <str>       - http://USERNAME:PASSWORD@HOST:PORT
+  --sheet-id, -s <value>   - Google Spreadsheet ID
+  --google-key, -g <value> - Path to google service account credentials json file
   --data-set, -d <value> - dataSet to pull ID
   --path, -p <value>     - CSV output path (directory) [optional]
 
 FLAGS:
   --help, -h - show help
 ```
+
 Example:
+
 ```console
-  shell:~$ yarn start metadata pull-data-set --dhis-url='http://admin:district@localhost:8080' --data-set=AAAAAAAAAAA --path=./foo/
+  shell:~$ yarn start metadata pull-data-set --dhis-url='http://admin:district@localhost:8080' --data-set=AAAAAAAAAAA --google-key="./path-to-credentials.json" --sheet-id="..." --path=./foo/
 ```
 
 ### pull-ev-program:
@@ -104,7 +112,9 @@ OPTIONS:
 FLAGS:
   --help, -h - show help
 ```
+
 Example:
+
 ```console
   shell:~$ yarn start metadata pull-ev-program --dhis-url='http://admin:district@localhost:8080' --event-program=AAAAAAAAAAA --path=./foo/
 ```
@@ -144,15 +154,13 @@ can use the `Data Administration` app, go to `Maintenance`, select
 `Perform Maintenance` button. Alternatively, you can just set in the
 `.env.local` file the `UPDATE_CATEGORY_OPTION_COMBOS` option to `true`.
 
-
- 
 ## Default category combo
 
 -To get the default `categoryCombo` used at a dhis2 instance, go to the
--following endpoint:
--`/api/categoryCombos.json?filter=name:eq:default&fields=id,name` .
- 
+-following endpoint: -`/api/categoryCombos.json?filter=name:eq:default&fields=id,name` .
+
 ### How the default category combo is used
+
 -If you want to understand what is special about the default category-combination and how it works in dhis2, you can check [this talk by Jim-Grace](https://youtu.be/EcR9QwJvc7c?t=314) (and maybe [these -slides](https://drive.google.com/file/d/1MWq-Nx-AcSSuTfF9z7VPq0W9PXyl9IAn/view)).
 
 -It is used at least in `dataElements`, `dataSets`, and `programs`.
@@ -175,11 +183,29 @@ site](https://console.developers.google.com/apis/credentials).
 
 The spreadsheet needs to have sharing permissions with, at least,
 anyone that has the link to it (and not only anyone within your
-organization). This is necessary because we use an api key to access
-the spreadsheet, but we could avoid it if we used OAuth2
-authentication (and in that case, we could also write on the
-spreadsheet). It would be harder to implement, though, and seems
-unnecessary.
+organization).
+
+## Writing to google spreadsheets
+
+The `pull-data-set` script can write to an existing google spreadsheet using the json credentials of a **Service Account**.
+
+In order to generate a service account you should:
+
+-   Enable the [Google sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com)
+-   On the [service account manager](https://console.cloud.google.com/iam-admin/serviceaccounts) click on "CREATE SERVICE ACCOUNT"
+-   Enter a **service account name** and press **DONE**
+-   In the service account manager copy the value from the **Email** column (that's the one you will add in the share permissions of the google spreadsheet)
+-   In the service account manager click on the **Actions** icon and then click on **Manage permissions**
+-   Go to the tab **Keys**, press **ADD KEY** -> **Create New Key**
+-   In the modal select **JSON** and press **CREATE**. It should automatically download a json file. Use the path to this file as a parameter for the pull-data-set script.
+
+```bash
+  shell:~$ yarn start metadata pull-data-set \
+  --dhis-url='http://user:password@localhost:8080' \
+  --data-set=AAAAAAAAAAA \
+  --google-key="./myfolder/path-to-credentials.json" \
+  --sheet-id="..."
+```
 
 ## Metadata spreadsheet template
 

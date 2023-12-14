@@ -10,18 +10,20 @@ import {
     CategoryOptionsSheetRow,
 } from "domain/entities/Sheet";
 import { DataElement } from "domain/entities/DataElement";
-import { Id } from "../entities/Base";
+import { Id, Path } from "../entities/Base";
 import { fieldsType, metadataFields } from "utils/metadataFields";
 import { CategoryCombo } from "domain/entities/CategoryCombo";
 import { Category } from "../entities/Category";
 import { CategoryOption } from "domain/entities/CategoryOptions";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
+import { headers } from "utils/csvHeaders";
+import { Maybe } from "utils/ts-utils";
 
 export class PullDataSetUseCase {
     constructor(private metadataRepository: MetadataRepository, private sheetsRepository: SheetsRepository) {}
 
-    async execute({ dataSetId, spreadSheetId }: { dataSetId: string; spreadSheetId: string }) {
+    async execute({ dataSetId, spreadSheetId, csvPath }: PullDataSetUseCaseOptions) {
         const dataSetData = await this.getDataSetData([dataSetId]);
 
         const chunkedUniqueDEIds = _(dataSetData)
@@ -75,6 +77,46 @@ export class PullDataSetUseCase {
             this.convertToSpreadSheetValue("categories", categoriesRows),
             this.convertToSpreadSheetValue("categoryOptions", categoryOptionsRows),
         ]);
+
+        if (csvPath) {
+            await this.metadataRepository.exportMetadataToCSV(
+                dataSetRows,
+                headers.dataSetsHeaders,
+                "dataSets",
+                csvPath
+            );
+            await this.metadataRepository.exportMetadataToCSV(
+                dataSetElementsRows,
+                headers.dataSetElementsHeaders,
+                "dataSetElements",
+                csvPath
+            );
+            await this.metadataRepository.exportMetadataToCSV(
+                dataElementsRows,
+                headers.dataElementsHeaders,
+                "dataElements",
+                csvPath
+            );
+
+            await this.metadataRepository.exportMetadataToCSV(
+                categoryCombosRows,
+                headers.categoryCombosHeaders,
+                "categoryCombos",
+                csvPath
+            );
+            await this.metadataRepository.exportMetadataToCSV(
+                categoriesRows,
+                headers.categoriesHeaders,
+                "categories",
+                csvPath
+            );
+            await this.metadataRepository.exportMetadataToCSV(
+                categoryOptionsRows,
+                headers.categoryOptionsHeaders,
+                "categoryOptions",
+                csvPath
+            );
+        }
     }
 
     private convertToSpreadSheetValue(
@@ -246,3 +288,5 @@ export class PullDataSetUseCase {
         };
     }
 }
+
+type PullDataSetUseCaseOptions = { dataSetId: string; spreadSheetId: string; csvPath: Maybe<Path> };

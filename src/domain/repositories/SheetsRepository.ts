@@ -3,5 +3,5 @@ import { SpreadSheet } from "domain/entities/SpreadSheet";
 
 export interface SheetsRepository {
     getSpreadsheet(googleSheetId: string): Promise<Sheet[]>;
-    save(googleSheetId: string, sheets: SpreadSheet[]): Promise<void>;
+    save(id: string, sheets: SpreadSheet[]): Promise<void>;
 }
