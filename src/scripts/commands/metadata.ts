@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { command, option, optional, subcommands, boolean, flag } from "cmd-ts";
+import { command, option, optional, subcommands, boolean, flag, string } from "cmd-ts";
 import {
     getApiUrlOption,
     getD2Api,
@@ -20,6 +20,14 @@ import { PullDataSetUseCase } from "domain/usecases/PullDataSetUseCase";
 import { PullEventProgramUseCase } from "domain/usecases/PullEventProgramUseCase";
 
 const dhis2UrlArg = { url: getApiUrlOption({ long: "dhis-url" }) };
+
+const sheetIdArg = option({
+    type: SpreadsheetId,
+    long: "sheet-id",
+    short: "s",
+    description: "Google Spreadsheet ID",
+});
+
 const googleArgs = {
     gKey: option({
         type: GoogleApiKey,
@@ -27,12 +35,7 @@ const googleArgs = {
         short: "g",
         description: "Google Api key",
     }),
-    sheetId: option({
-        type: SpreadsheetId,
-        long: "sheet-id",
-        short: "s",
-        description: "Google Spreadsheet ID",
-    }),
+    sheetId: sheetIdArg,
 };
 
 export function getCommand() {
@@ -63,7 +66,7 @@ export function getCommand() {
         },
         handler: async args => {
             try {
-                const sheetsApi = getGoogleSheetsApi(args.gKey);
+                const sheetsApi = await getGoogleSheetsApi(args.gKey);
                 const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
                 log.info(`Reading https://docs.google.com/spreadsheets/d/${args.sheetId} ...`);
 
@@ -112,7 +115,7 @@ export function getCommand() {
         },
         handler: async args => {
             try {
-                const sheetsApi = getGoogleSheetsApi(args.gKey);
+                const sheetsApi = await getGoogleSheetsApi(args.gKey);
                 const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
 
                 log.info(`Getting IDs from server at ${args.url} ...`);
@@ -136,28 +139,33 @@ export function getCommand() {
         description: "Gets the dataSet metadata from DHIS2 instance and exports to CSV file.",
         args: {
             ...dhis2UrlArg,
+            sheetId: sheetIdArg,
+            gKey: option({
+                type: string,
+                long: "google-key",
+            }),
             dataSetToPull: option({
                 type: IDString,
                 long: "data-set",
                 short: "d",
                 description: "dataSet to pull ID",
             }),
-            path: option({
-                type: optional(DirPath),
-                long: "path",
-                short: "p",
-                description: "CSV output path (directory)",
-            }),
         },
         handler: async args => {
             try {
+                const sheetsApi = await getGoogleSheetsApi(args.gKey);
+                const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
+
                 log.info(`Getting metadata from server at ${args.url} ...`);
                 const api = getD2Api(args.url);
                 const MetadataRepository = new MetadataD2Repository(api);
 
-                log.info("Writing CSVs...");
-                const downloadIds = new PullDataSetUseCase(MetadataRepository);
-                await downloadIds.execute(args.dataSetToPull, args.path);
+                log.info(`Updating Spreadsheet: ${args.sheetId}...`);
+                const downloadIds = new PullDataSetUseCase(MetadataRepository, sheetsRepository);
+                await downloadIds.execute({
+                    dataSetId: args.dataSetToPull,
+                    spreadSheetId: args.sheetId,
+                });
 
                 process.exit(0);
             } catch (error: any) {

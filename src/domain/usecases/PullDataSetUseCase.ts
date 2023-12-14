@@ -15,12 +15,13 @@ import { fieldsType, metadataFields } from "utils/metadataFields";
 import { CategoryCombo } from "domain/entities/CategoryCombo";
 import { Category } from "../entities/Category";
 import { CategoryOption } from "domain/entities/CategoryOptions";
-import { headers } from "utils/csvHeaders";
+import { SheetsRepository } from "domain/repositories/SheetsRepository";
+import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
 
 export class PullDataSetUseCase {
-    constructor(private metadataRepository: MetadataRepository) {}
+    constructor(private metadataRepository: MetadataRepository, private sheetsRepository: SheetsRepository) {}
 
-    async execute(dataSetId: Id, path?: string) {
+    async execute({ dataSetId, spreadSheetId }: { dataSetId: string; spreadSheetId: string }) {
         const dataSetData = await this.getDataSetData([dataSetId]);
 
         const chunkedUniqueDEIds = _(dataSetData)
@@ -66,38 +67,21 @@ export class PullDataSetUseCase {
             this.buildCategoryOptionRow(categoryOption, categoriesData)
         );
 
-        await this.metadataRepository.exportMetadataToCSV(dataSetRows, headers.dataSetsHeaders, "dataSets", path);
-        await this.metadataRepository.exportMetadataToCSV(
-            dataSetElementsRows,
-            headers.dataSetElementsHeaders,
-            "dataSetElements",
-            path
-        );
-        await this.metadataRepository.exportMetadataToCSV(
-            dataElementsRows,
-            headers.dataElementsHeaders,
-            "dataElements",
-            path
-        );
+        await this.sheetsRepository.save(spreadSheetId, [
+            this.convertToSpreadSheetValue("dataSets", dataSetRows),
+            this.convertToSpreadSheetValue("dataSetElements", dataSetElementsRows),
+            this.convertToSpreadSheetValue("dataElements", dataElementsRows),
+            this.convertToSpreadSheetValue("categoryCombos", categoryCombosRows),
+            this.convertToSpreadSheetValue("categories", categoriesRows),
+            this.convertToSpreadSheetValue("categoryOptions", categoryOptionsRows),
+        ]);
+    }
 
-        await this.metadataRepository.exportMetadataToCSV(
-            categoryCombosRows,
-            headers.categoryCombosHeaders,
-            "categoryCombos",
-            path
-        );
-        await this.metadataRepository.exportMetadataToCSV(
-            categoriesRows,
-            headers.categoriesHeaders,
-            "categories",
-            path
-        );
-        await this.metadataRepository.exportMetadataToCSV(
-            categoryOptionsRows,
-            headers.categoryOptionsHeaders,
-            "categoryOptions",
-            path
-        );
+    private convertToSpreadSheetValue(
+        sheetName: SpreadSheetName,
+        rows: DataSetsSheetRow[] | DataSetElementsSheetRow[] | DataElementsSheetRow[]
+    ): SpreadSheet {
+        return { name: sheetName, range: "A2", values: rows.map(Object.values) };
     }
 
     private async getDataSetData(dataSetId: Id[]): Promise<DataSet[]> {

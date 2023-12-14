@@ -18,7 +18,6 @@ export async function getGoogleSheetsApi(googleApiKey: string): Promise<sheets_v
         keyFile: googleApiKey,
         scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
-    log.info(`Authenticating to googleapis.com...`);
     const authClient = await auth.getClient();
     const { spreadsheets } = google.sheets({ version: "v4", auth: authClient });
     return spreadsheets;
