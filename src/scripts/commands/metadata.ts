@@ -67,7 +67,7 @@ export function getCommand() {
         },
         handler: async args => {
             try {
-                const sheetsApi = await getGoogleSheetsApi(args.gKey);
+                const sheetsApi = getGoogleSheetsApi(args.gKey);
                 const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
                 log.info(`Reading https://docs.google.com/spreadsheets/d/${args.sheetId} ...`);
 
@@ -116,7 +116,7 @@ export function getCommand() {
         },
         handler: async args => {
             try {
-                const sheetsApi = await getGoogleSheetsApi(args.gKey);
+                const sheetsApi = getGoogleSheetsApi(args.gKey);
                 const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
 
                 log.info(`Getting IDs from server at ${args.url} ...`);

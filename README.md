@@ -85,7 +85,7 @@ Gets the dataSet metadata from DHIS2 instance and exports to google spreadsheet 
 OPTIONS:
   --dhis-url <str>       - http://USERNAME:PASSWORD@HOST:PORT
   --sheet-id, -s <value>   - Google Spreadsheet ID
-  --google-key, -g <value> - Path to google service account credentials json file
+  --google-credentials, -g <value> - Path to google service account credentials json file
   --data-set, -d <value> - dataSet to pull ID
   --path, -p <value>     - CSV output path (directory) [optional]
 
@@ -96,7 +96,7 @@ FLAGS:
 Example:
 
 ```console
-  shell:~$ yarn start metadata pull-data-set --dhis-url='http://admin:district@localhost:8080' --data-set=AAAAAAAAAAA --google-key="./path-to-credentials.json" --sheet-id="..." --path=./foo/
+  shell:~$ yarn start metadata pull-data-set --dhis-url='http://admin:district@localhost:8080' --data-set=AAAAAAAAAAA --google-credentials="./path-to-credentials.json" --sheet-id="..." --path=./foo/
 ```
 
 ### pull-ev-program:
@@ -203,7 +203,7 @@ In order to generate a service account you should:
   shell:~$ yarn start metadata pull-data-set \
   --dhis-url='http://user:password@localhost:8080' \
   --data-set=AAAAAAAAAAA \
-  --google-key="./myfolder/path-to-credentials.json" \
+  --google-credentials="./myfolder/path-to-credentials.json" \
   --sheet-id="..."
 ```
 
