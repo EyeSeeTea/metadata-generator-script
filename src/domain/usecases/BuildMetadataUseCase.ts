@@ -6,6 +6,8 @@ import { Sheet } from "domain/entities/Sheet";
 import { getItems } from "utils/utils";
 import { MetadataRepository } from "domain/repositories/MetadataRepository";
 import log from "utils/log";
+import { Translation } from "domain/entities/Translation";
+import { Maybe } from "utils/ts-utils";
 
 type localeKey =
     | "Afrikaans"
@@ -44,8 +46,9 @@ export class BuildMetadataUseCase {
     async execute(sheetId: string): Promise<MetadataOutput> {
         const sheets = await this.sheetsRepository.getSpreadsheet(sheetId);
         const newSheets = await this.getAllExistingMetadata(sheets);
-        const metadata = this.buildMetadata(newSheets);
-        return metadata;
+        const metadata = this.buildMetadata(sheets);
+        const existingMetadata = this.buildMetadata(newSheets);
+        return _(metadata).merge({}, metadata, existingMetadata).value();
     }
 
     private async getAllExistingMetadata(sheets: Sheet[]) {
@@ -173,6 +176,13 @@ export class BuildMetadataUseCase {
                     return _(sheet.items)
                         .map(item => {
                             return this.isValidUid(item.name) ? item.name : undefined;
+                        })
+                        .compact()
+                        .value();
+                } else if (sheet.name === "dataSets") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.id) ? item.id : undefined;
                         })
                         .compact()
                         .value();
@@ -609,18 +619,24 @@ export class BuildMetadataUseCase {
                     };
                 });
 
-            data.legendSets = [
+            data.legendSets = _([
                 ...(data.legendSets || []),
                 ...this.processItemLegendSets(sheets, data.name, data.id, "dataSet"),
-            ];
-            data.translations = [
-                ...(data.translations || []),
-                ...this.processTranslations(sheets, data.name, data.id, "dataSet"),
-            ];
-            data.attributeValues = [
+            ])
+                .uniqBy(dls => dls.id)
+                .value();
+
+            data.translations = this.mergeAndGetUniqueTranslations(
+                data.translations,
+                this.processTranslations(sheets, data.name, data.id, "dataSet")
+            );
+
+            data.attributeValues = _([
                 ...(data.attributeValues || []),
                 ...this.processItemAttributes(sheets, data, "dataSet"),
-            ];
+            ])
+                .uniqBy(this.getAttributeId)
+                .value();
 
             if (!_.isObjectLike(data.categoryCombo)) {
                 this.replaceById(data, "categoryCombo", categoryCombos);
@@ -633,10 +649,28 @@ export class BuildMetadataUseCase {
             return {
                 ...data,
                 sections: [...(data.sections || []), ...newSections],
-                dataSetElements: [...(data.dataSetElements || []), ...newDataSetElements],
-                dataInputPeriods: [...(data.dataInputPeriods || []), ...newDataInputPeriods],
+                dataSetElements: _([...(data.dataSetElements || []), ...newDataSetElements])
+                    .uniqBy(dse => dse.dataElement.id)
+                    .value(),
+                dataInputPeriods: _([...(data.dataInputPeriods || []), ...newDataInputPeriods])
+                    .uniqBy(dse => dse.period.id)
+                    .value(),
             };
         });
+    }
+
+    private getAttributeId(attribute: MetadataItem) {
+        return attribute.attribute.id;
+    }
+
+    private mergeAndGetUniqueTranslations(
+        existingTranslations: Maybe<Translation[]>,
+        newTranslations: Translation[]
+    ): Translation[] {
+        const result = _.unionBy(existingTranslations, newTranslations, obj => {
+            return _.join([obj.property?.toLowerCase(), obj.locale?.toLowerCase()], "-");
+        });
+        return result;
     }
 
     private buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "programDataElements") {
@@ -675,11 +709,19 @@ export class BuildMetadataUseCase {
                 optionSet: optionSetId ? { id: optionSetId } : undefined,
                 commentOptionSet: commentOptionSetId ? { id: commentOptionSetId } : undefined,
                 domainType: domainType,
-                translations: [...(data.translations || []), ...translations],
-                attributeValues: [...(data.attributeValues || []), ...attributeValues],
-                legendSets: [...(data.legendSets || []), ...legendSets],
+                translations: this.mergeAndGetUniqueTranslations(data.translations, translations),
+                attributeValues: _([...(data.attributeValues || []), ...attributeValues])
+                    .uniqBy(this.getAttributeId)
+                    .value(),
+                legendSets: _([...(data.legendSets || []), ...legendSets])
+                    .uniqBy(this.getId)
+                    .value(),
             };
         });
+    }
+
+    private getId(value: MetadataItem) {
+        return value.id;
     }
 
     private getRelatedId(value: string, items: MetadataItem[]): string | undefined {
@@ -715,10 +757,10 @@ export class BuildMetadataUseCase {
                 });
 
             this.addSharingSetting(data);
-            data.translations = [
-                ...(data.translations || []),
-                ...this.processTranslations(sheets, data.name, data.id, "dataElementGroup"),
-            ];
+            data.translations = this.mergeAndGetUniqueTranslations(
+                data.translations,
+                this.processTranslations(sheets, data.name, data.id, "dataElementGroup")
+            );
 
             return { ...data, dataElements: _(data.dataElements).unionBy(newDataElements, "id").value() };
         });
@@ -746,10 +788,10 @@ export class BuildMetadataUseCase {
                 });
 
             this.addSharingSetting(data);
-            data.translations = [
-                ...(data.translations || []),
-                ...this.processTranslations(sheets, data.name, data.id, "dataElementGroupSet"),
-            ];
+            data.translations = this.mergeAndGetUniqueTranslations(
+                data.translations,
+                this.processTranslations(sheets, data.name, data.id, "dataElementGroupSet")
+            );
 
             return { ...data, dataElementGroups: _(data.dataElementGroups).unionBy(newGroups).value() };
         });
@@ -774,7 +816,10 @@ export class BuildMetadataUseCase {
                 : undefined;
 
             this.addSharingSetting(data);
-            data.translation = this.processTranslations(sheets, data.name, data.id, "attribute");
+            data.translation = this.mergeAndGetUniqueTranslations(
+                data.translations,
+                this.processTranslations(sheets, data.name, data.id, "attribute")
+            );
 
             return { ...data, optionSet };
         });
@@ -813,10 +858,10 @@ export class BuildMetadataUseCase {
             }
 
             this.addSharingSetting(data);
-            data.translations = [
-                ...(data.translations || []),
-                ...this.processTranslations(sheets, data.name, data.id, "program"),
-            ];
+            data.translations = this.mergeAndGetUniqueTranslations(
+                data.translations,
+                this.processTranslations(sheets, data.name, data.id, "program")
+            );
 
             if (trackedEntityType.id) {
                 // WITH_REGISTRATION == Tracker Program
@@ -845,7 +890,9 @@ export class BuildMetadataUseCase {
                     programType,
                     trackedEntityType,
                     programStages,
-                    programSections: [...(data.programSections || []), ...programSections],
+                    programSections: _([...(data.programSections || []), ...programSections])
+                        .uniqBy(this.getId)
+                        .value(),
                     programTrackedEntityAttributes: [
                         ...(data.programTrackedEntityAttributes || []),
                         ...programTrackedEntityAttributes,
@@ -953,10 +1000,10 @@ export class BuildMetadataUseCase {
             }
 
             this.addSharingSetting(programStage);
-            const translations = [
-                ...(programStage.translations || []),
-                ...this.processTranslations(sheets, programStage.name, programStage.id, "programStage"),
-            ];
+            const translations = this.mergeAndGetUniqueTranslations(
+                programStage.translations,
+                this.processTranslations(sheets, programStage.name, programStage.id, "programStage")
+            );
 
             return { ...programStage, programStageDataElements, programStageSections, translations };
         });
@@ -1084,7 +1131,7 @@ export class BuildMetadataUseCase {
             return {
                 ...data,
                 legendSets: [...(data.legendSets || []), ...legendSets],
-                translations: [...(data.translations || []), ...translations],
+                translations: this.mergeAndGetUniqueTranslations(data.translations, translations),
             };
         });
     }
@@ -1151,7 +1198,7 @@ export class BuildMetadataUseCase {
                     ...(data.trackedEntityTypeAttributes || []),
                     ...trackedEntityTypeAttributes,
                 ],
-                translations: [...(data.translations || []), ...translations],
+                translations: this.mergeAndGetUniqueTranslations(data.translations, translations),
             };
         });
     }
@@ -1220,7 +1267,10 @@ export class BuildMetadataUseCase {
             this.replaceById(data, "programStage", stages);
 
             this.addSharingSetting(data);
-            data.translations = this.processTranslations(sheets, variable.name, variable.id, "programRuleVariable");
+            data.translations = this.mergeAndGetUniqueTranslations(
+                data.translations,
+                this.processTranslations(sheets, variable.name, variable.id, "programRuleVariable")
+            );
 
             return data;
         });
