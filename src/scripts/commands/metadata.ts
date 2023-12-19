@@ -19,6 +19,7 @@ import { DownloadIdsUseCase } from "domain/usecases/DownloadIdsUseCase";
 import { makeUploadMetadataLog, writeToJSON } from "utils/utils";
 import { PullDataSetUseCase } from "domain/usecases/PullDataSetUseCase";
 import { PullEventProgramUseCase } from "domain/usecases/PullEventProgramUseCase";
+import { CsvRepository } from "data/CsvRepository";
 
 const dhis2UrlArg = { url: getApiUrlOption({ long: "dhis-url" }) };
 
@@ -137,12 +138,17 @@ export function getCommand() {
 
     const pullDataSet = command({
         name: "pull-data-set",
-        description: "Gets the dataSet metadata from DHIS2 instance and exports to google spreadsheet and CSV file.",
+        description: "Gets the dataSet metadata from DHIS2 instance and exports to google spreadsheet or CSV file.",
         args: {
             ...dhis2UrlArg,
-            sheetId: sheetIdArg,
+            sheetId: option({
+                type: optional(SpreadsheetId),
+                long: "sheet-id",
+                short: "s",
+                description: "Google Spreadsheet ID",
+            }),
             gCredentials: option({
-                type: string,
+                type: optional(string),
                 long: "google-credentials",
             }),
             dataSetToPull: option({
@@ -157,22 +163,33 @@ export function getCommand() {
                 short: "p",
                 description: "CSV output path (directory)",
             }),
+            output: option({
+                type: optional(string),
+                defaultValue: () => "spreadsheet",
+                long: "output",
+                description: "output for the document: spreadsheet or csv",
+            }),
         },
         handler: async args => {
             try {
-                const sheetsApi = await getGoogleSheetsApiByCredentials(args.gCredentials);
-                const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
+                const params = parseOutputValues(args.output, args);
+                let sheetsRepository;
+                if (args.output === "csv") {
+                    sheetsRepository = new CsvRepository();
+                } else {
+                    const sheetsApi = await getGoogleSheetsApiByCredentials(params.gCredentials);
+                    sheetsRepository = new GoogleSheetsRepository(sheetsApi);
+                }
 
                 log.info(`Getting metadata from server at ${args.url} ...`);
                 const api = getD2Api(args.url);
                 const MetadataRepository = new MetadataD2Repository(api);
 
-                log.info(`Updating Spreadsheet: ${args.sheetId}...`);
-                const downloadIds = new PullDataSetUseCase(MetadataRepository, sheetsRepository);
-                await downloadIds.execute({
+                log.info(`Generating ${args.output}...`);
+                await new PullDataSetUseCase(MetadataRepository, sheetsRepository).execute({
                     dataSetId: args.dataSetToPull,
-                    spreadSheetId: args.sheetId,
-                    csvPath: args.path,
+                    spreadSheetId: params.sheetId,
+                    csvPath: params.path,
                 });
 
                 process.exit(0);
@@ -185,7 +202,8 @@ export function getCommand() {
 
     const pullEvProgram = command({
         name: "pull-ev-program",
-        description: "Gets the Event Program metadata from DHIS2 instance and exports to CSV file.",
+        description:
+            "Gets the Event Program metadata from DHIS2 instance and exports to google spreadsheet or CSV file.",
         args: {
             ...dhis2UrlArg,
             eventProgramToPull: option({
@@ -194,22 +212,49 @@ export function getCommand() {
                 short: "d",
                 description: "eventProgram to pull ID",
             }),
+            sheetId: option({
+                type: optional(SpreadsheetId),
+                long: "sheet-id",
+                short: "s",
+                description: "Google Spreadsheet ID",
+            }),
+            gCredentials: option({
+                type: optional(string),
+                long: "google-credentials",
+            }),
             path: option({
                 type: optional(DirPath),
                 long: "path",
                 short: "p",
                 description: "CSV output path (directory)",
             }),
+            output: option({
+                type: optional(string),
+                defaultValue: () => "spreadsheet",
+                long: "output",
+                description: "output for the document: spreadsheet or csv",
+            }),
         },
         handler: async args => {
             try {
+                const params = parseOutputValues(args.output, args);
+                let sheetsRepository;
+                if (args.output === "csv") {
+                    sheetsRepository = new CsvRepository();
+                } else {
+                    const sheetsApi = await getGoogleSheetsApiByCredentials(params.gCredentials);
+                    sheetsRepository = new GoogleSheetsRepository(sheetsApi);
+                }
+
                 log.info(`Getting metadata from server at ${args.url} ...`);
                 const api = getD2Api(args.url);
                 const MetadataRepository = new MetadataD2Repository(api);
 
-                log.info("Writing CSVs...");
-                const downloadIds = new PullEventProgramUseCase(MetadataRepository);
-                await downloadIds.execute(args.eventProgramToPull, args.path);
+                await new PullEventProgramUseCase(MetadataRepository, sheetsRepository).execute({
+                    eventProgramId: args.eventProgramToPull,
+                    spreadSheetId: params.sheetId,
+                    csvPath: params.path,
+                });
 
                 process.exit(0);
             } catch (error: any) {
@@ -228,4 +273,25 @@ export function getCommand() {
             "pull-ev-program": pullEvProgram,
         },
     });
+}
+
+function parseOutputValues(output: string | undefined, args: any) {
+    if (output === "spreadsheet") {
+        if (!args.gCredentials) throw Error("Invalid google credentials: --google-credentials");
+        if (!args.sheetId) throw Error("Invalid google sheetId: --sheet-id");
+        return {
+            gCredentials: args.gCredentials,
+            sheetId: args.sheetId,
+            path: "",
+        };
+    } else if (output === "csv") {
+        if (!args.path) throw Error("Invalid csv path: --path");
+        return {
+            path: args.path,
+            gCredentials: "",
+            sheetId: "",
+        };
+    } else {
+        throw Error(`Invalid output parameter: spreadsheet or csv`);
+    }
 }

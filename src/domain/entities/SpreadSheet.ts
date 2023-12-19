@@ -2,6 +2,7 @@ export type SpreadSheet = {
     name: SpreadSheetName;
     range: A1Notation;
     values: SpreadSheetValue;
+    columns: string[];
 };
 
 // A1 Notation examples: https://developers.google.com/sheets/api/guides/concepts#expandable-1

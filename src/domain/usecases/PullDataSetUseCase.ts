@@ -17,8 +17,7 @@ import { Category } from "../entities/Category";
 import { CategoryOption } from "domain/entities/CategoryOptions";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
-import { headers } from "utils/csvHeaders";
-import { Maybe } from "utils/ts-utils";
+import { convertHeadersToArray, headers } from "utils/csvHeaders";
 
 export class PullDataSetUseCase {
     constructor(private metadataRepository: MetadataRepository, private sheetsRepository: SheetsRepository) {}
@@ -69,61 +68,64 @@ export class PullDataSetUseCase {
             this.buildCategoryOptionRow(categoryOption, categoriesData)
         );
 
-        await this.sheetsRepository.save(spreadSheetId, [
-            this.convertToSpreadSheetValue("dataSets", dataSetRows),
-            this.convertToSpreadSheetValue("dataSetElements", dataSetElementsRows),
-            this.convertToSpreadSheetValue("dataElements", dataElementsRows),
-            this.convertToSpreadSheetValue("categoryCombos", categoryCombosRows),
-            this.convertToSpreadSheetValue("categories", categoriesRows),
-            this.convertToSpreadSheetValue("categoryOptions", categoryOptionsRows),
-        ]);
+        await this.generateSpreadSheet(
+            spreadSheetId,
+            csvPath,
+            dataSetRows,
+            dataSetElementsRows,
+            dataElementsRows,
+            categoryCombosRows,
+            categoriesRows,
+            categoryOptionsRows
+        );
+    }
 
-        if (csvPath) {
-            await this.metadataRepository.exportMetadataToCSV(
-                dataSetRows,
-                headers.dataSetsHeaders,
-                "dataSets",
-                csvPath
-            );
-            await this.metadataRepository.exportMetadataToCSV(
-                dataSetElementsRows,
-                headers.dataSetElementsHeaders,
+    private async generateSpreadSheet(
+        spreadSheetId: string,
+        csvPath: string,
+        dataSetRows: DataSetsSheetRow[],
+        dataSetElementsRows: DataSetElementsSheetRow[],
+        dataElementsRows: DataElementsSheetRow[],
+        categoryCombosRows: CategoryCombosSheetRow[],
+        categoriesRows: CategoriesSheetRow[],
+        categoryOptionsRows: CategoryOptionsSheetRow[]
+    ) {
+        await this.sheetsRepository.save(spreadSheetId || csvPath, [
+            this.convertToSpreadSheetValue("dataSets", dataSetRows, convertHeadersToArray(headers.dataSetsHeaders)),
+            this.convertToSpreadSheetValue(
                 "dataSetElements",
-                csvPath
-            );
-            await this.metadataRepository.exportMetadataToCSV(
-                dataElementsRows,
-                headers.dataElementsHeaders,
+                dataSetElementsRows,
+                convertHeadersToArray(headers.dataSetElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "dataElements",
-                csvPath
-            );
-
-            await this.metadataRepository.exportMetadataToCSV(
-                categoryCombosRows,
-                headers.categoryCombosHeaders,
+                dataElementsRows,
+                convertHeadersToArray(headers.dataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "categoryCombos",
-                csvPath
-            );
-            await this.metadataRepository.exportMetadataToCSV(
-                categoriesRows,
-                headers.categoriesHeaders,
+                categoryCombosRows,
+                convertHeadersToArray(headers.categoryCombosHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "categories",
-                csvPath
-            );
-            await this.metadataRepository.exportMetadataToCSV(
-                categoryOptionsRows,
-                headers.categoryOptionsHeaders,
+                categoriesRows,
+                convertHeadersToArray(headers.categoriesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "categoryOptions",
-                csvPath
-            );
-        }
+                categoryOptionsRows,
+                convertHeadersToArray(headers.categoryOptionsHeaders)
+            ),
+        ]);
     }
 
     private convertToSpreadSheetValue(
         sheetName: SpreadSheetName,
-        rows: DataSetsSheetRow[] | DataSetElementsSheetRow[] | DataElementsSheetRow[]
+        rows: DataSetsSheetRow[] | DataSetElementsSheetRow[] | DataElementsSheetRow[],
+        headers: string[]
     ): SpreadSheet {
-        return { name: sheetName, range: "A2", values: rows.map(Object.values) };
+        return { name: sheetName, range: "A2", values: rows.map(Object.values), columns: headers };
     }
 
     private async getDataSetData(dataSetId: Id[]): Promise<DataSet[]> {
@@ -222,8 +224,8 @@ export class PullDataSetUseCase {
             aggregationType: dataElement.aggregationType,
             domainType: dataElement.domainType,
             description: dataElement.description,
-            optionSet: dataElement.optionSet,
-            commentOptionSet: dataElement.commentOptionSet,
+            optionSet: dataElement.optionSet ? dataElement.optionSet.id : undefined,
+            commentOptionSet: dataElement.commentOptionSet ? dataElement.commentOptionSet.id : undefined,
             zeroIsSignificant: this.booleanToString(dataElement.zeroIsSignificant),
             url: dataElement.url,
             fieldMask: dataElement.fieldMask,
@@ -289,4 +291,4 @@ export class PullDataSetUseCase {
     }
 }
 
-type PullDataSetUseCaseOptions = { dataSetId: string; spreadSheetId: string; csvPath: Maybe<Path> };
+type PullDataSetUseCaseOptions = { dataSetId: string; spreadSheetId: string; csvPath: Path };

@@ -18,25 +18,28 @@ import {
     programRuleActionsSheetRow,
 } from "domain/entities/Sheet";
 import { DataElement } from "domain/entities/DataElement";
-import { Id, Ref, RenderType } from "../entities/Base";
+import { Id, Path, Ref, RenderType } from "../entities/Base";
 import { CategoryCombo } from "domain/entities/CategoryCombo";
 import { Category } from "../entities/Category";
 import { CategoryOption } from "domain/entities/CategoryOptions";
 import { Program } from "domain/entities/Program";
 import { ProgramStage } from "../entities/ProgramStage";
 import { ProgramStageSection } from "../entities/ProgramStageSection";
-import { headers } from "utils/csvHeaders";
+import { convertHeadersToArray, headers } from "utils/csvHeaders";
 import { fieldsType, metadataFields } from "utils/metadataFields";
 import { ProgramRuleVariable } from "domain/entities/ProgramRuleVariable";
 import { Legend, LegendSet } from "../entities/LegendSet";
 import { ProgramRule, ProgramRuleAction } from "domain/entities/ProgramRule";
 import { MetadataItem } from "../entities/MetadataItem";
+import { SheetsRepository } from "domain/repositories/SheetsRepository";
+import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
 
 export class PullEventProgramUseCase {
-    constructor(private metadataRepository: MetadataRepository) {}
+    constructor(private metadataRepository: MetadataRepository, private spreadSheetsRepository: SheetsRepository) {}
 
-    async execute(eventProgramId: Id, path?: string) {
+    async execute(options: PullEventProgramUseCaseOptions) {
         // PROGRAM GET
+        const { eventProgramId, csvPath, spreadSheetId } = options;
         const programData = await this.getProgramData([eventProgramId]);
 
         const programStagesIds = _.uniq(
@@ -210,93 +213,186 @@ export class PullEventProgramUseCase {
         //
         // PRINT CSVs
         //
-        await this.metadataRepository.exportMetadataToCSV(programRows, headers.programsHeaders, "programs", path);
+        await this.spreadSheetsRepository.save(spreadSheetId || csvPath, [
+            this.convertToSpreadSheetValue("programs", programRows, convertHeadersToArray(headers.programsHeaders)),
+            this.convertToSpreadSheetValue(
+                "programStages",
+                programStagesRows,
+                convertHeadersToArray(headers.programStagesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStageDataElements",
+                programStagesDataElementsRows,
+                convertHeadersToArray(headers.programStageDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStageSections",
+                programStageSectionsRows,
+                convertHeadersToArray(headers.programStageSectionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStageSectionsDataElements",
+                programStageSectionsDataElementRow,
+                convertHeadersToArray(headers.programStageSectionsDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programRules",
+                programRulesData,
+                convertHeadersToArray(headers.programRulesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programRuleActions",
+                programRuleActionData,
+                convertHeadersToArray(headers.programRuleActionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programRuleVariables",
+                programRuleVariablesRows,
+                convertHeadersToArray(headers.programRuleVariablesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataElements",
+                dataElementsRows,
+                convertHeadersToArray(headers.dataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataElementLegends",
+                dataElementLegendsRows,
+                convertHeadersToArray(headers.dataElementLegendsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryCombos",
+                categoryCombosRows,
+                convertHeadersToArray(headers.categoryCombosHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categories",
+                categoriesRows,
+                convertHeadersToArray(headers.categoriesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryOptions",
+                categoryOptionsRows,
+                convertHeadersToArray(headers.categoryOptionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "legendSets",
+                legendSetRows,
+                convertHeadersToArray(headers.legendSetsHeaders)
+            ),
+            this.convertToSpreadSheetValue("legends", legendsRows, convertHeadersToArray(headers.legendsHeaders)),
+        ]);
+        // await this.metadataRepository.exportMetadataToCSV(programRows, headers.programsHeaders, "programs", csvPath);
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programStagesRows,
-            headers.programStagesHeaders,
-            "programStages",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     programStagesRows,
+        //     headers.programStagesHeaders,
+        //     "programStages",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programStagesDataElementsRows,
-            headers.programStageDataElementsHeaders,
-            "programStageDataElements",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     programStagesDataElementsRows,
+        //     headers.programStageDataElementsHeaders,
+        //     "programStageDataElements",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programStageSectionsRows,
-            headers.programStageSectionsHeaders,
-            "programStageSections",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     programStageSectionsRows,
+        //     headers.programStageSectionsHeaders,
+        //     "programStageSections",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programStageSectionsDataElementRow,
-            headers.programStageSectionsDataElementsHeaders,
-            "programStageSectionsDataElements",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     programStageSectionsDataElementRow,
+        //     headers.programStageSectionsDataElementsHeaders,
+        //     "programStageSectionsDataElements",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programRulesData,
-            headers.programRulesHeaders,
-            "programRules",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     programRulesData,
+        //     headers.programRulesHeaders,
+        //     "programRules",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programRuleActionData,
-            headers.programRuleActionsHeaders,
-            "programRuleActions",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     programRuleActionData,
+        //     headers.programRuleActionsHeaders,
+        //     "programRuleActions",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programRuleVariablesRows,
-            headers.programRuleVariablesHeaders,
-            "programRuleVariables",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     programRuleVariablesRows,
+        //     headers.programRuleVariablesHeaders,
+        //     "programRuleVariables",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            dataElementsRows,
-            headers.dataElementsHeaders,
-            "dataElements",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     dataElementsRows,
+        //     headers.dataElementsHeaders,
+        //     "dataElements",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            dataElementLegendsRows,
-            headers.dataElementLegendsHeaders,
-            "dataElementLegends",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     dataElementLegendsRows,
+        //     headers.dataElementLegendsHeaders,
+        //     "dataElementLegends",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            categoryCombosRows,
-            headers.categoryCombosHeaders,
-            "categoryCombos",
-            path
-        );
-        await this.metadataRepository.exportMetadataToCSV(
-            categoriesRows,
-            headers.categoriesHeaders,
-            "categories",
-            path
-        );
-        await this.metadataRepository.exportMetadataToCSV(
-            categoryOptionsRows,
-            headers.categoryOptionsHeaders,
-            "categoryOptions",
-            path
-        );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     categoryCombosRows,
+        //     headers.categoryCombosHeaders,
+        //     "categoryCombos",
+        //     csvPath
+        // );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     categoriesRows,
+        //     headers.categoriesHeaders,
+        //     "categories",
+        //     csvPath
+        // );
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     categoryOptionsRows,
+        //     headers.categoryOptionsHeaders,
+        //     "categoryOptions",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(legendSetRows, headers.legendSetsHeaders, "legendSets", path);
+        // await this.metadataRepository.exportMetadataToCSV(
+        //     legendSetRows,
+        //     headers.legendSetsHeaders,
+        //     "legendSets",
+        //     csvPath
+        // );
 
-        await this.metadataRepository.exportMetadataToCSV(legendsRows, headers.legendsHeaders, "legends", path);
+        // await this.metadataRepository.exportMetadataToCSV(legendsRows, headers.legendsHeaders, "legends", csvPath);
+    }
+
+    private convertToSpreadSheetValue(
+        sheetName: SpreadSheetName,
+        rows:
+            | ProgramsSheetRow[]
+            | ProgramStagesSheetRow[]
+            | ProgramStageDataElementsSheetRow[]
+            | ProgramStageSectionsDataElementsSheetRow[]
+            | ProgramRule[]
+            | ProgramRuleAction[]
+            | ProgramRuleVariablesSheetRow[]
+            | DataElementsSheetRow[]
+            | DataElementLegendsSheetRow[]
+            | LegendsSheetRow[]
+            | LegendsSheetRow[],
+        headers: string[]
+    ): SpreadSheet {
+        return { name: sheetName, range: "A2", values: rows.map(Object.values), columns: headers };
     }
 
     //
@@ -578,8 +674,8 @@ export class PullEventProgramUseCase {
             aggregationType: dataElement.aggregationType,
             domainType: dataElement.domainType,
             description: dataElement.description,
-            optionSet: dataElement.optionSet,
-            commentOptionSet: dataElement.commentOptionSet,
+            optionSet: dataElement.optionSet ? dataElement.optionSet.id : undefined,
+            commentOptionSet: dataElement.commentOptionSet ? dataElement.commentOptionSet.id : undefined,
             zeroIsSignificant: this.booleanToString(dataElement.zeroIsSignificant),
             url: dataElement.url,
             fieldMask: dataElement.fieldMask,
@@ -687,3 +783,5 @@ export class PullEventProgramUseCase {
         return object.find(item => item.id === id) ?? undefined;
     }
 }
+
+type PullEventProgramUseCaseOptions = { eventProgramId: string; spreadSheetId: string; csvPath: Path };

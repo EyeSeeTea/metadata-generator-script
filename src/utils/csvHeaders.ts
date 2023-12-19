@@ -87,12 +87,12 @@ const programsHeaders = [
     { id: "trackedEntityType", title: "trackedEntityType" },
     { id: "categoryCombo", title: "categoryCombo" },
     { id: "version", title: "version" },
-    { id: "expiryPeriodType: PeriodTypeexpiryPeriodType" },
-    { id: "expiryDays: numberexpiryDays" },
-    { id: "completeEventsExpiryDays: numbercompleteEventsExpiryDays" },
+    { id: "expiryPeriodType", title: "expiryPeriodType" },
+    { id: "expiryDays", title: "expiryDays" },
+    { id: "completeEventsExpiryDays", title: "completeEventsExpiryDays" },
     { id: "displayFrontPageList", title: "displayFrontPageList" },
     { id: "useFirstStageDuringRegistration", title: "useFirstStageDuringRegistration" },
-    { id: "accessLevel: AccessLevelTypeaccessLevel" },
+    { id: "accessLevel", title: "accessLevel" },
     { id: "minAttributesRequiredToSearch: numberminAttributesRequiredToSearch" },
     { id: "maxTeiCountToReturn: numbermaxTeiCountToReturn" },
     { id: "selectIncidentDatesInFuture", title: "selectIncidentDatesInFuture" },
@@ -229,3 +229,7 @@ export const headers = {
     legendSetsHeaders: legendSetsHeaders,
     legendsHeaders: legendsHeaders,
 };
+
+export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {
+    return headers.map(header => header.id);
+}

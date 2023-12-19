@@ -80,13 +80,14 @@ Example:
 ### pull-data-set:
 
 ```console
-Gets the dataSet metadata from DHIS2 instance and exports to google spreadsheet and CSV file.
+Gets the dataSet metadata from DHIS2 instance and exports to google spreadsheet or CSV file.
 
 OPTIONS:
   --dhis-url <str>       - http://USERNAME:PASSWORD@HOST:PORT
   --sheet-id, -s <value>   - Google Spreadsheet ID
   --google-credentials, -g <value> - Path to google service account credentials json file
   --data-set, -d <value> - dataSet to pull ID
+  --output, -o <value>   - output mode: spreadsheet or csv
   --path, -p <value>     - CSV output path (directory) [optional]
 
 FLAGS:
@@ -95,18 +96,38 @@ FLAGS:
 
 Example:
 
-```console
-  shell:~$ yarn start metadata pull-data-set --dhis-url='http://admin:district@localhost:8080' --data-set=AAAAAAAAAAA --google-credentials="./path-to-credentials.json" --sheet-id="..." --path=./foo/
+Export to csv
+
+```bash
+yarn start metadata pull-data-set \
+  --dhis-url='http://admin:district@localhost:8080' \
+  --data-set=lyLU2wR22tC \
+  --path="./csvs/" \
+  --output=csv
+```
+
+Export to spreadsheet
+
+```bash
+  yarn start metadata pull-data-set \
+  --dhis-url='http://admin:district@localhost:8080' \
+  --data-set=lyLU2wR22tC \
+  --google-credentials="./path-to-credentials.json" \
+  --sheet-id="google_spreadsheet_id" \
+  --output=spreadsheet
 ```
 
 ### pull-ev-program:
 
 ```console
-Gets the Event Program metadata from DHIS2 instance and exports to CSV file.
+Gets the Event Program metadata from DHIS2 instance and exports to spreadsheet or CSV file.
 
 OPTIONS:
   --dhis-url <str>            - http://USERNAME:PASSWORD@HOST:PORT
   --event-program, -d <value> - eventProgram to pull ID
+  --sheet-id, -s <value>   - Google Spreadsheet ID
+  --google-credentials, -g <value> - Path to google service account credentials json file
+  --output, -o <value>   - output mode: spreadsheet or csv
   --path, -p <value>          - CSV output path (directory) [optional]
 
 FLAGS:
@@ -115,8 +136,25 @@ FLAGS:
 
 Example:
 
-```console
-  shell:~$ yarn start metadata pull-ev-program --dhis-url='http://admin:district@localhost:8080' --event-program=AAAAAAAAAAA --path=./foo/
+Export to csv
+
+```bash
+yarn start metadata pull-ev-program \
+  --dhis-url='http://admin:district@localhost:8080' \
+  --event-program=lxAQ7Zs9VYR \
+  --path=./programs/ \
+  --output=csv
+```
+
+Export to spreadsheet
+
+```bash
+yarn start metadata pull-ev-program \
+  --dhis-url='http://admin:district@localhost:8080' \
+  --event-program=lxAQ7Zs9VYR \
+  --google-credentials="./path-to-credentials.json" \
+  --sheet-id="google_spreadsheet_id" \
+  --output=spreadsheet
 ```
 
 ## Description
@@ -204,7 +242,8 @@ In order to generate a service account you should:
   --dhis-url='http://user:password@localhost:8080' \
   --data-set=AAAAAAAAAAA \
   --google-credentials="./myfolder/path-to-credentials.json" \
-  --sheet-id="..."
+  --sheet-id="..." \
+  --output=spreadsheet
 ```
 
 ## Metadata spreadsheet template
