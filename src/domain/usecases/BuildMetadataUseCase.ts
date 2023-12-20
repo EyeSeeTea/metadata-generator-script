@@ -52,111 +52,44 @@ export class BuildMetadataUseCase {
     }
 
     private async getAllExistingMetadata(sheets: Sheet[]) {
-        const metadataIds = this.checkDataSetUidsInSheets(sheets);
-
-        const dataSets = await this.getExistingMetadata("dataSets", this.getMetadataDetails(metadataIds, "dataSets"));
-
-        const dataElements = await this.getExistingMetadata(
-            "dataElements",
-            this.getMetadataDetails(metadataIds, "dataElements")
-        );
-
-        const sections = await this.getExistingMetadata("sections", this.getMetadataDetails(metadataIds, "sections"));
-
-        const dataElementGroups = await this.getExistingMetadata(
-            "dataElementGroups",
-            this.getMetadataDetails(metadataIds, "dataElementGroups")
-        );
-
-        const dataElementGroupSets = await this.getExistingMetadata(
-            "dataElementGroupSets",
-            this.getMetadataDetails(metadataIds, "dataElementGroupSets")
-        );
-
-        const categoryCombos = await this.getExistingMetadata(
-            "categoryCombos",
-            this.getMetadataDetails(metadataIds, "categoryCombos")
-        );
-
-        const categories = await this.getExistingMetadata(
-            "categories",
-            this.getMetadataDetails(metadataIds, "categories")
-        );
-
-        const categoryOptions = await this.getExistingMetadata(
-            "categoryOptions",
-            this.getMetadataDetails(metadataIds, "categoryOptions")
-        );
-
-        const optionSets = await this.getExistingMetadata(
-            "optionSets",
-            this.getMetadataDetails(metadataIds, "optionSets")
-        );
-
-        const trackedEntityTypes = await this.getExistingMetadata(
-            "trackedEntityTypes",
-            this.getMetadataDetails(metadataIds, "trackedEntityTypes")
-        );
-
-        const trackedEntityAttributes = await this.getExistingMetadata(
-            "trackedEntityAttributes",
-            this.getMetadataDetails(metadataIds, "trackedEntityAttributes")
-        );
-
-        const programs = await this.getExistingMetadata("programs", this.getMetadataDetails(metadataIds, "programs"));
-
-        const programStages = await this.getExistingMetadata(
-            "programStages",
-            this.getMetadataDetails(metadataIds, "programStages")
-        );
+        const metadataIds = this.getUidsFromSheets(sheets);
+        const allIds = metadataIds.flatMap(metadata => metadata.ids);
+        const metadata = await this.metadataRepository.getByIds(allIds);
 
         const newSheets = sheets.map(sheet => {
             if (sheet.name === "dataSets") {
-                return { ...sheet, items: _(dataSets).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.dataSets).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "dataElementGroups") {
-                return { ...sheet, items: _(dataElementGroups).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.dataElementGroups).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "dataElementGroupSets") {
-                return { ...sheet, items: _(dataElementGroupSets).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.dataElementGroupSets).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "categoryCombos") {
-                return { ...sheet, items: _(categoryCombos).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.categoryCombos).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "categories") {
-                return { ...sheet, items: _(categories).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.categories).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "categoryOptions") {
-                return { ...sheet, items: _(categoryOptions).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.categoryOptions).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "optionSets") {
-                return { ...sheet, items: _(optionSets).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.optionSets).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "trackedEntityTypes") {
-                return { ...sheet, items: _(trackedEntityTypes).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.trackedEntityTypes).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "trackedEntityAttributes") {
-                return { ...sheet, items: _(trackedEntityAttributes).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.trackedEntityAttributes).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "programs") {
-                return { ...sheet, items: _(programs).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.programs).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "programStages") {
-                return { ...sheet, items: _(programStages).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.programStages).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "sections") {
-                return { ...sheet, items: _(sections).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.sections).unionBy(sheet.items, "id").value() };
             } else if (sheet.name === "dataElements") {
-                return { ...sheet, items: _(dataElements).unionBy(sheet.items, "id").value() };
+                return { ...sheet, items: _(metadata.dataElements).unionBy(sheet.items, "id").value() };
             }
             return sheet;
         });
         return newSheets;
     }
 
-    private getMetadataDetails(metadataIds: MetadataIds[], type: MetadataIds["type"]) {
-        return metadataIds.find(metadata => metadata.type === type)?.ids || [];
-    }
-
-    private async getExistingMetadata(type: MetadataIds["type"], dataSetElementsIds: string[]) {
-        return dataSetElementsIds.length
-            ? await this.metadataRepository.getMetadata({
-                  type,
-                  value: { [type]: { fields: { $owner: true }, filter: { id: { in: dataSetElementsIds } } } },
-              })
-            : [];
-    }
-
-    private checkDataSetUidsInSheets(sheets: Sheet[]): MetadataIds[] {
+    private getUidsFromSheets(sheets: Sheet[]): MetadataIds[] {
         const dataSetIds = _(sheets)
             .flatMap(sheet => {
                 if (
@@ -220,6 +153,13 @@ export class BuildMetadataUseCase {
                     return _(sheet.items)
                         .map(item => {
                             return this.isValidUid(item.name) ? item.name : undefined;
+                        })
+                        .compact()
+                        .value();
+                } else if (sheet.name === "dataElements") {
+                    return _(sheet.items)
+                        .map(item => {
+                            return this.isValidUid(item.id) ? item.id : undefined;
                         })
                         .compact()
                         .value();

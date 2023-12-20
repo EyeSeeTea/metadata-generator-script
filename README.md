@@ -40,13 +40,16 @@ OPTIONS:
   --google-key, -g <value> - Google Api key
   --sheet-id, -s <value>   - Google Spreadsheet ID
   --path, -p <value>       - JSON output path (file or directory) [optional]
+  --merge-mode -m         - [DHIS2 merge mode](https://docs.dhis2.org/en/develop/using-the-api/dhis-core-version-master/metadata.html#webapi_metadata_create_update) (default to MERGE)
 
 FLAGS:
   --local-run, -l  - Don't upload metadata to DHIS2 instance
   --update-coc, -c - Update category option combos
   --help, -h       - show help
 ```
+
 Example:
+
 ```console
   shell:~$ yarn start metadata build-metadata --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/metadata.json
 ```
@@ -68,7 +71,9 @@ OPTIONS:
 FLAGS:
   --help, -h - show help
 ```
+
 Example:
+
 ```console
   shell:~$ yarn start metadata download-ids --dhis-url='http://admin:district@localhost:8080' --google-key=.... --sheet-id=..... -l --path=./foo/
 ```
@@ -86,7 +91,9 @@ OPTIONS:
 FLAGS:
   --help, -h - show help
 ```
+
 Example:
+
 ```console
   shell:~$ yarn start metadata pull-data-set --dhis-url='http://admin:district@localhost:8080' --data-set=AAAAAAAAAAA --path=./foo/
 ```
@@ -104,7 +111,9 @@ OPTIONS:
 FLAGS:
   --help, -h - show help
 ```
+
 Example:
+
 ```console
   shell:~$ yarn start metadata pull-ev-program --dhis-url='http://admin:district@localhost:8080' --event-program=AAAAAAAAAAA --path=./foo/
 ```
@@ -144,15 +153,13 @@ can use the `Data Administration` app, go to `Maintenance`, select
 `Perform Maintenance` button. Alternatively, you can just set in the
 `.env.local` file the `UPDATE_CATEGORY_OPTION_COMBOS` option to `true`.
 
-
- 
 ## Default category combo
 
 -To get the default `categoryCombo` used at a dhis2 instance, go to the
--following endpoint:
--`/api/categoryCombos.json?filter=name:eq:default&fields=id,name` .
- 
+-following endpoint: -`/api/categoryCombos.json?filter=name:eq:default&fields=id,name` .
+
 ### How the default category combo is used
+
 -If you want to understand what is special about the default category-combination and how it works in dhis2, you can check [this talk by Jim-Grace](https://youtu.be/EcR9QwJvc7c?t=314) (and maybe [these -slides](https://drive.google.com/file/d/1MWq-Nx-AcSSuTfF9z7VPq0W9PXyl9IAn/view)).
 
 -It is used at least in `dataElements`, `dataSets`, and `programs`.
