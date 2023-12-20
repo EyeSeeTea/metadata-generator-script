@@ -35,7 +35,7 @@ export class MetadataD2Repository implements MetadataRepository {
 
     async getByIds(metadataIds: string[]): Promise<MetadataItem> {
         if (metadataIds.length === 0) return [];
-        const allMetadata = await promiseMap(_.chunk(metadataIds, 10), async ids => {
+        const allMetadata = await promiseMap(_.chunk(metadataIds, 100), async ids => {
             const metadata = await this.api
                 .request<MetadataItem>({
                     url: "/metadata",
