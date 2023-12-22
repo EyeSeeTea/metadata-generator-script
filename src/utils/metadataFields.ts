@@ -27,6 +27,8 @@ const sectionFields = {
     showColumnTotals: true,
     dataSet: true,
     description: true,
+    translations: true,
+    dataElements: true,
 };
 
 const dataSetFieds = {

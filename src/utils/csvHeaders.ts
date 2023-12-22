@@ -244,6 +244,19 @@ const optionSetTranslationsHeaders = [
     { id: "value", title: "value" },
 ];
 
+const sectionsTranslationsHeaders = [
+    { id: "section", title: "section" },
+    { id: "name", title: "name" },
+    { id: "locale", title: "locale" },
+    { id: "value", title: "value" },
+];
+
+const sectionsDataElementsHeaders = [
+    { id: "dataSet", title: "dataSet" },
+    { id: "section", title: "section" },
+    { id: "name", title: "name" },
+];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
@@ -266,6 +279,8 @@ export const headers = {
     optionSetsHeaders: optionSetsHeaders,
     optionsHeaders: optionsHeaders,
     optionSetTranslationsHeaders: optionSetTranslationsHeaders,
+    sectionsTranslationsHeaders: sectionsTranslationsHeaders,
+    sectionsDataElementsHeaders: sectionsDataElementsHeaders,
 };
 
 export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {

@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { MetadataRepository, Query } from "domain/repositories/MetadataRepository";
-import { DataSet, DataSetElement } from "domain/entities/DataSet";
+import { DataSet, DataSetElement, DataSetSection } from "domain/entities/DataSet";
 import {
     DataSetsSheetRow,
     DataSetElementsSheetRow,
@@ -85,6 +85,26 @@ export class PullDataSetUseCase {
             };
         });
 
+        const sectionTranslationsRows = _(allSections)
+            .flatMap(section => {
+                return section.translations.map(translation => {
+                    const localeDetails = defaultLanguages.find(language => language.id === translation.locale);
+                    return {
+                        id: section.id,
+                        name: this.getValueOrEmpty(translation.property),
+                        locale: localeDetails ? localeDetails.name : "",
+                        value: this.getValueOrEmpty(translation.value),
+                    };
+                });
+            })
+            .value();
+
+        const sectionDataElementsRows = allSections.flatMap(section => {
+            return section.dataElements.map(dataElement => {
+                return { dataSet: section.dataSet.id, section: section.id, name: dataElement.id };
+            });
+        });
+
         const relatedIdsInDataSet = dataSetData.flatMap(dataSet => {
             const optionSetIds = _(dataSet.dataSetElements)
                 .flatMap(dataSetElement => {
@@ -163,7 +183,9 @@ export class PullDataSetUseCase {
             sectionsDataRows,
             optionSetRows,
             optionsRows,
-            optionSetTranslationsRows
+            optionSetTranslationsRows,
+            sectionTranslationsRows,
+            sectionDataElementsRows
         );
     }
 
@@ -183,7 +205,9 @@ export class PullDataSetUseCase {
         sectionsDataRows: any[],
         optionSetsRows: any[],
         optionsRows: any[],
-        optionSetTranslationsRows: any[]
+        optionSetTranslationsRows: any[],
+        sectionTranslationsRows: any[],
+        sectionDataElementsRows: any
     ) {
         await this.sheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("dataSets", dataSetRows, convertHeadersToArray(headers.dataSetsHeaders)),
@@ -201,6 +225,16 @@ export class PullDataSetUseCase {
                 "sections",
                 sectionsDataRows,
                 convertHeadersToArray(headers.sectionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "sectionDataElements",
+                sectionDataElementsRows,
+                convertHeadersToArray(headers.sectionsDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "sectionTranslations",
+                sectionTranslationsRows,
+                convertHeadersToArray(headers.sectionsTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "categoryCombos",

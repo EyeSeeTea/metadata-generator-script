@@ -1,4 +1,6 @@
 import { PeriodType, Id, Ref, NamedRef } from "./Base";
+import { DataElement } from "./DataElement";
+import { Translation } from "./Translation";
 
 export interface DataSet {
     id: Id;
@@ -37,6 +39,8 @@ export interface DataSetSection extends NamedRef {
     description: string;
     showColumnTotals: boolean;
     showRowTotals: boolean;
+    translations: Translation[];
+    dataElements: DataElement[];
 }
 
 export interface DataSetElement {
