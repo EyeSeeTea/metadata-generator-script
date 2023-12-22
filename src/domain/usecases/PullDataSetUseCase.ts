@@ -18,6 +18,7 @@ import { CategoryOption } from "domain/entities/CategoryOptions";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
 import { convertHeadersToArray, headers } from "utils/csvHeaders";
+import { Maybe } from "utils/ts-utils";
 
 export class PullDataSetUseCase {
     constructor(private metadataRepository: MetadataRepository, private sheetsRepository: SheetsRepository) {}
@@ -68,6 +69,19 @@ export class PullDataSetUseCase {
             this.buildCategoryOptionRow(categoryOption, categoriesData)
         );
 
+        const allSections = dataSetData.flatMap(dataSet => dataSet.sections);
+        const sectionsDataRows = allSections.map(dataSetSection => {
+            return {
+                id: dataSetSection.id,
+                name: this.getValueOrEmpty(dataSetSection.name),
+                code: this.getValueOrEmpty(dataSetSection.code),
+                dataSet: this.getValueOrEmpty(dataSetSection.dataSet.id),
+                showRowTotals: dataSetSection.showRowTotals,
+                showColumnTotals: dataSetSection.showColumnTotals,
+                description: this.getValueOrEmpty(dataSetSection.description),
+            };
+        });
+
         await this.generateSpreadSheet(
             spreadSheetId,
             csvPath,
@@ -76,8 +90,13 @@ export class PullDataSetUseCase {
             dataElementsRows,
             categoryCombosRows,
             categoriesRows,
-            categoryOptionsRows
+            categoryOptionsRows,
+            sectionsDataRows
         );
+    }
+
+    private getValueOrEmpty(value: string | undefined): Maybe<string> {
+        return value ? value : "";
     }
 
     private async generateSpreadSheet(
@@ -88,7 +107,8 @@ export class PullDataSetUseCase {
         dataElementsRows: DataElementsSheetRow[],
         categoryCombosRows: CategoryCombosSheetRow[],
         categoriesRows: CategoriesSheetRow[],
-        categoryOptionsRows: CategoryOptionsSheetRow[]
+        categoryOptionsRows: CategoryOptionsSheetRow[],
+        sectionsDataRows: any[]
     ) {
         await this.sheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("dataSets", dataSetRows, convertHeadersToArray(headers.dataSetsHeaders)),
@@ -101,6 +121,11 @@ export class PullDataSetUseCase {
                 "dataElements",
                 dataElementsRows,
                 convertHeadersToArray(headers.dataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "sections",
+                sectionsDataRows,
+                convertHeadersToArray(headers.sectionsHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "categoryCombos",

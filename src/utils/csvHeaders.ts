@@ -210,6 +210,16 @@ const legendsHeaders = [
     { id: "endValue", title: "endValue" },
 ];
 
+const sectionsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "code", title: "code" },
+    { id: "dataSet", title: "dataSet" },
+    { id: "showRowTotals", title: "showRowTotals" },
+    { id: "showColumnTotals", title: "showColumnTotals" },
+    { id: "description", title: "description" },
+];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
@@ -228,6 +238,7 @@ export const headers = {
     programRuleVariablesHeaders: programRuleVariablesHeaders,
     legendSetsHeaders: legendSetsHeaders,
     legendsHeaders: legendsHeaders,
+    sectionsHeaders: sectionsHeaders,
 };
 
 export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {

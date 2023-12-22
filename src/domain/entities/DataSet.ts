@@ -1,4 +1,4 @@
-import { PeriodType, Id, Ref } from "./Base";
+import { PeriodType, Id, Ref, NamedRef } from "./Base";
 
 export interface DataSet {
     id: Id;
@@ -28,7 +28,15 @@ export interface DataSet {
     // attributeValues: Array<{ value: string; attribute: Ref }>;
     indicators: Ref[];
     legendSets: Ref[];
-    sections: Ref[];
+    sections: DataSetSection[];
+}
+
+export interface DataSetSection extends NamedRef {
+    code: string;
+    dataSet: Ref;
+    description: string;
+    showColumnTotals: boolean;
+    showRowTotals: boolean;
 }
 
 export interface DataSetElement {

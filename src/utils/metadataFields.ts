@@ -1,4 +1,14 @@
-export type fieldsType = Record<string, boolean>;
+export type fieldsType = Record<string, boolean | typeof sectionFields>;
+
+const sectionFields = {
+    id: true,
+    name: true,
+    code: true,
+    showRowTotals: true,
+    showColumnTotals: true,
+    dataSet: true,
+    description: true,
+};
 
 const dataSetFieds = {
     id: true,
@@ -27,7 +37,7 @@ const dataSetFieds = {
     dataInputPeriods: true,
     indicators: true,
     legendSets: true,
-    sections: true,
+    sections: sectionFields,
 };
 
 const dataElementFieds = {
