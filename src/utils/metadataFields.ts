@@ -1,4 +1,23 @@
-export type fieldsType = Record<string, boolean | typeof sectionFields>;
+export type fieldsType = Record<
+    string,
+    boolean | typeof sectionFields | typeof optionSetFields | typeof dataSetElementsFields
+>;
+
+const optionSetFields = {
+    id: true,
+    options: true,
+    translations: true,
+};
+
+const dataSetElementsFields = {
+    categoryCombo: true,
+    dataSet: true,
+    dataElement: {
+        id: true,
+        optionSet: optionSetFields,
+        commentOptionSet: optionSetFields,
+    },
+};
 
 const sectionFields = {
     id: true,
@@ -33,7 +52,7 @@ const dataSetFieds = {
     expiryDays: true,
     categoryCombo: true,
     workflow: true,
-    dataSetElements: true,
+    dataSetElements: dataSetElementsFields,
     dataInputPeriods: true,
     indicators: true,
     legendSets: true,

@@ -19,6 +19,9 @@ import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
 import { convertHeadersToArray, headers } from "utils/csvHeaders";
 import { Maybe } from "utils/ts-utils";
+import { option } from "cmd-ts";
+import logger from "utils/log";
+import { defaultLanguages } from "utils/utils";
 
 export class PullDataSetUseCase {
     constructor(private metadataRepository: MetadataRepository, private sheetsRepository: SheetsRepository) {}
@@ -82,6 +85,72 @@ export class PullDataSetUseCase {
             };
         });
 
+        const relatedIdsInDataSet = dataSetData.flatMap(dataSet => {
+            const optionSetIds = _(dataSet.dataSetElements)
+                .flatMap(dataSetElement => {
+                    const optionSet = dataSetElement.dataElement.optionSet;
+                    const optionSetId = optionSet?.id;
+                    const optionsIds = _(optionSet?.options)
+                        .map(option => option.id)
+                        .compact()
+                        .value();
+
+                    const commentOptionSet = dataSetElement.dataElement.commentOptionSet;
+                    const commentOptionSetId = commentOptionSet?.id;
+                    const commentOptionsIds = _(commentOptionSet?.options)
+                        .map(option => option.id)
+                        .compact()
+                        .value();
+                    return [...optionsIds, ...commentOptionsIds, optionSetId, commentOptionSetId];
+                })
+                .compact()
+                .value();
+            return optionSetIds;
+        });
+
+        logger.info("Fetching related metadata...");
+        const metadata = await this.metadataRepository.getByIds(relatedIdsInDataSet);
+
+        const optionSetRows = _(metadata.optionSets)
+            .map(optionSet => {
+                return {
+                    id: optionSet.id,
+                    name: this.getValueOrEmpty(optionSet.name),
+                    code: this.getValueOrEmpty(optionSet.code),
+                    valueType: this.getValueOrEmpty(optionSet.valueType),
+                    description: this.getValueOrEmpty(optionSet.description),
+                };
+            })
+            .value();
+
+        const optionsRows = _(metadata.options)
+            .map(option => {
+                return {
+                    id: option.id,
+                    name: this.getValueOrEmpty(option.name),
+                    code: this.getValueOrEmpty(option.code),
+                    optionSet: this.getValueOrEmpty(option.optionSet?.id),
+                    shortName: this.getValueOrEmpty(option.shortName),
+                    description: this.getValueOrEmpty(option.description),
+                };
+            })
+            .value();
+
+        const optionSetTranslationsRows = _(metadata.optionSets)
+            .flatMap(optionSet => {
+                if (optionSet.translations.length === 0) return [];
+                return optionSet.translations.map((translation: any) => {
+                    const localeDetails = defaultLanguages.find(language => language.id === translation.locale);
+                    return {
+                        id: optionSet.id,
+                        name: this.getValueOrEmpty(translation.property),
+                        locale: localeDetails ? localeDetails.name : "",
+                        value: this.getValueOrEmpty(translation.value),
+                    };
+                });
+            })
+            .value();
+
         await this.generateSpreadSheet(
             spreadSheetId,
             csvPath,
@@ -91,7 +160,10 @@ export class PullDataSetUseCase {
             categoryCombosRows,
             categoriesRows,
             categoryOptionsRows,
-            sectionsDataRows
+            sectionsDataRows,
+            optionSetRows,
+            optionsRows,
+            optionSetTranslationsRows
         );
     }
 
@@ -108,7 +180,10 @@ export class PullDataSetUseCase {
         categoryCombosRows: CategoryCombosSheetRow[],
         categoriesRows: CategoriesSheetRow[],
         categoryOptionsRows: CategoryOptionsSheetRow[],
-        sectionsDataRows: any[]
+        sectionsDataRows: any[],
+        optionSetsRows: any[],
+        optionsRows: any[],
+        optionSetTranslationsRows: any[]
     ) {
         await this.sheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("dataSets", dataSetRows, convertHeadersToArray(headers.dataSetsHeaders)),
@@ -141,6 +216,17 @@ export class PullDataSetUseCase {
                 "categoryOptions",
                 categoryOptionsRows,
                 convertHeadersToArray(headers.categoryOptionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "optionSets",
+                optionSetsRows,
+                convertHeadersToArray(headers.optionSetsHeaders)
+            ),
+            this.convertToSpreadSheetValue("options", optionsRows, convertHeadersToArray(headers.optionsHeaders)),
+            this.convertToSpreadSheetValue(
+                "optionSetTranslations",
+                optionSetTranslationsRows,
+                convertHeadersToArray(headers.optionSetTranslationsHeaders)
             ),
         ]);
     }

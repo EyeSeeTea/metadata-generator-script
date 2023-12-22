@@ -220,6 +220,30 @@ const sectionsHeaders = [
     { id: "description", title: "description" },
 ];
 
+const optionSetsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "code", title: "code" },
+    { id: "valueType", title: "valueType" },
+    { id: "description", title: "description" },
+];
+
+const optionsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "code", title: "code" },
+    { id: "optionSet", title: "optionSet" },
+    { id: "shortName", title: "shortName" },
+    { id: "description", title: "description" },
+];
+
+const optionSetTranslationsHeaders = [
+    { id: "optionSet", title: "optionSet" },
+    { id: "name", title: "name" },
+    { id: "locale", title: "locale" },
+    { id: "value", title: "value" },
+];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
@@ -239,6 +263,9 @@ export const headers = {
     legendSetsHeaders: legendSetsHeaders,
     legendsHeaders: legendsHeaders,
     sectionsHeaders: sectionsHeaders,
+    optionSetsHeaders: optionSetsHeaders,
+    optionsHeaders: optionsHeaders,
+    optionSetTranslationsHeaders: optionSetTranslationsHeaders,
 };
 
 export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {

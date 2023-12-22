@@ -41,7 +41,17 @@ export interface DataSetSection extends NamedRef {
 
 export interface DataSetElement {
     dataSet: Ref;
-    dataElement: Ref;
+    dataElement: {
+        id: Id;
+        optionSet?: {
+            id: Id;
+            options: Ref[];
+        };
+        commentOptionSet?: {
+            id: Id;
+            options: Ref[];
+        };
+    };
     categoryCombo?: Ref;
 }
 
