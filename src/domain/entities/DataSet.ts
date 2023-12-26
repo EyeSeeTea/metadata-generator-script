@@ -31,6 +31,7 @@ export interface DataSet {
     indicators: Ref[];
     legendSets: Ref[];
     sections: DataSetSection[];
+    translations: Translation[];
 }
 
 export interface DataSetSection extends NamedRef {

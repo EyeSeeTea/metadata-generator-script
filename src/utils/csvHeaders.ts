@@ -1,3 +1,9 @@
+const translationsHeaders = [
+    { id: "name", title: "name" },
+    { id: "locale", title: "locale" },
+    { id: "value", title: "value" },
+];
+
 const dataSetsHeaders = [
     { id: "id", title: "id" },
     { id: "name", title: "name" },
@@ -257,6 +263,21 @@ const sectionsDataElementsHeaders = [
     { id: "name", title: "name" },
 ];
 
+const dataSetInputPeriodsHeaders = [
+    { id: "name", title: "name" },
+    { id: "period", title: "period" },
+    { id: "openingDate", title: "openingDate" },
+    { id: "closingDate", title: "closingDate" },
+];
+
+const dataSetLegendsHeaders = [
+    { id: "dataSet", title: "dataSet" },
+    { id: "name", title: "name" },
+];
+
+const dataSetTranslationsHeaders = [{ id: "dataSet", title: "dataSet" }, ...translationsHeaders];
+const dataElementsTranslationsHeaders = [{ id: "dataElement", title: "dataElement" }, ...translationsHeaders];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
@@ -281,6 +302,10 @@ export const headers = {
     optionSetTranslationsHeaders: optionSetTranslationsHeaders,
     sectionsTranslationsHeaders: sectionsTranslationsHeaders,
     sectionsDataElementsHeaders: sectionsDataElementsHeaders,
+    dataSetInputPeriodsHeaders: dataSetInputPeriodsHeaders,
+    dataSetLegendsHeaders: dataSetLegendsHeaders,
+    dataSetTranslationsHeaders: dataSetTranslationsHeaders,
+    dataElementsTranslationsHeaders: dataElementsTranslationsHeaders,
 };
 
 export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {

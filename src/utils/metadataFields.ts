@@ -59,6 +59,7 @@ const dataSetFieds = {
     indicators: true,
     legendSets: true,
     sections: sectionFields,
+    translations: true,
 };
 
 const dataElementFieds = {
@@ -78,6 +79,7 @@ const dataElementFieds = {
     url: true,
     fieldMask: true,
     legendSets: true,
+    translations: true,
 };
 
 const categoryComboFields = {

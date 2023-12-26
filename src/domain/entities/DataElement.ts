@@ -1,4 +1,5 @@
 import { AggregationType, ValueType, DomainType, Id, Ref } from "./Base";
+import { Translation } from "./Translation";
 
 export interface DataElement {
     id: Id;
@@ -17,9 +18,5 @@ export interface DataElement {
     url: string;
     fieldMask: string;
     legendSets: Ref[];
+    translations: Translation[];
 }
-
-//     attributeValues: D2AttributeValueGeneric<D2Attribute>[];
-//     legendSet: D2LegendSet;
-//     optionSetValue: boolean;
-//     translations: D2Translation[];

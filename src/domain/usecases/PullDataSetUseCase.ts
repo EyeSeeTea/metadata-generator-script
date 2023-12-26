@@ -22,6 +22,7 @@ import { Maybe } from "utils/ts-utils";
 import { option } from "cmd-ts";
 import logger from "utils/log";
 import { defaultLanguages } from "utils/utils";
+import { Translation } from "domain/entities/Translation";
 
 export class PullDataSetUseCase {
     constructor(private metadataRepository: MetadataRepository, private sheetsRepository: SheetsRepository) {}
@@ -158,18 +159,44 @@ export class PullDataSetUseCase {
 
         const optionSetTranslationsRows = _(metadata.optionSets)
             .flatMap(optionSet => {
-                if (optionSet.translations.length === 0) return [];
-                return optionSet.translations.map((translation: any) => {
-                    const localeDetails = defaultLanguages.find(language => language.id === translation.locale);
-                    return {
-                        id: optionSet.id,
-                        name: this.getValueOrEmpty(translation.property),
-                        locale: localeDetails ? localeDetails.name : "",
-                        value: this.getValueOrEmpty(translation.value),
-                    };
+                const translations = this.buildTranslationsRows(optionSet.translations);
+                return translations.map(translation => {
+                    return { optionSet: optionSet.id, ...translation };
                 });
             })
             .value();
+
+        const dataSetInputPeriodsRows = dataSetData.flatMap(dataSet => {
+            const periods = dataSet.dataInputPeriods.map(period => period);
+            return periods.map((period): DataSetInputPeriodsRows => {
+                return {
+                    name: dataSet.id,
+                    period: period.period.id,
+                    openingDate: period.openingDate,
+                    closingDate: period.closingDate,
+                };
+            });
+        });
+
+        const dataSetLegendsRows = dataSetData.flatMap(dataSet => {
+            return dataSet.legendSets.map((legendSet): DataSetLegendRow => {
+                return { dataSet: dataSet.id, name: legendSet.id };
+            });
+        });
+
+        const dataSetTranslationsRows = dataSetData.flatMap(dataSet => {
+            const translations = this.buildTranslationsRows(dataSet.translations);
+            return translations.map(translation => {
+                return { dataSet: dataSet.id, ...translation };
+            });
+        });
+
+        const dataElementsTranslations = dataElementsData.flatMap(dataElement => {
+            const translations = this.buildTranslationsRows(dataElement.translations);
+            return translations.map(translation => {
+                return { dataElement: dataElement.id, ...translation };
+            });
+        });
 
         await this.generateSpreadSheet(
             spreadSheetId,
@@ -185,8 +212,26 @@ export class PullDataSetUseCase {
             optionsRows,
             optionSetTranslationsRows,
             sectionTranslationsRows,
-            sectionDataElementsRows
+            sectionDataElementsRows,
+            dataSetInputPeriodsRows,
+            dataSetLegendsRows,
+            dataSetTranslationsRows,
+            dataElementsTranslations
         );
+    }
+
+    private buildTranslationsRows(translations: Translation[]): TranslationRow[] {
+        return translations.map((translation: Translation): TranslationRow => {
+            const localeDetails = defaultLanguages.find(language => language.id === translation.locale);
+            if (!localeDetails) {
+                logger.warn(`Locale ${translation.locale} not found for translation: ${translation.value}`);
+            }
+            return {
+                name: this.getValueOrEmpty(translation.property),
+                locale: localeDetails ? localeDetails.name : "",
+                value: this.getValueOrEmpty(translation.value),
+            };
+        });
     }
 
     private getValueOrEmpty(value: string | undefined): Maybe<string> {
@@ -207,7 +252,11 @@ export class PullDataSetUseCase {
         optionsRows: any[],
         optionSetTranslationsRows: any[],
         sectionTranslationsRows: any[],
-        sectionDataElementsRows: any
+        sectionDataElementsRows: any,
+        dataSetInputPeriodsRows: DataSetInputPeriodsRows[],
+        dataSetLegendsRows: DataSetLegendRow[],
+        dataSetTranslationsRows: TranslationRow[],
+        dataElementsTranslationsRows: TranslationRow[]
     ) {
         await this.sheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("dataSets", dataSetRows, convertHeadersToArray(headers.dataSetsHeaders)),
@@ -215,6 +264,21 @@ export class PullDataSetUseCase {
                 "dataSetElements",
                 dataSetElementsRows,
                 convertHeadersToArray(headers.dataSetElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataSetInputPeriods",
+                dataSetInputPeriodsRows,
+                convertHeadersToArray(headers.dataSetInputPeriodsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataSetLegends",
+                dataSetLegendsRows,
+                convertHeadersToArray(headers.dataSetLegendsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataSetTranslations",
+                dataSetTranslationsRows,
+                convertHeadersToArray(headers.dataSetTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "dataElements",
@@ -235,6 +299,11 @@ export class PullDataSetUseCase {
                 "sectionTranslations",
                 sectionTranslationsRows,
                 convertHeadersToArray(headers.sectionsTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataElementTranslations",
+                dataElementsTranslationsRows,
+                convertHeadersToArray(headers.dataElementsTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "categoryCombos",
@@ -267,7 +336,7 @@ export class PullDataSetUseCase {
 
     private convertToSpreadSheetValue(
         sheetName: SpreadSheetName,
-        rows: DataSetsSheetRow[] | DataSetElementsSheetRow[] | DataElementsSheetRow[],
+        rows: DataSetsSheetRow[] | DataSetElementsSheetRow[] | DataElementsSheetRow[] | TranslationRow[],
         headers: string[]
     ): SpreadSheet {
         return { name: sheetName, range: "A2", values: rows.map(Object.values), columns: headers };
@@ -437,3 +506,21 @@ export class PullDataSetUseCase {
 }
 
 type PullDataSetUseCaseOptions = { dataSetId: string; spreadSheetId: string; csvPath: Path };
+
+type DataSetInputPeriodsRows = {
+    name: string;
+    period: string;
+    openingDate: string;
+    closingDate: string;
+};
+
+type DataSetLegendRow = {
+    dataSet: string;
+    name: string;
+};
+
+type TranslationRow = {
+    name: Maybe<string>;
+    locale: Maybe<string>;
+    value: Maybe<string>;
+};
