@@ -89,6 +89,7 @@ const categoryComboFields = {
     dataDimensionType: true,
     description: true,
     categories: true,
+    translations: true,
 };
 
 const categoriesFields = {
@@ -99,6 +100,7 @@ const categoriesFields = {
     description: true,
     categoryOptions: true,
     dataDimensionType: true,
+    translations: true,
 };
 
 const categoryOptionsFields = {
@@ -107,6 +109,7 @@ const categoryOptionsFields = {
     shortName: true,
     code: true,
     description: true,
+    translations: true,
 };
 
 const programsFields = {

@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { MetadataRepository, Query } from "domain/repositories/MetadataRepository";
-import { DataSet, DataSetElement, DataSetSection } from "domain/entities/DataSet";
+import { DataSet, DataSetElement } from "domain/entities/DataSet";
 import {
     DataSetsSheetRow,
     DataSetElementsSheetRow,
@@ -191,11 +191,28 @@ export class PullDataSetUseCase {
             });
         });
 
-        const dataElementsTranslations = dataElementsData.flatMap(dataElement => {
+        const dataElementsTranslationsRows = dataElementsData.flatMap(dataElement => {
             const translations = this.buildTranslationsRows(dataElement.translations);
             return translations.map(translation => {
                 return { dataElement: dataElement.id, ...translation };
             });
+        });
+
+        const dataElementsLegendsRows = this.buildDataElementsLegendsRows(dataElementsData);
+
+        const categoryComboTranslationsRows = categoryCombosData.flatMap(categoryCombo => {
+            const translations = this.buildTranslationsRows(categoryCombo.translations);
+            return translations.map(translation => ({ categoryCombo: categoryCombo.id, ...translation }));
+        });
+
+        const categoryTranslationsRows = categoriesData.flatMap(category => {
+            const translations = this.buildTranslationsRows(category.translations);
+            return translations.map(translation => ({ categoryCombo: category.id, ...translation }));
+        });
+
+        const categoryOptionTranslationsRows = categoryOptionsData.flatMap(categoryOption => {
+            const translations = this.buildTranslationsRows(categoryOption.translations);
+            return translations.map(translation => ({ categoryCombo: categoryOption.id, ...translation }));
         });
 
         await this.generateSpreadSheet(
@@ -216,8 +233,20 @@ export class PullDataSetUseCase {
             dataSetInputPeriodsRows,
             dataSetLegendsRows,
             dataSetTranslationsRows,
-            dataElementsTranslations
+            dataElementsTranslationsRows,
+            dataElementsLegendsRows,
+            categoryComboTranslationsRows,
+            categoryTranslationsRows,
+            categoryOptionTranslationsRows
         );
+    }
+
+    private buildDataElementsLegendsRows(dataElementsData: DataElement[]) {
+        return dataElementsData.flatMap(dataElement => {
+            return dataElement.legendSets.map(legendSet => {
+                return { dataElement: dataElement.id, name: legendSet.id };
+            });
+        });
     }
 
     private buildTranslationsRows(translations: Translation[]): TranslationRow[] {
@@ -256,7 +285,11 @@ export class PullDataSetUseCase {
         dataSetInputPeriodsRows: DataSetInputPeriodsRows[],
         dataSetLegendsRows: DataSetLegendRow[],
         dataSetTranslationsRows: TranslationRow[],
-        dataElementsTranslationsRows: TranslationRow[]
+        dataElementsTranslationsRows: TranslationRow[],
+        dataElementsLegendsRows: DataElementLegendRow[],
+        categoryComboTranslationsRows: TranslationRow[],
+        categoriesTranslationsRows: TranslationRow[],
+        categoryOptionTranslationsRows: TranslationRow[]
     ) {
         await this.sheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("dataSets", dataSetRows, convertHeadersToArray(headers.dataSetsHeaders)),
@@ -301,6 +334,11 @@ export class PullDataSetUseCase {
                 convertHeadersToArray(headers.sectionsTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
+                "dataElementLegends",
+                dataElementsLegendsRows,
+                convertHeadersToArray(headers.dataElementsLegendsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "dataElementTranslations",
                 dataElementsTranslationsRows,
                 convertHeadersToArray(headers.dataElementsTranslationsHeaders)
@@ -311,14 +349,29 @@ export class PullDataSetUseCase {
                 convertHeadersToArray(headers.categoryCombosHeaders)
             ),
             this.convertToSpreadSheetValue(
+                "categoryComboTranslations",
+                categoryComboTranslationsRows,
+                convertHeadersToArray(headers.categoryCombosTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "categories",
                 categoriesRows,
                 convertHeadersToArray(headers.categoriesHeaders)
             ),
             this.convertToSpreadSheetValue(
+                "categoryTranslations",
+                categoriesTranslationsRows,
+                convertHeadersToArray(headers.categoriesTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "categoryOptions",
                 categoryOptionsRows,
                 convertHeadersToArray(headers.categoryOptionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryOptionTranslations",
+                categoryOptionTranslationsRows,
+                convertHeadersToArray(headers.categoryOptionTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "optionSets",
@@ -507,20 +560,9 @@ export class PullDataSetUseCase {
 
 type PullDataSetUseCaseOptions = { dataSetId: string; spreadSheetId: string; csvPath: Path };
 
-type DataSetInputPeriodsRows = {
-    name: string;
-    period: string;
-    openingDate: string;
-    closingDate: string;
-};
+type DataSetInputPeriodsRows = { name: string; period: string; openingDate: string; closingDate: string };
 
-type DataSetLegendRow = {
-    dataSet: string;
-    name: string;
-};
+type DataSetLegendRow = { dataSet: string; name: string };
 
-type TranslationRow = {
-    name: Maybe<string>;
-    locale: Maybe<string>;
-    value: Maybe<string>;
-};
+type TranslationRow = { name: Maybe<string>; locale: Maybe<string>; value: Maybe<string> };
+type DataElementLegendRow = { dataElement: string; name: string };

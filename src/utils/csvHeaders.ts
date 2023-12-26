@@ -277,6 +277,13 @@ const dataSetLegendsHeaders = [
 
 const dataSetTranslationsHeaders = [{ id: "dataSet", title: "dataSet" }, ...translationsHeaders];
 const dataElementsTranslationsHeaders = [{ id: "dataElement", title: "dataElement" }, ...translationsHeaders];
+const dataElementsLegendsHeaders = [
+    { id: "dataElement", title: "dataElement" },
+    { id: "name", title: "name" },
+];
+const categoryCombosTranslationsHeaders = [{ id: "categoryCombo", title: "categoryCombo" }, ...translationsHeaders];
+const categoriesTranslationsHeaders = [{ id: "category", title: "category" }, ...translationsHeaders];
+const categoryOptionTranslationsHeaders = [{ id: "categoryOption", title: "categoryOption" }, ...translationsHeaders];
 
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
@@ -306,6 +313,10 @@ export const headers = {
     dataSetLegendsHeaders: dataSetLegendsHeaders,
     dataSetTranslationsHeaders: dataSetTranslationsHeaders,
     dataElementsTranslationsHeaders: dataElementsTranslationsHeaders,
+    dataElementsLegendsHeaders: dataElementsLegendsHeaders,
+    categoryCombosTranslationsHeaders: categoryCombosTranslationsHeaders,
+    categoriesTranslationsHeaders: categoriesTranslationsHeaders,
+    categoryOptionTranslationsHeaders: categoryOptionTranslationsHeaders,
 };
 
 export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {
