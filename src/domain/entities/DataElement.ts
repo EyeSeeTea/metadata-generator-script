@@ -19,4 +19,5 @@ export interface DataElement {
     fieldMask: string;
     legendSets: Ref[];
     translations: Translation[];
+    dataElementGroups: Ref[];
 }

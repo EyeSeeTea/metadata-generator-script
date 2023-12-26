@@ -80,6 +80,7 @@ const dataElementFieds = {
     fieldMask: true,
     legendSets: true,
     translations: true,
+    dataElementGroups: true,
 };
 
 const categoryComboFields = {

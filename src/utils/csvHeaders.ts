@@ -284,6 +284,23 @@ const dataElementsLegendsHeaders = [
 const categoryCombosTranslationsHeaders = [{ id: "categoryCombo", title: "categoryCombo" }, ...translationsHeaders];
 const categoriesTranslationsHeaders = [{ id: "category", title: "category" }, ...translationsHeaders];
 const categoryOptionTranslationsHeaders = [{ id: "categoryOption", title: "categoryOption" }, ...translationsHeaders];
+const dataElementGroupsRowsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "shortName", title: "shortName" },
+    { id: "code", title: "code" },
+    { id: "description", title: "description" },
+];
+
+const dataElementGroupElementsHeaders = [
+    { id: "dataElementGroup", title: "dataElementGroup" },
+    { id: "name", title: "name" },
+];
+
+const dataElementGroupTranslationsHeaders = [
+    { id: "dataElementGroup", title: "dataElementGroup" },
+    ...translationsHeaders,
+];
 
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
@@ -317,6 +334,9 @@ export const headers = {
     categoryCombosTranslationsHeaders: categoryCombosTranslationsHeaders,
     categoriesTranslationsHeaders: categoriesTranslationsHeaders,
     categoryOptionTranslationsHeaders: categoryOptionTranslationsHeaders,
+    dataElementGroupsRowsHeaders: dataElementGroupsRowsHeaders,
+    dataElementGroupElementsHeaders: dataElementGroupElementsHeaders,
+    dataElementGroupTranslationsHeaders: dataElementGroupTranslationsHeaders,
 };
 
 export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {
