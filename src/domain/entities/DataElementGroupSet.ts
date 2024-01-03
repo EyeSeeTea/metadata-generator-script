@@ -1,14 +1,15 @@
-import { Ref } from "@eyeseetea/d2-api";
 import { Id } from "./Base";
+import { DataElementGroup } from "./DataElementGroup";
 import { Translation } from "./Translation";
 
-export type DataElementGroup = {
+export type DataElementGroupSet = {
     id: Id;
     name: string;
     shortName: string;
     code: string;
     description: string;
+    compulsory: boolean;
+    dataDimension: boolean;
+    dataElementGroups: DataElementGroup[];
     translations: Translation[];
-    dataElements: Ref[];
-    groupSets: Ref[];
 };

@@ -25,6 +25,7 @@ import { defaultLanguages } from "utils/utils";
 import { Translation } from "domain/entities/Translation";
 import { DataElementGroup } from "domain/entities/DataElementGroup";
 import { MetadataItem } from "domain/entities/MetadataItem";
+import { DataElementGroupSet } from "domain/entities/DataElementGroupSet";
 
 export class PullDataSetUseCase {
     constructor(private metadataRepository: MetadataRepository, private sheetsRepository: SheetsRepository) {}
@@ -114,6 +115,11 @@ export class PullDataSetUseCase {
         const metadata = await this.metadataRepository.getByIds([...relatedIdsInDataSet, ...relatedIdsInDataElements]);
 
         const dataElementGroupsRows = this.buildDataElementGroupsRows(metadata);
+        const dataElementGroupSetRows = this.buildDataElementGroupSetRows(metadata);
+        const dataElementGroupSetGroupsRows = this.buildDataElementGroupSetGroupsRows(metadata.dataElementGroupSets);
+        const dataElementGroupSetTranslationsRows = this.buildDataElementGroupSetTranslationsRows(
+            metadata.dataElementGroupSets
+        );
         const dataElementGroupElementsRows = this.buildDataElementGroupElementsRows(metadata.dataElementGroups);
         const dataElementGroupTranslationsRows = this.buildDataElementGroupTranslationsRows(metadata.dataElementGroups);
 
@@ -225,8 +231,50 @@ export class PullDataSetUseCase {
             categoryOptionTranslationsRows,
             dataElementGroupsRows,
             dataElementGroupElementsRows,
-            dataElementGroupTranslationsRows
+            dataElementGroupTranslationsRows,
+            dataElementGroupSetRows,
+            dataElementGroupSetGroupsRows,
+            dataElementGroupSetTranslationsRows
         );
+    }
+
+    private buildDataElementGroupSetTranslationsRows(dataElementGroupSets: DataElementGroupSet[]) {
+        return dataElementGroupSets.flatMap(dataElementGroupSet => {
+            const translations = this.buildTranslationsRows(dataElementGroupSet.translations);
+            return translations.map(translation => {
+                return { dataElementGroupSet: dataElementGroupSet.id, ...translation };
+            });
+        });
+    }
+
+    private buildDataElementGroupSetGroupsRows(
+        dataElementGroupSets: DataElementGroupSet[]
+    ): DataElementGroupSetGroupsRow[] {
+        return dataElementGroupSets.flatMap(dataElementGroupSet => {
+            const dataElementGroupsIds = _(dataElementGroupSet.dataElementGroups)
+                .map(dataElementGroup => dataElementGroup.id)
+                .value();
+
+            return dataElementGroupsIds.map(dataElementGroupId => {
+                return { dataElementGroupSet: dataElementGroupSet.id, name: dataElementGroupId };
+            });
+        });
+    }
+
+    private buildDataElementGroupSetRows(metadata: MetadataItem) {
+        return _(metadata.dataElementGroupSets)
+            .map((dataElementGroupSet): DataElementGroupSetRow => {
+                return {
+                    id: dataElementGroupSet.id,
+                    name: dataElementGroupSet.name,
+                    shortName: dataElementGroupSet.shortName,
+                    code: dataElementGroupSet.code,
+                    description: dataElementGroupSet.description,
+                    compulsory: this.booleanToString(dataElementGroupSet.compulsory),
+                    dataDimension: this.booleanToString(dataElementGroupSet.dataDimension),
+                };
+            })
+            .value();
     }
 
     private buildDataElementGroupTranslationsRows(dataElementGroups: DataElementGroup[]): TranslationRow[] {
@@ -266,9 +314,17 @@ export class PullDataSetUseCase {
             return groups;
         });
 
-        return _([...deGroupIds])
-            .uniq()
-            .value();
+        const deGroupSetIds = dataElementsData.flatMap(dataElement => {
+            const dataGroupSetIds = dataElement.dataElementGroups.flatMap(dataElementGroup =>
+                dataElementGroup.groupSets.map(groupSet => groupSet.id)
+            );
+            return dataGroupSetIds;
+        });
+
+        const uniqueDataElementGroupIds = _(deGroupIds).uniq().value();
+        const uniqueDataElementGroupSetIds = _(deGroupSetIds).uniq().value();
+
+        return [...uniqueDataElementGroupIds, ...uniqueDataElementGroupSetIds];
     }
 
     private getRelatedIdsInDataSets(dataSetData: DataSet[]) {
@@ -348,7 +404,10 @@ export class PullDataSetUseCase {
         categoryOptionTranslationsRows: TranslationRow[],
         dataElementGroupsRows: DataElementGroupRow[],
         dataElementGroupElementsRows: DataElementGroupElementRow[],
-        dataElementGroupTranslationsRows: TranslationRow[]
+        dataElementGroupTranslationsRows: TranslationRow[],
+        dataElementGroupSetRows: DataElementGroupSetRow[],
+        dataElementGroupSetGroupsRows: DataElementGroupSetGroupsRow[],
+        dataElementGroupSetTranslationsRows: TranslationRow[]
     ) {
         await this.sheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("dataSets", dataSetRows, convertHeadersToArray(headers.dataSetsHeaders)),
@@ -417,7 +476,21 @@ export class PullDataSetUseCase {
                 dataElementGroupTranslationsRows,
                 convertHeadersToArray(headers.dataElementGroupTranslationsHeaders)
             ),
-
+            this.convertToSpreadSheetValue(
+                "dataElementGroupSets",
+                dataElementGroupSetRows,
+                convertHeadersToArray(headers.dataElementGroupSetRowsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataElementGroupSetGroups",
+                dataElementGroupSetGroupsRows,
+                convertHeadersToArray(headers.dataElementGroupSetGroupsRowsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataElementGroupSetTranslations",
+                dataElementGroupSetTranslationsRows,
+                convertHeadersToArray(headers.dataElementGroupSetTranslationsRowsHeaders)
+            ),
             this.convertToSpreadSheetValue(
                 "categoryCombos",
                 categoryCombosRows,
@@ -642,4 +715,12 @@ type DataSetLegendRow = { dataSet: string; name: string };
 type TranslationRow = { name: Maybe<string>; locale: Maybe<string>; value: Maybe<string> };
 type DataElementLegendRow = { dataElement: string; name: string };
 type DataElementGroupElementRow = { dataElementGroup: string; name: string };
-type DataElementGroupRow = Omit<DataElementGroup, "translations" | "dataElements">;
+type DataElementGroupRow = Omit<DataElementGroup, "translations" | "dataElements" | "groupSets">;
+type DataElementGroupSetRow = Omit<
+    DataElementGroupSet,
+    "compulsory" | "dataDimension" | "dataElementGroups" | "translations"
+> & {
+    compulsory: string;
+    dataDimension: string;
+};
+type DataElementGroupSetGroupsRow = { dataElementGroupSet: string; name: string };

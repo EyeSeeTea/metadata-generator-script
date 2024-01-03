@@ -1,7 +1,13 @@
 export type fieldsType = Record<
     string,
-    boolean | typeof sectionFields | typeof optionSetFields | typeof dataSetElementsFields
+    | boolean
+    | typeof sectionFields
+    | typeof optionSetFields
+    | typeof dataSetElementsFields
+    | typeof dataElementGroupsFields
 >;
+
+const dataElementGroupsFields = { id: true, groupSets: true };
 
 const optionSetFields = {
     id: true,
@@ -80,7 +86,7 @@ const dataElementFieds = {
     fieldMask: true,
     legendSets: true,
     translations: true,
-    dataElementGroups: true,
+    dataElementGroups: dataElementGroupsFields,
 };
 
 const categoryComboFields = {

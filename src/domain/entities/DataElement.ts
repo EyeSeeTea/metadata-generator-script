@@ -1,4 +1,5 @@
 import { AggregationType, ValueType, DomainType, Id, Ref } from "./Base";
+import { DataElementGroup } from "./DataElementGroup";
 import { Translation } from "./Translation";
 
 export interface DataElement {
@@ -19,5 +20,5 @@ export interface DataElement {
     fieldMask: string;
     legendSets: Ref[];
     translations: Translation[];
-    dataElementGroups: Ref[];
+    dataElementGroups: Pick<DataElementGroup, "id" | "groupSets">[];
 }
