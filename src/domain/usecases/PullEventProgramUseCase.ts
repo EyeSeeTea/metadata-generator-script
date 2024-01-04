@@ -33,6 +33,9 @@ import { ProgramRule, ProgramRuleAction } from "domain/entities/ProgramRule";
 import { MetadataItem } from "../entities/MetadataItem";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
+import { TranslationRow, buildTranslationsRows } from "domain/entities/Translation";
+import { Option, OptionSet } from "domain/entities/OptionSet";
+import { getValueOrEmpty } from "utils/utils";
 
 export class PullEventProgramUseCase {
     constructor(private metadataRepository: MetadataRepository, private spreadSheetsRepository: SheetsRepository) {}
@@ -173,7 +176,7 @@ export class PullEventProgramUseCase {
                 ? this.findById(programStageSectionsData, pra.programStageSection.id)?.name
                 : undefined;
 
-            this.buildProgramRuleActionsRows(
+            return this.buildProgramRuleActionsRows(
                 pra,
                 programRuleName,
                 dataElementName,
@@ -210,11 +213,27 @@ export class PullEventProgramUseCase {
             });
         });
 
-        //
-        // PRINT CSVs
-        //
+        const programTranslationsRows = this.buildProgramTranslationsRows(programData);
+        const programStageTranslationsRows = this.buildProgramStageTranslationsRows(programStagesData);
+        const categoryTranslationsRows = this.buildCategoryTranslationsRows(categoriesData);
+        const categoryComboTranslationsRows = this.buildCategoryComboTranslationsRows(categoryCombosData);
+        const categoryOptionTranslationsRows = this.buildCategoryOptionTranslationsRows(categoryOptionsData);
+
+        const optionSetIds = this.getOptionSetIds(dataElementsData);
+
+        const metadata = await this.metadataRepository.getByIds([...optionSetIds]);
+
+        const optionSetsRows = this.buildOptionSetRows(metadata.optionSets);
+        const optionSetTranslationsRows = this.buildOptionSetTranslationsRows(metadata.optionSets);
+        const optionsRows = this.buildOptionsRows(metadata.options);
+
         await this.spreadSheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("programs", programRows, convertHeadersToArray(headers.programsHeaders)),
+            this.convertToSpreadSheetValue(
+                "programTranslations",
+                programTranslationsRows,
+                convertHeadersToArray(headers.programTranslationsHeaders)
+            ),
             this.convertToSpreadSheetValue(
                 "programStages",
                 programStagesRows,
@@ -224,6 +243,11 @@ export class PullEventProgramUseCase {
                 "programStageDataElements",
                 programStagesDataElementsRows,
                 convertHeadersToArray(headers.programStageDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStageTranslations",
+                programStageTranslationsRows,
+                convertHeadersToArray(headers.programStageTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "programStageSections",
@@ -237,12 +261,12 @@ export class PullEventProgramUseCase {
             ),
             this.convertToSpreadSheetValue(
                 "programRules",
-                programRulesData,
+                programRulesRows,
                 convertHeadersToArray(headers.programRulesHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "programRuleActions",
-                programRuleActionData,
+                programRuleActionsRows,
                 convertHeadersToArray(headers.programRuleActionsHeaders)
             ),
             this.convertToSpreadSheetValue(
@@ -266,9 +290,19 @@ export class PullEventProgramUseCase {
                 convertHeadersToArray(headers.categoryCombosHeaders)
             ),
             this.convertToSpreadSheetValue(
+                "categoryComboTranslations",
+                categoryComboTranslationsRows,
+                convertHeadersToArray(headers.categoryComboTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "categories",
                 categoriesRows,
                 convertHeadersToArray(headers.categoriesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryTranslations",
+                categoryTranslationsRows,
+                convertHeadersToArray(headers.categoryTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "categoryOptions",
@@ -276,104 +310,132 @@ export class PullEventProgramUseCase {
                 convertHeadersToArray(headers.categoryOptionsHeaders)
             ),
             this.convertToSpreadSheetValue(
+                "categoryOptionTranslations",
+                categoryOptionTranslationsRows,
+                convertHeadersToArray(headers.categoryOptionTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
                 "legendSets",
                 legendSetRows,
                 convertHeadersToArray(headers.legendSetsHeaders)
             ),
             this.convertToSpreadSheetValue("legends", legendsRows, convertHeadersToArray(headers.legendsHeaders)),
+            this.convertToSpreadSheetValue(
+                "optionSets",
+                optionSetsRows,
+                convertHeadersToArray(headers.optionSetsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "optionSetTranslations",
+                optionSetTranslationsRows,
+                convertHeadersToArray(headers.optionSetTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue("options", optionsRows, convertHeadersToArray(headers.optionsHeaders)),
         ]);
-        // await this.metadataRepository.exportMetadataToCSV(programRows, headers.programsHeaders, "programs", csvPath);
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     programStagesRows,
-        //     headers.programStagesHeaders,
-        //     "programStages",
-        //     csvPath
-        // );
+    private buildOptionsRows(options: Option[]): OptionRow[] {
+        return _(options)
+            .map(option => {
+                return {
+                    id: option.id,
+                    name: getValueOrEmpty(option.name),
+                    code: getValueOrEmpty(option.code),
+                    optionSet: getValueOrEmpty(option.optionSet?.id),
+                    shortName: getValueOrEmpty(option.shortName),
+                    description: getValueOrEmpty(option.description),
+                };
+            })
+            .value();
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     programStagesDataElementsRows,
-        //     headers.programStageDataElementsHeaders,
-        //     "programStageDataElements",
-        //     csvPath
-        // );
+    private buildOptionSetTranslationsRows(optionSets: OptionSet[]): OptionSetTranslationRow[] {
+        return optionSets.flatMap(optionSet => {
+            const translations = buildTranslationsRows(optionSet.translations);
+            return translations.map(translation => {
+                return { optionSet: optionSet.id, ...translation };
+            });
+        });
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     programStageSectionsRows,
-        //     headers.programStageSectionsHeaders,
-        //     "programStageSections",
-        //     csvPath
-        // );
+    private buildOptionSetRows(optionSets: OptionSet[]): OptionSetRow[] {
+        return _(optionSets)
+            .map(optionSet => {
+                return {
+                    id: optionSet.id,
+                    name: optionSet.name,
+                    code: optionSet.code,
+                    valueType: optionSet.valueType,
+                    description: optionSet.description,
+                };
+            })
+            .value();
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     programStageSectionsDataElementRow,
-        //     headers.programStageSectionsDataElementsHeaders,
-        //     "programStageSectionsDataElements",
-        //     csvPath
-        // );
+    private getOptionSetIds(dataElements: DataElement[]): Id[] {
+        console.log("dataElements", JSON.stringify(dataElements));
+        const optionSetIds = dataElements.flatMap(dataElement => {
+            const optionSet = dataElement.optionSet;
+            const optionSetId = optionSet?.id;
+            const optionsIds = _(optionSet?.options)
+                .map(option => option.id)
+                .value();
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     programRulesData,
-        //     headers.programRulesHeaders,
-        //     "programRules",
-        //     csvPath
-        // );
+            const commentOptionSet = dataElement.commentOptionSet;
+            const commentOptionSetId = commentOptionSet?.id;
+            const commentOptionsIds = _(commentOptionSet?.options)
+                .map(option => option.id)
+                .value();
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     programRuleActionData,
-        //     headers.programRuleActionsHeaders,
-        //     "programRuleActions",
-        //     csvPath
-        // );
+            return [optionSetId, ...optionsIds, commentOptionSetId, ...commentOptionsIds];
+        });
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     programRuleVariablesRows,
-        //     headers.programRuleVariablesHeaders,
-        //     "programRuleVariables",
-        //     csvPath
-        // );
+        return _(optionSetIds).compact().value();
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     dataElementsRows,
-        //     headers.dataElementsHeaders,
-        //     "dataElements",
-        //     csvPath
-        // );
+    private buildCategoryOptionTranslationsRows(categoryOptions: CategoryOption[]): CategoryOptionTranslationRow[] {
+        return categoryOptions.flatMap(categoryOption => {
+            const translations = buildTranslationsRows(categoryOption.translations);
+            return translations.map(translation => {
+                return { categoryOption: categoryOption.id, ...translation };
+            });
+        });
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     dataElementLegendsRows,
-        //     headers.dataElementLegendsHeaders,
-        //     "dataElementLegends",
-        //     csvPath
-        // );
+    private buildCategoryComboTranslationsRows(categoryCombos: CategoryCombo[]): CategoryComboTranslationRow[] {
+        return categoryCombos.flatMap(categoryCombo => {
+            const translations = buildTranslationsRows(categoryCombo.translations);
+            return translations.map(translation => {
+                return { categoryCombo: categoryCombo.id, ...translation };
+            });
+        });
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     categoryCombosRows,
-        //     headers.categoryCombosHeaders,
-        //     "categoryCombos",
-        //     csvPath
-        // );
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     categoriesRows,
-        //     headers.categoriesHeaders,
-        //     "categories",
-        //     csvPath
-        // );
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     categoryOptionsRows,
-        //     headers.categoryOptionsHeaders,
-        //     "categoryOptions",
-        //     csvPath
-        // );
+    private buildCategoryTranslationsRows(categories: Category[]): CategoryTranslationRow[] {
+        return categories.flatMap(category => {
+            const translations = buildTranslationsRows(category.translations);
+            return translations.map(translation => {
+                return { category: category.id, ...translation };
+            });
+        });
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(
-        //     legendSetRows,
-        //     headers.legendSetsHeaders,
-        //     "legendSets",
-        //     csvPath
-        // );
+    private buildProgramStageTranslationsRows(programStagesData: ProgramStage[]): ProgramStageTranslationRow[] {
+        return programStagesData.flatMap(programStage => {
+            const translations = buildTranslationsRows(programStage.translations);
+            return translations.map(translation => {
+                return { programStage: programStage.id, ...translation };
+            });
+        });
+    }
 
-        // await this.metadataRepository.exportMetadataToCSV(legendsRows, headers.legendsHeaders, "legends", csvPath);
+    private buildProgramTranslationsRows(programData: Program[]): ProgramTranslationRow[] {
+        return programData.flatMap(program => {
+            const translations = buildTranslationsRows(program.translations);
+            return translations.map(translation => {
+                return { program: program.id, ...translation };
+            });
+        });
     }
 
     private convertToSpreadSheetValue(
@@ -389,7 +451,15 @@ export class PullEventProgramUseCase {
             | DataElementsSheetRow[]
             | DataElementLegendsSheetRow[]
             | LegendsSheetRow[]
-            | LegendsSheetRow[],
+            | LegendsSheetRow[]
+            | ProgramTranslationRow[]
+            | ProgramStageTranslationRow[]
+            | CategoryTranslationRow[]
+            | CategoryComboTranslationRow[]
+            | CategoryOptionTranslationRow[]
+            | OptionSetRow[]
+            | OptionSetTranslationRow[]
+            | OptionRow[],
         headers: string[]
     ): SpreadSheet {
         return { name: sheetName, range: "A2", values: rows.map(Object.values), columns: headers };
@@ -785,3 +855,37 @@ export class PullEventProgramUseCase {
 }
 
 type PullEventProgramUseCaseOptions = { eventProgramId: string; spreadSheetId: string; csvPath: Path };
+
+interface ProgramTranslationRow extends TranslationRow {
+    program: string;
+}
+
+interface ProgramStageTranslationRow extends TranslationRow {
+    programStage: string;
+}
+
+interface CategoryTranslationRow extends TranslationRow {
+    category: string;
+}
+
+interface CategoryComboTranslationRow extends TranslationRow {
+    categoryCombo: string;
+}
+
+interface CategoryOptionTranslationRow extends TranslationRow {
+    categoryOption: string;
+}
+
+interface OptionSetTranslationRow extends TranslationRow {
+    optionSet: string;
+}
+
+type OptionSetRow = Omit<OptionSet, "translations" | "options">;
+// type DataElementGroupSetRow = Omit<
+//     DataElementGroupSet,
+//     "compulsory" | "dataDimension" | "dataElementGroups" | "translations"
+// > & {
+//     compulsory: string;
+//     dataDimension: string;
+// };
+type OptionRow = Partial<Omit<Option, "translations" | "optionSet"> & { optionSet: string }>;

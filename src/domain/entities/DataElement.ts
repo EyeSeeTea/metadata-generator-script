@@ -1,5 +1,6 @@
 import { AggregationType, ValueType, DomainType, Id, Ref } from "./Base";
 import { DataElementGroup } from "./DataElementGroup";
+import { OptionSet } from "./OptionSet";
 import { Translation } from "./Translation";
 
 export interface DataElement {
@@ -13,8 +14,8 @@ export interface DataElement {
     aggregationType: AggregationType;
     domainType: DomainType;
     description: string;
-    optionSet: Ref;
-    commentOptionSet: Ref;
+    optionSet?: OptionSet;
+    commentOptionSet?: OptionSet;
     zeroIsSignificant: boolean;
     url: string;
     fieldMask: string;

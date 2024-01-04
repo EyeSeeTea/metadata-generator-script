@@ -322,6 +322,11 @@ const dataElementGroupSetTranslationsRowsHeaders = [
     ...translationsHeaders,
 ];
 
+const programTranslationsHeaders = [{ id: "program", title: "program" }, ...translationsHeaders];
+const programStageTranslationsHeaders = [{ id: "programStage", title: "programStage" }, ...translationsHeaders];
+const categoryTranslationsHeaders = [{ id: "category", title: "category" }, ...translationsHeaders];
+const categoryComboTranslationsHeaders = [{ id: "categoryCombo", title: "category" }, ...translationsHeaders];
+
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
     dataSetElementsHeaders: dataSetElementsHeaders,
@@ -360,6 +365,10 @@ export const headers = {
     dataElementGroupSetRowsHeaders: dataElementGroupSetRowsHeaders,
     dataElementGroupSetGroupsRowsHeaders: dataElementGroupSetGroupsRowsHeaders,
     dataElementGroupSetTranslationsRowsHeaders: dataElementGroupSetTranslationsRowsHeaders,
+    programTranslationsHeaders: programTranslationsHeaders,
+    programStageTranslationsHeaders: programStageTranslationsHeaders,
+    categoryTranslationsHeaders: categoryTranslationsHeaders,
+    categoryComboTranslationsHeaders: categoryComboTranslationsHeaders,
 };
 
 export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {

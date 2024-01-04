@@ -19,10 +19,9 @@ import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
 import { convertHeadersToArray, headers } from "utils/csvHeaders";
 import { Maybe } from "utils/ts-utils";
-import { option } from "cmd-ts";
 import logger from "utils/log";
 import { defaultLanguages } from "utils/utils";
-import { Translation } from "domain/entities/Translation";
+import { Translation, TranslationRow } from "domain/entities/Translation";
 import { DataElementGroup } from "domain/entities/DataElementGroup";
 import { MetadataItem } from "domain/entities/MetadataItem";
 import { DataElementGroupSet } from "domain/entities/DataElementGroupSet";
@@ -712,7 +711,6 @@ type DataSetInputPeriodsRows = { name: string; period: string; openingDate: stri
 
 type DataSetLegendRow = { dataSet: string; name: string };
 
-type TranslationRow = { name: Maybe<string>; locale: Maybe<string>; value: Maybe<string> };
 type DataElementLegendRow = { dataElement: string; name: string };
 type DataElementGroupElementRow = { dataElementGroup: string; name: string };
 type DataElementGroupRow = Omit<DataElementGroup, "translations" | "dataElements" | "groupSets">;

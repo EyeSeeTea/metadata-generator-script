@@ -79,8 +79,8 @@ const dataElementFieds = {
     aggregationType: true,
     domainType: true,
     description: true,
-    optionSet: true,
-    commentOptionSet: true,
+    optionSet: optionSetFields,
+    commentOptionSet: optionSetFields,
     zeroIsSignificant: true,
     url: true,
     fieldMask: true,
@@ -147,6 +147,7 @@ const programsFields = {
     relatedProgram: true,
     programStages: true,
     programRuleVariables: true,
+    translations: true,
 };
 
 const programStagesFields = {
@@ -176,6 +177,7 @@ const programStagesFields = {
     sortOrder: true,
     programStageSections: true,
     programStageDataElements: true,
+    translations: true,
 };
 
 const programStageSectionFields = {

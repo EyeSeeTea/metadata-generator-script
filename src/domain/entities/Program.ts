@@ -1,4 +1,5 @@
 import { PeriodType, Id, Ref, AccessLevelType, FeatureType } from "./Base";
+import { Translation } from "./Translation";
 
 export interface Program {
     id: Id;
@@ -28,4 +29,5 @@ export interface Program {
     relatedProgram?: Ref;
     programStages?: Ref[];
     programRuleVariables?: Ref[];
+    translations: Translation[];
 }

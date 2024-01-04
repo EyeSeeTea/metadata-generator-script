@@ -1,4 +1,5 @@
 import { PeriodType, Id, Ref, AccessLevelType, FeatureType, ValidationStrategyType, RenderType } from "./Base";
+import { Translation } from "./Translation";
 
 export interface ProgramStage {
     id: Id;
@@ -27,6 +28,7 @@ export interface ProgramStage {
     sortOrder: number;
     programStageDataElements: ProgramStageDataElement[];
     programStageSections: Ref[];
+    translations: Translation[];
 }
 
 export interface ProgramStageDataElement {

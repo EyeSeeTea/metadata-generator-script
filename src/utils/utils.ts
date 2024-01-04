@@ -3,6 +3,7 @@ import _ from "lodash";
 import { MetadataResponse } from "domain/entities/MetadataItem";
 import { Sheet } from "../domain/entities/Sheet";
 import { MetadataOutput } from "domain/entities/MetadataOutput";
+import { Maybe } from "./ts-utils";
 
 // Connect to a server using the given D2Api and upload the given metadata.
 export function makeUploadMetadataLog(result: MetadataResponse) {
@@ -147,3 +148,7 @@ export const defaultLanguages = [
         name: "Vietnamese",
     },
 ];
+
+export function getValueOrEmpty(value: string | undefined): Maybe<string> {
+    return value ? value : "";
+}
