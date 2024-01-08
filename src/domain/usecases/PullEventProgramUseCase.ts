@@ -350,12 +350,14 @@ export class PullEventProgramUseCase {
     }
 
     private buildOptionSetTranslationsRows(optionSets: OptionSet[]): OptionSetTranslationRow[] {
-        return optionSets.flatMap(optionSet => {
-            const translations = buildTranslationsRows(optionSet.translations);
-            return translations.map(translation => {
-                return { optionSet: optionSet.id, ...translation };
-            });
-        });
+        return _(optionSets)
+            .flatMap(optionSet => {
+                const translations = buildTranslationsRows(optionSet.translations);
+                return translations.map(translation => {
+                    return { optionSet: optionSet.id, ...translation };
+                });
+            })
+            .value();
     }
 
     private buildOptionSetRows(optionSets: OptionSet[]): OptionSetRow[] {
@@ -373,7 +375,6 @@ export class PullEventProgramUseCase {
     }
 
     private getOptionSetIds(dataElements: DataElement[]): Id[] {
-        console.log("dataElements", JSON.stringify(dataElements));
         const optionSetIds = dataElements.flatMap(dataElement => {
             const optionSet = dataElement.optionSet;
             const optionSetId = optionSet?.id;
