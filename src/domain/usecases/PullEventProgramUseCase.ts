@@ -350,6 +350,7 @@ export class PullEventProgramUseCase {
     }
 
     private buildOptionSetTranslationsRows(optionSets: OptionSet[]): OptionSetTranslationRow[] {
+        console.log("option set", optionSets);
         return _(optionSets)
             .flatMap(optionSet => {
                 const translations = buildTranslationsRows(optionSet.translations);
