@@ -1,4 +1,7 @@
-import { PeriodType, Id, Ref, AccessLevelType, FeatureType } from "./Base";
+import { Maybe } from "utils/ts-utils";
+import { PeriodType, Id, Ref, AccessLevelType, FeatureType, RenderType } from "./Base";
+import { CategoryCombo } from "./CategoryCombo";
+import { TrackedEntityAttribute, TrackedEntityType } from "./TrackedEntityType";
 import { Translation } from "./Translation";
 
 export interface Program {
@@ -7,8 +10,8 @@ export interface Program {
     shortName: string;
     code?: string;
     description?: string;
-    trackedEntityType?: Ref;
-    categoryCombo: Ref;
+    trackedEntityType?: TrackedEntityType;
+    categoryCombo: CategoryCombo;
     version?: string;
     expiryPeriodType?: PeriodType;
     expiryDays?: string;
@@ -30,4 +33,25 @@ export interface Program {
     programStages?: Ref[];
     programRuleVariables?: Ref[];
     translations: Translation[];
+    programTrackedEntityAttributes: ProgramTrackedEntityAttribute[];
+    programSections: ProgramSection[];
 }
+
+export type ProgramSection = {
+    id: Id;
+    name: string;
+    description: string;
+    renderType: RenderType;
+    trackedEntityAttributes: ProgramTrackedEntityAttribute[];
+};
+
+export type ProgramTrackedEntityAttribute = {
+    id: Id;
+    name: string;
+    displayInList: boolean;
+    mandatory: boolean;
+    allowFutureDate: boolean;
+    searchable: boolean;
+    renderType: Maybe<Record<"MOBILE" | "DESKTOP", { type: string }>>;
+    trackedEntityAttribute: TrackedEntityAttribute;
+};

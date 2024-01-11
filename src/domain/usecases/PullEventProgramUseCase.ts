@@ -22,7 +22,7 @@ import { Id, Path, Ref, RenderType } from "../entities/Base";
 import { CategoryCombo } from "domain/entities/CategoryCombo";
 import { Category } from "../entities/Category";
 import { CategoryOption } from "domain/entities/CategoryOptions";
-import { Program } from "domain/entities/Program";
+import { Program, ProgramSection, ProgramTrackedEntityAttribute } from "domain/entities/Program";
 import { ProgramStage } from "../entities/ProgramStage";
 import { ProgramStageSection } from "../entities/ProgramStageSection";
 import { convertHeadersToArray, headers } from "utils/csvHeaders";
@@ -36,6 +36,14 @@ import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
 import { TranslationRow, buildTranslationsRows } from "domain/entities/Translation";
 import { Option, OptionSet } from "domain/entities/OptionSet";
 import { getValueOrEmpty } from "utils/utils";
+import {
+    TrackedEntityAttribute,
+    TrackedEntityType,
+    TrackedEntityTypeAttribute,
+} from "domain/entities/TrackedEntityType";
+import { Maybe } from "utils/ts-utils";
+import logger from "utils/log";
+import { write, writeFileSync } from "fs";
 
 export class PullEventProgramUseCase {
     constructor(private metadataRepository: MetadataRepository, private spreadSheetsRepository: SheetsRepository) {}
@@ -142,12 +150,13 @@ export class PullEventProgramUseCase {
         const pssRows = programStageSectionsData.map(pss => {
             const programStageName = programStagesData.find(psToFind => psToFind.id === pss.programStage.id)?.name;
             if (!programStageName) throw new Error(` programStage id ${pss.programStage.id} name not found`);
-            const pssRow = this.buildProgramStageSectionRow(pss, programStageName, programName);
+            const pssRow = this.buildProgramStageSectionRow(pss, programName, programStageName);
             const pssdeRows = this.buildProgramStageSectionsDataElementRow(
                 programName,
                 programStageName,
                 pss.name,
-                pss.dataElements
+                pss.dataElements,
+                dataElementsData
             );
             return {
                 pssRow: pssRow,
@@ -201,8 +210,8 @@ export class PullEventProgramUseCase {
 
         // LEGEND SETS BUILD
 
-        const legendSetRows = legendSetsData.map(ls => this.buildLegendSetRow(ls));
-        const legendsRows = legendSetsData.flatMap(ls => this.buildLegendsRows(ls.legends, ls.name));
+        // const legendSetRows = legendSetsData.map(ls => this.buildLegendSetRow(ls));
+        // const legendsRows = legendSetsData.flatMap(ls => this.buildLegendsRows(ls.legends, ls.name));
 
         const dataElementLegendsRows = dataElementsData.flatMap(de => {
             return de.legendSets.flatMap(dels => {
@@ -219,9 +228,49 @@ export class PullEventProgramUseCase {
         const categoryComboTranslationsRows = this.buildCategoryComboTranslationsRows(categoryCombosData);
         const categoryOptionTranslationsRows = this.buildCategoryOptionTranslationsRows(categoryOptionsData);
 
+        const programRelatedIds = this.getRelatedIdsFromProgram(programData);
         const optionSetIds = this.getOptionSetIds(dataElementsData);
 
-        const metadata = await this.metadataRepository.getByIds([...optionSetIds]);
+        const metadata = await this.metadataRepository.getByIds([...optionSetIds, ...programRelatedIds]);
+
+        const trackedEntityAttributesRows = this.buildTrackedEntityAttributesRows(metadata.trackedEntityAttributes);
+        const trackedEntityAttributesTranslationsRows = this.buildTrackedEntityAttributesTranslationsRows(
+            metadata.trackedEntityAttributes
+        );
+
+        const legendSetRows = this.buildLegendsSetRows(metadata.legendSets, legendSetsData);
+        const legendsRows = _(legendSetsData)
+            .concat(metadata.legendSets)
+            .flatMap(ls => this.buildLegendsRows(ls.legends, ls.name))
+            .compact()
+            .value();
+
+        const trackedEntityAttributesLegendsRows = this.buildTrackedEntityAttributesLegends(
+            metadata.legendSets,
+            metadata.trackedEntityAttributes
+        );
+
+        const trackedEntityTypesRows = this.buildTrackedEntityTypesRows(metadata.trackedEntityTypes);
+        const trackedEntityTypeAttributesRows = this.buildTrackedEntityTypeAttributeRows(
+            metadata.trackedEntityTypes,
+            trackedEntityAttributesRows
+        );
+        const trackedEntityTypesTranslationsRows = this.buildTrackedEntityTypeTranslationsRows(
+            metadata.trackedEntityTypes
+        );
+        const programTrackedEntityAttributesRows = this.buildProgramTrackedEntityAttributesRows(
+            programData,
+            metadata.trackedEntityAttributes
+        );
+
+        const programSectionsRows = this.buildProgramSectionsRows(programData);
+        const programSectionsTrackedEntityAttributesRows = this.buildProgramSectionsTrackedEntityAttributes(
+            programData,
+            metadata.trackedEntityAttributes
+        );
+
+        const programDataElementsRows = this.buildProgramDataElementsRows(programStagesData, dataElementsData);
+        const programDataElementTranslationsRows = this.buildProgramDataElementTranslationsRows(dataElementsData);
 
         const optionSetsRows = this.buildOptionSetRows(metadata.optionSets);
         const optionSetTranslationsRows = this.buildOptionSetTranslationsRows(metadata.optionSets);
@@ -229,6 +278,32 @@ export class PullEventProgramUseCase {
 
         await this.spreadSheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("programs", programRows, convertHeadersToArray(headers.programsHeaders)),
+            this.convertToSpreadSheetValue(
+                "programSections",
+                programSectionsRows,
+                convertHeadersToArray(headers.programSectionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programSectionsTrackedEntityAttributes",
+                programSectionsTrackedEntityAttributesRows,
+                convertHeadersToArray(headers.programSectionsTrackedEntityAttributesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programTrackedEntityAttributes",
+                programTrackedEntityAttributesRows,
+                convertHeadersToArray(headers.programTrackedEntityAttributesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programDataElements",
+                programDataElementsRows,
+                convertHeadersToArray(headers.programDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programDataElementTranslations",
+                programDataElementTranslationsRows,
+                convertHeadersToArray(headers.programDataElementTranslationsHeaders)
+            ),
+
             this.convertToSpreadSheetValue(
                 "programTranslations",
                 programTranslationsRows,
@@ -258,6 +333,37 @@ export class PullEventProgramUseCase {
                 "programStageSectionsDataElements",
                 programStageSectionsDataElementRow,
                 convertHeadersToArray(headers.programStageSectionsDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityTypes",
+                trackedEntityTypesRows,
+                convertHeadersToArray(headers.trackedEntityTypesRowsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityTypeAttributes",
+                trackedEntityTypeAttributesRows,
+                convertHeadersToArray(headers.trackedEntityTypeAttributesRowsHeaders)
+            ),
+
+            this.convertToSpreadSheetValue(
+                "trackedEntityTypeTranslations",
+                trackedEntityTypesTranslationsRows,
+                convertHeadersToArray(headers.trackedEntityTypeTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityAttributes",
+                trackedEntityAttributesRows,
+                convertHeadersToArray(headers.trackedEntityAttributesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityAttributeTranslations",
+                trackedEntityAttributesTranslationsRows,
+                convertHeadersToArray(headers.trackedEntityAttributeTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityAttributesLegends",
+                trackedEntityAttributesLegendsRows,
+                convertHeadersToArray(headers.trackedEntityAttributesLegendsHeaders)
             ),
             this.convertToSpreadSheetValue(
                 "programRules",
@@ -334,6 +440,285 @@ export class PullEventProgramUseCase {
         ]);
     }
 
+    buildProgramDataElementTranslationsRows(dataElements: DataElement[]) {
+        return _(dataElements)
+            .flatMap(dataElement => {
+                const translations = buildTranslationsRows(dataElement.translations);
+                return translations.map(translation => {
+                    return { programDataElement: dataElement.name, ...translation };
+                });
+            })
+            .value();
+    }
+
+    private buildProgramDataElementsRows(programStage: ProgramStage[], dataElements: DataElement[]) {
+        return programStage.flatMap(section => {
+            return _(section.programStageDataElements)
+                .map(programDataElement => {
+                    const dataElementDetails = dataElements.find(
+                        dataElement => dataElement.id === programDataElement.dataElement.id
+                    );
+                    if (!dataElementDetails) {
+                        logger.warn(
+                            `Cannot find dataElement: ${programDataElement.dataElement.id} in section ${section.name}`
+                        );
+                        return undefined;
+                    }
+                    return {
+                        id: programDataElement.dataElement.id,
+                        name: dataElementDetails.name,
+                        shortName: dataElementDetails.shortName,
+                        formName: dataElementDetails.formName,
+                        programStageSection: section.name,
+                        code: dataElementDetails.code,
+                        valueType: dataElementDetails.valueType,
+                        aggregationType: dataElementDetails.aggregationType,
+                        description: dataElementDetails.description,
+                        optionSet: dataElementDetails.optionSet?.name || "",
+                    };
+                })
+                .compact()
+                .value();
+        });
+    }
+
+    private buildProgramSectionsTrackedEntityAttributes(
+        programs: Program[],
+        trackedEntityAttributes: TrackedEntityAttribute[] = []
+    ): { name: string; program: string; programSection: string }[] {
+        return _(programs)
+            .flatMap(program => {
+                const allSections = program.programSections.flatMap(section => section);
+                return allSections.flatMap(section => {
+                    const attributes = section.trackedEntityAttributes.flatMap(attribute => attribute);
+                    return _(attributes)
+                        .map(trackedEntityAttribute => {
+                            const attributeDetails = trackedEntityAttributes.find(
+                                tea => tea.id === trackedEntityAttribute.id
+                            );
+                            if (!attributeDetails) {
+                                logger.warn(
+                                    `Cannot found trackedEntityAttribute: ${trackedEntityAttribute.id} in programSectionsTrackedEntityAttributes sheet`
+                                );
+                                return undefined;
+                            }
+                            return {
+                                name: trackedEntityAttribute.name,
+                                program: program.name,
+                                programSection: section.name,
+                            };
+                        })
+                        .compact()
+                        .value();
+                });
+            })
+            .value();
+    }
+
+    private buildProgramSectionsRows(programData: Program[]): ProgramSectionRow[] {
+        return _(programData)
+            .flatMap(program => {
+                return program.programSections.map((section): ProgramSectionRow => {
+                    return {
+                        id: section.id,
+                        name: section.name,
+                        program: program.name,
+                        renderTypeMobile: section.renderType.MOBILE.type,
+                        renderTypeDesktop: section.renderType.DESKTOP.type,
+                        description: section.description,
+                    };
+                });
+            })
+            .value();
+    }
+
+    private buildProgramTrackedEntityAttributesRows(
+        programData: Program[],
+        trackedEntityAttributes: TrackedEntityAttribute[]
+    ): ProgramTrackedEntityAttributesRow[] {
+        return _(programData)
+            .flatMap(program => {
+                return _(program.programTrackedEntityAttributes)
+                    .map((programTea): Maybe<ProgramTrackedEntityAttributesRow> => {
+                        const teaDetails = trackedEntityAttributes.find(
+                            tea => tea.id === programTea.trackedEntityAttribute.id
+                        );
+                        if (!teaDetails) return undefined;
+                        return {
+                            id: programTea.id,
+                            name: teaDetails.name,
+                            program: program.name,
+                            displayInList: programTea.displayInList,
+                            mandatory: programTea.mandatory,
+                            allowFutureDate: programTea.allowFutureDate,
+                            searchable: programTea.searchable,
+                            renderTypeDesktop: programTea.renderType ? programTea.renderType.DESKTOP.type : "",
+                            renderTypeMobile: programTea.renderType ? programTea.renderType.MOBILE.type : "",
+                        };
+                    })
+                    .compact()
+                    .value();
+            })
+            .value();
+    }
+
+    private buildTrackedEntityTypeAttributeRows(
+        trackedEntityTypes: TrackedEntityType[],
+        trackedEntityAttributesRows: TrackedEntityAttributeRow[]
+    ) {
+        return _(trackedEntityTypes)
+            .flatMap(trackedEntityType => {
+                return _(trackedEntityType.trackedEntityTypeAttributes)
+                    .map(trackedEntityTypeAttribute => {
+                        const tetAttributeDetails = trackedEntityAttributesRows.find(
+                            tea => tea.id === trackedEntityTypeAttribute.trackedEntityAttribute.id
+                        );
+                        if (!tetAttributeDetails) {
+                            logger.warn(`Cannot find trackedEntityAttribute ${trackedEntityTypeAttribute.id}`);
+                            return undefined;
+                        }
+                        return {
+                            trackedEntityType: trackedEntityType.name,
+                            name: tetAttributeDetails.name,
+                            displayInList: trackedEntityTypeAttribute.displayInList,
+                            mandatory: trackedEntityTypeAttribute.mandatory,
+                            searchable: trackedEntityTypeAttribute.searchable,
+                        };
+                    })
+                    .compact()
+                    .value();
+            })
+            .value();
+    }
+
+    private buildTrackedEntityTypeTranslationsRows(
+        trackedEntityTypes: TrackedEntityType[]
+    ): TrackedEntityTypeTranslationsRow[] {
+        return _(trackedEntityTypes)
+            .flatMap(trackedEntityType => {
+                const translations = buildTranslationsRows(trackedEntityType.translations);
+                return translations.map(translation => {
+                    return { trackedEntityType: trackedEntityType.name, ...translation };
+                });
+            })
+            .value();
+    }
+
+    private buildTrackedEntityTypesRows(trackedEntityTypes: TrackedEntityType[]): TrackedEntityTypeRow[] {
+        return _(trackedEntityTypes)
+            .map((trackedEntityType): TrackedEntityTypeRow => {
+                return {
+                    id: trackedEntityType.id,
+                    name: trackedEntityType.name,
+                    description: trackedEntityType.description,
+                    allowAuditLog: trackedEntityType.allowAuditLog,
+                    minAttributesRequiredToSearch: trackedEntityType.minAttributesRequiredToSearch,
+                    maxTeiCountToReturn: trackedEntityType.maxTeiCountToReturn,
+                    featureType: trackedEntityType.featureType,
+                };
+            })
+            .value();
+    }
+
+    private buildTrackedEntityAttributesLegends(
+        legendSets: LegendSet[],
+        trackedEntityAttributes: TrackedEntityAttribute[]
+    ): TrackedEntityAttributesLegendRow[] {
+        return _(trackedEntityAttributes)
+            .flatMap(trackedEntityAttribute => {
+                return _(trackedEntityAttribute.legendSets)
+                    .map(legendSet => {
+                        const legendSetDetails = legendSets.find(l => l.id === legendSet.id);
+                        if (!legendSetDetails) {
+                            logger.warn(
+                                `Cannot find legendSet ${legendSet.id} in trackedEntityAttribute ${trackedEntityAttribute.name}`
+                            );
+                            return undefined;
+                        }
+                        return { trackedEntityAttribute: trackedEntityAttribute.name, name: legendSetDetails.name };
+                    })
+                    .compact()
+                    .value();
+            })
+            .compact()
+            .value();
+    }
+
+    private buildLegendsSetRows(legendSets: LegendSet[], legendSetsData: LegendSet[]): LegendSetsSheetRow[] {
+        return _(legendSets).concat(legendSetsData).map(this.buildLegendSetRow).compact().value();
+    }
+
+    private buildTrackedEntityAttributesTranslationsRows(
+        trackedEntityAttributes: TrackedEntityAttribute[]
+    ): TrackedEntityAttributeTranslationRow[] {
+        return _(trackedEntityAttributes)
+            .flatMap(trackedEntityAttribute => {
+                const translations = buildTranslationsRows(trackedEntityAttribute.translations);
+                return translations.map(translation => {
+                    return { trackedEntityAttribute: trackedEntityAttribute.name, ...translation };
+                });
+            })
+            .value();
+    }
+
+    private getRelatedIdsFromProgram(programData: Program[]): Id[] {
+        return _(programData)
+            .flatMap(program => {
+                const trackedEntityTypeAttributes = program.trackedEntityType
+                    ? program.trackedEntityType.trackedEntityTypeAttributes
+                    : [];
+
+                const relatedIds = _(trackedEntityTypeAttributes)
+                    .flatMap(trackedEntityTypeAttribute => {
+                        const { id, trackedEntityAttribute } = trackedEntityTypeAttribute;
+                        const legendSetIds = trackedEntityAttribute.legendSets.map(legendSet => legendSet.id);
+                        const optionSetId = trackedEntityAttribute.optionSet?.id;
+                        const optionsIds = _(trackedEntityAttribute.optionSet?.options)
+                            .map(option => option.id)
+                            .value();
+                        return [...legendSetIds, ...optionsIds, id, optionSetId, trackedEntityAttribute.id];
+                    })
+                    .compact()
+                    .value();
+
+                const allTrackedEntityAttributeIds = program.programTrackedEntityAttributes.map(
+                    pTea => pTea.trackedEntityAttribute.id
+                );
+
+                return [...relatedIds, ...allTrackedEntityAttributeIds, program.trackedEntityType?.id];
+            })
+            .compact()
+            .uniq()
+            .value();
+    }
+
+    private buildTrackedEntityAttributesRows(
+        trackedEntityAttributes: TrackedEntityAttribute[]
+    ): TrackedEntityAttributeRow[] {
+        return trackedEntityAttributes.map((trackedEntityAttribute): TrackedEntityAttributeRow => {
+            return {
+                id: trackedEntityAttribute.id,
+                name: trackedEntityAttribute.name,
+                shortName: trackedEntityAttribute.shortName,
+                formName: trackedEntityAttribute.formName,
+                code: trackedEntityAttribute.code,
+                description: trackedEntityAttribute.description,
+                fieldMask: trackedEntityAttribute.fieldMask,
+                optionSet: trackedEntityAttribute.optionSet?.id,
+                valueType: trackedEntityAttribute.valueType,
+                aggregationType: trackedEntityAttribute.aggregationType,
+                unique: trackedEntityAttribute.unique,
+                orgunitScope: trackedEntityAttribute.orgunitScope,
+                generated: trackedEntityAttribute.generated,
+                pattern: trackedEntityAttribute.pattern,
+                inherit: trackedEntityAttribute.inherit,
+                confidential: trackedEntityAttribute.confidential,
+                displayInListNoProgram: trackedEntityAttribute.displayInListNoProgram,
+                skipSynchronization: trackedEntityAttribute.skipSynchronization,
+            };
+        });
+    }
+
     private buildOptionsRows(options: Option[]): OptionRow[] {
         return _(options)
             .map(option => {
@@ -350,7 +735,6 @@ export class PullEventProgramUseCase {
     }
 
     private buildOptionSetTranslationsRows(optionSets: OptionSet[]): OptionSetTranslationRow[] {
-        console.log("option set", optionSets);
         return _(optionSets)
             .flatMap(optionSet => {
                 const translations = buildTranslationsRows(optionSet.translations);
@@ -461,7 +845,8 @@ export class PullEventProgramUseCase {
             | CategoryOptionTranslationRow[]
             | OptionSetRow[]
             | OptionSetTranslationRow[]
-            | OptionRow[],
+            | OptionRow[]
+            | TrackedEntityAttributesLegendRow[],
         headers: string[]
     ): SpreadSheet {
         return { name: sheetName, range: "A2", values: rows.map(Object.values), columns: headers };
@@ -559,8 +944,8 @@ export class PullEventProgramUseCase {
             shortName: program.shortName,
             code: program.code,
             description: program.description,
-            trackedEntityType: program.trackedEntityType?.id,
-            categoryCombo: program.categoryCombo.id,
+            trackedEntityType: program.trackedEntityType?.name,
+            categoryCombo: program.categoryCombo?.name,
             version: program.version,
             expiryPeriodType: program.expiryPeriodType,
             expiryDays: program.expiryDays,
@@ -586,7 +971,7 @@ export class PullEventProgramUseCase {
         return {
             id: programStage.id,
             name: programStage.name,
-            program: programStage.program.id,
+            program: programStage.program.name,
             enableUserAssignment: programStage.enableUserAssignment,
             blockEntryForm: programStage.blockEntryForm,
             featureType: programStage.featureType,
@@ -596,7 +981,7 @@ export class PullEventProgramUseCase {
             description: programStage.description,
             minDaysFromStart: programStage.minDaysFromStart,
             repeatable: programStage.repeatable,
-            periodType: programStage.preGenerateUID,
+            periodType: programStage.periodType,
             displayGenerateEventBox: programStage.displayGenerateEventBox,
             standardInterval: programStage.standardInterval,
             autoGenerateEvent: programStage.autoGenerateEvent,
@@ -625,9 +1010,9 @@ export class PullEventProgramUseCase {
             const render = this.renderToString(psde.renderType);
             return {
                 id: psde.id,
-                name: deName,
                 program: programName,
                 programStage: programStage.name,
+                name: deName,
                 compulsory: psde.compulsory,
                 allowProvidedElsewhere: psde.allowProvidedElsewhere,
                 displayInReports: psde.displayInReports,
@@ -660,16 +1045,22 @@ export class PullEventProgramUseCase {
         program: string,
         programStage: string,
         programStageSection: string,
-        dataElements: Ref[]
+        dataElements: Ref[],
+        dataElementsDetails: DataElement[]
     ): ProgramStageSectionsDataElementsSheetRow[] {
-        return dataElements.map(dataElement => {
-            return {
-                program: program,
-                programStage: programStage,
-                programStageSection: programStageSection,
-                name: dataElement.id,
-            };
-        });
+        return _(dataElements)
+            .map(psDataElement => {
+                const dataElementDetail = dataElementsDetails.find(dataElement => dataElement.id === psDataElement.id);
+                if (!dataElementDetail) return undefined;
+                return {
+                    program: program,
+                    programStage: programStage,
+                    programStageSection: programStageSection,
+                    name: dataElementDetail.name,
+                };
+            })
+            .compact()
+            .value();
     }
 
     private buildProgramRuleRow(programRule: ProgramRule, programName: string): ProgramRulesSheetRow {
@@ -882,12 +1273,34 @@ interface OptionSetTranslationRow extends TranslationRow {
     optionSet: string;
 }
 
+interface TrackedEntityAttributeTranslationRow extends TranslationRow {
+    trackedEntityAttribute: string;
+}
+
+interface TrackedEntityTypeTranslationsRow extends TranslationRow {
+    trackedEntityType: string;
+}
+
 type OptionSetRow = Omit<OptionSet, "translations" | "options">;
-// type DataElementGroupSetRow = Omit<
-//     DataElementGroupSet,
-//     "compulsory" | "dataDimension" | "dataElementGroups" | "translations"
-// > & {
-//     compulsory: string;
-//     dataDimension: string;
-// };
 type OptionRow = Partial<Omit<Option, "translations" | "optionSet"> & { optionSet: string }>;
+type TrackedEntityAttributeRow = Omit<TrackedEntityAttribute, "translations" | "optionSet" | "legendSets"> & {
+    optionSet: Maybe<string>;
+};
+
+type TrackedEntityAttributesLegendRow = { trackedEntityAttribute: string; name: string };
+type TrackedEntityTypeRow = Omit<TrackedEntityType, "trackedEntityTypeAttributes" | "translations">;
+type ProgramTrackedEntityAttributesRow = Omit<
+    ProgramTrackedEntityAttribute,
+    "renderType" | "trackedEntityAttribute"
+> & {
+    name: string;
+    program: string;
+    renderTypeDesktop: string;
+    renderTypeMobile: string;
+};
+
+type ProgramSectionRow = Pick<ProgramSection, "id" | "name" | "description"> & {
+    program: string;
+    renderTypeDesktop: string;
+    renderTypeMobile: string;
+};

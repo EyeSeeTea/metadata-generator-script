@@ -325,7 +325,109 @@ const dataElementGroupSetTranslationsRowsHeaders = [
 const programTranslationsHeaders = [{ id: "program", title: "program" }, ...translationsHeaders];
 const programStageTranslationsHeaders = [{ id: "programStage", title: "programStage" }, ...translationsHeaders];
 const categoryTranslationsHeaders = [{ id: "category", title: "category" }, ...translationsHeaders];
-const categoryComboTranslationsHeaders = [{ id: "categoryCombo", title: "category" }, ...translationsHeaders];
+const categoryComboTranslationsHeaders = [{ id: "categoryCombo", title: "categoryCombo" }, ...translationsHeaders];
+const trackedEntityAttributeTranslationsHeaders = [
+    { id: "trackedEntityAttribute", title: "trackedEntityAttribute" },
+    ...translationsHeaders,
+];
+
+const trackedEntityAttributesHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "shortName", title: "shortName" },
+    { id: "formName", title: "formName" },
+    { id: "code", title: "code" },
+    { id: "description", title: "description" },
+    { id: "fieldMask", title: "fieldMask" },
+    { id: "optionSet", title: "optionSet" },
+    { id: "valueType", title: "valueType" },
+    { id: "aggregationType", title: "aggregationType" },
+    { id: "unique", title: "unique" },
+    { id: "orgunitScope", title: "orgunitScope" },
+    { id: "generated", title: "generated" },
+    { id: "pattern", title: "pattern" },
+    { id: "inherit", title: "inherit" },
+    { id: "confidential", title: "confidential" },
+    { id: "displayInListNoProgram", title: "displayInListNoProgram" },
+    { id: "skipSynchronization", title: "skipSynchronization" },
+];
+const trackedEntityAttributesLegendsHeaders = [
+    {
+        id: "trackedEntityAttribute",
+        title: "trackedEntityAttribute",
+    },
+    {
+        id: "name",
+        title: "name",
+    },
+];
+
+const trackedEntityTypesRowsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "description", title: "description" },
+    { id: "allowAuditLog", title: "allowAuditLog" },
+    { id: "minAttributesRequiredToSearch", title: "minAttributesRequiredToSearch" },
+    { id: "maxTeiCountToReturn", title: "maxTeiCountToReturn" },
+    { id: "featureType", title: "featureType" },
+];
+
+const trackedEntityTypeTranslationsHeaders = [
+    { id: "trackedEntityType", title: "trackedEntityType" },
+    ...translationsHeaders,
+];
+
+const trackedEntityTypeAttributesRowsHeaders = [
+    { id: "trackedEntityType", title: "trackedEntityType" },
+    { id: "name", title: "name" },
+    { id: "displayInList", title: "displayInList" },
+    { id: "mandatory", title: "mandatory" },
+    { id: "searchable", title: "searchable" },
+];
+
+const programTrackedEntityAttributesRowsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "program", title: "program" },
+    { id: "displayInList", title: "displayInList" },
+    { id: "mandatory", title: "mandatory" },
+    { id: "allowFutureDate", title: "allowFutureDate" },
+    { id: "searchable", title: "searchable" },
+    { id: "renderTypeDesktop", title: "renderTypeDesktop" },
+    { id: "renderTypeMobile", title: "renderTypeMobile" },
+];
+
+const programSectionsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "program", title: "program" },
+    { id: "renderTypeDesktop", title: "renderTypeDesktop" },
+    { id: "renderTypeMobile", title: "renderTypeMobile" },
+    { id: "description", title: "description" },
+];
+
+const programSectionsTrackedEntityAttributesHeaders = [
+    { id: "name", title: "name" },
+    { id: "program", title: "program" },
+    { id: "programSection", title: "programSection" },
+];
+
+const programDataElementsHeaders = [
+    { id: "id", title: "id" },
+    { id: "name", title: "name" },
+    { id: "shortName", title: "shortName" },
+    { id: "programStageSection", title: "programStageSection" },
+    { id: "code", title: "code" },
+    { id: "valueType", title: "valueType" },
+    { id: "aggregationType", title: "aggregationType" },
+    { id: "description", title: "description" },
+    { id: "optionSet", title: "optionSet" },
+];
+
+const programDataElementTranslationsHeaders = [
+    { id: "programDataElement", title: "programDataElement" },
+    ...translationsHeaders,
+];
 
 export const headers = {
     dataSetsHeaders: dataSetsHeaders,
@@ -369,6 +471,17 @@ export const headers = {
     programStageTranslationsHeaders: programStageTranslationsHeaders,
     categoryTranslationsHeaders: categoryTranslationsHeaders,
     categoryComboTranslationsHeaders: categoryComboTranslationsHeaders,
+    trackedEntityAttributesHeaders: trackedEntityAttributesHeaders,
+    trackedEntityAttributeTranslationsHeaders: trackedEntityAttributeTranslationsHeaders,
+    trackedEntityAttributesLegendsHeaders: trackedEntityAttributesLegendsHeaders,
+    trackedEntityTypesRowsHeaders: trackedEntityTypesRowsHeaders,
+    trackedEntityTypeTranslationsHeaders: trackedEntityTypeTranslationsHeaders,
+    trackedEntityTypeAttributesRowsHeaders: trackedEntityTypeAttributesRowsHeaders,
+    programTrackedEntityAttributesHeaders: programTrackedEntityAttributesRowsHeaders,
+    programSectionsHeaders: programSectionsHeaders,
+    programSectionsTrackedEntityAttributesHeaders: programSectionsTrackedEntityAttributesHeaders,
+    programDataElementsHeaders: programDataElementsHeaders,
+    programDataElementTranslationsHeaders: programDataElementTranslationsHeaders,
 };
 
 export function convertHeadersToArray(headers: { id: string; title?: string }[]): string[] {
