@@ -20,8 +20,7 @@ import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
 import { convertHeadersToArray, headers } from "utils/csvHeaders";
 import { Maybe } from "utils/ts-utils";
 import logger from "utils/log";
-import { defaultLanguages } from "utils/utils";
-import { Translation, TranslationRow } from "domain/entities/Translation";
+import { generateTranslations } from "domain/entities/Translation";
 import { DataElementGroup } from "domain/entities/DataElementGroup";
 import { MetadataItem } from "domain/entities/MetadataItem";
 import { DataElementGroupSet } from "domain/entities/DataElementGroupSet";
@@ -77,34 +76,34 @@ export class PullDataSetUseCase {
 
         const allSections = dataSetData.flatMap(dataSet => dataSet.sections);
         const sectionsDataRows = allSections.map(dataSetSection => {
+            const dataSetName = dataSetData.find(dataSet => dataSet.id === dataSetSection.dataSet.id)?.name;
+            if (!dataSetName) {
+                logger.warn(`Cannot found dataSet with id: ${dataSetSection.dataSet.id} in sheet sections`);
+            }
             return {
                 id: dataSetSection.id,
                 name: this.getValueOrEmpty(dataSetSection.name),
                 code: this.getValueOrEmpty(dataSetSection.code),
-                dataSet: this.getValueOrEmpty(dataSetSection.dataSet.id),
+                dataSet: this.getValueOrEmpty(dataSetName),
                 showRowTotals: dataSetSection.showRowTotals,
                 showColumnTotals: dataSetSection.showColumnTotals,
                 description: this.getValueOrEmpty(dataSetSection.description),
             };
         });
 
-        const sectionTranslationsRows = _(allSections)
-            .flatMap(section => {
-                return section.translations.map(translation => {
-                    const localeDetails = defaultLanguages.find(language => language.id === translation.locale);
-                    return {
-                        id: section.id,
-                        name: this.getValueOrEmpty(translation.property),
-                        locale: localeDetails ? localeDetails.name : "",
-                        value: this.getValueOrEmpty(translation.value),
-                    };
-                });
-            })
-            .value();
+        const sectionTranslationsRows = generateTranslations("section", allSections);
 
         const sectionDataElementsRows = allSections.flatMap(section => {
             return section.dataElements.map(dataElement => {
-                return { dataSet: section.dataSet.id, section: section.id, name: dataElement.id };
+                const dataSetName = dataSetData.find(dataSet => dataSet.id === section.dataSet.id)?.name;
+                const dataElementName = dataElementsData.find(dataElement => dataElement.id === dataElement.id)?.name;
+                if (!dataSetName) {
+                    logger.warn(`Cannot found dataSet with id: ${section.dataSet.id} in sheet sectionDataElements`);
+                }
+                if (!dataElementName) {
+                    logger.warn(`Cannot found dataSet with id: ${dataElement.id} in sheet sectionDataElements`);
+                }
+                return { dataSet: dataSetName, section: section.name, name: dataElementName };
             });
         });
 
@@ -115,12 +114,16 @@ export class PullDataSetUseCase {
 
         const dataElementGroupsRows = this.buildDataElementGroupsRows(metadata);
         const dataElementGroupSetRows = this.buildDataElementGroupSetRows(metadata);
-        const dataElementGroupSetGroupsRows = this.buildDataElementGroupSetGroupsRows(metadata.dataElementGroupSets);
-        const dataElementGroupSetTranslationsRows = this.buildDataElementGroupSetTranslationsRows(
+        const dataElementGroupSetGroupsRows = this.buildDataElementGroupSetGroupsRows(
+            metadata.dataElementGroupSets,
+            metadata.dataElementGroups
+        );
+        const dataElementGroupSetTranslationsRows = generateTranslations(
+            "dataElementGroupSet",
             metadata.dataElementGroupSets
         );
         const dataElementGroupElementsRows = this.buildDataElementGroupElementsRows(metadata.dataElementGroups);
-        const dataElementGroupTranslationsRows = this.buildDataElementGroupTranslationsRows(metadata.dataElementGroups);
+        const dataElementGroupTranslationsRows = generateTranslations("dataElementGroup", metadata.dataElementGroups);
 
         const optionSetRows = _(metadata.optionSets)
             .map(optionSet => {
@@ -136,31 +139,25 @@ export class PullDataSetUseCase {
 
         const optionsRows = _(metadata.options)
             .map(option => {
+                const optionSetName = optionSetRows.find(optionSet => optionSet.id === option.optionSet?.id)?.name;
                 return {
                     id: option.id,
                     name: this.getValueOrEmpty(option.name),
                     code: this.getValueOrEmpty(option.code),
-                    optionSet: this.getValueOrEmpty(option.optionSet?.id),
+                    optionSet: this.getValueOrEmpty(optionSetName),
                     shortName: this.getValueOrEmpty(option.shortName),
                     description: this.getValueOrEmpty(option.description),
                 };
             })
             .value();
 
-        const optionSetTranslationsRows = _(metadata.optionSets)
-            .flatMap(optionSet => {
-                const translations = this.buildTranslationsRows(optionSet.translations);
-                return translations.map(translation => {
-                    return { optionSet: optionSet.id, ...translation };
-                });
-            })
-            .value();
+        const optionSetTranslationsRows = generateTranslations("optionSet", metadata.optionSets);
 
         const dataSetInputPeriodsRows = dataSetData.flatMap(dataSet => {
             const periods = dataSet.dataInputPeriods.map(period => period);
             return periods.map((period): DataSetInputPeriodsRows => {
                 return {
-                    name: dataSet.id,
+                    name: dataSet.name,
                     period: period.period.id,
                     openingDate: period.openingDate,
                     closingDate: period.closingDate,
@@ -170,244 +167,20 @@ export class PullDataSetUseCase {
 
         const dataSetLegendsRows = dataSetData.flatMap(dataSet => {
             return dataSet.legendSets.map((legendSet): DataSetLegendRow => {
-                return { dataSet: dataSet.id, name: legendSet.id };
+                return { dataSet: dataSet.name, name: legendSet.name };
             });
         });
 
-        const dataSetTranslationsRows = dataSetData.flatMap(dataSet => {
-            const translations = this.buildTranslationsRows(dataSet.translations);
-            return translations.map(translation => {
-                return { dataSet: dataSet.id, ...translation };
-            });
-        });
-
-        const dataElementsTranslationsRows = dataElementsData.flatMap(dataElement => {
-            const translations = this.buildTranslationsRows(dataElement.translations);
-            return translations.map(translation => {
-                return { dataElement: dataElement.id, ...translation };
-            });
-        });
+        const dataSetTranslationsRows = generateTranslations("dataSet", dataSetData);
+        const dataElementsTranslationsRows = generateTranslations("dataElementTranslations", dataElementsData);
 
         const dataElementsLegendsRows = this.buildDataElementsLegendsRows(dataElementsData);
 
-        const categoryComboTranslationsRows = categoryCombosData.flatMap(categoryCombo => {
-            const translations = this.buildTranslationsRows(categoryCombo.translations);
-            return translations.map(translation => ({ categoryCombo: categoryCombo.id, ...translation }));
-        });
+        const categoryComboTranslationsRows = generateTranslations("categoryCombo", categoryCombosData);
 
-        const categoryTranslationsRows = categoriesData.flatMap(category => {
-            const translations = this.buildTranslationsRows(category.translations);
-            return translations.map(translation => ({ categoryCombo: category.id, ...translation }));
-        });
+        const categoryTranslationsRows = generateTranslations("category", categoriesData);
+        const categoryOptionTranslationsRows = generateTranslations("categoryOption", categoryOptionsData);
 
-        const categoryOptionTranslationsRows = categoryOptionsData.flatMap(categoryOption => {
-            const translations = this.buildTranslationsRows(categoryOption.translations);
-            return translations.map(translation => ({ categoryCombo: categoryOption.id, ...translation }));
-        });
-
-        await this.generateSpreadSheet(
-            spreadSheetId,
-            csvPath,
-            dataSetRows,
-            dataSetElementsRows,
-            dataElementsRows,
-            categoryCombosRows,
-            categoriesRows,
-            categoryOptionsRows,
-            sectionsDataRows,
-            optionSetRows,
-            optionsRows,
-            optionSetTranslationsRows,
-            sectionTranslationsRows,
-            sectionDataElementsRows,
-            dataSetInputPeriodsRows,
-            dataSetLegendsRows,
-            dataSetTranslationsRows,
-            dataElementsTranslationsRows,
-            dataElementsLegendsRows,
-            categoryComboTranslationsRows,
-            categoryTranslationsRows,
-            categoryOptionTranslationsRows,
-            dataElementGroupsRows,
-            dataElementGroupElementsRows,
-            dataElementGroupTranslationsRows,
-            dataElementGroupSetRows,
-            dataElementGroupSetGroupsRows,
-            dataElementGroupSetTranslationsRows
-        );
-    }
-
-    private buildDataElementGroupSetTranslationsRows(dataElementGroupSets: DataElementGroupSet[]) {
-        return dataElementGroupSets.flatMap(dataElementGroupSet => {
-            const translations = this.buildTranslationsRows(dataElementGroupSet.translations);
-            return translations.map(translation => {
-                return { dataElementGroupSet: dataElementGroupSet.id, ...translation };
-            });
-        });
-    }
-
-    private buildDataElementGroupSetGroupsRows(
-        dataElementGroupSets: DataElementGroupSet[]
-    ): DataElementGroupSetGroupsRow[] {
-        return dataElementGroupSets.flatMap(dataElementGroupSet => {
-            const dataElementGroupsIds = _(dataElementGroupSet.dataElementGroups)
-                .map(dataElementGroup => dataElementGroup.id)
-                .value();
-
-            return dataElementGroupsIds.map(dataElementGroupId => {
-                return { dataElementGroupSet: dataElementGroupSet.id, name: dataElementGroupId };
-            });
-        });
-    }
-
-    private buildDataElementGroupSetRows(metadata: MetadataItem) {
-        return _(metadata.dataElementGroupSets)
-            .map((dataElementGroupSet): DataElementGroupSetRow => {
-                return {
-                    id: dataElementGroupSet.id,
-                    name: dataElementGroupSet.name,
-                    shortName: dataElementGroupSet.shortName,
-                    code: dataElementGroupSet.code,
-                    description: dataElementGroupSet.description,
-                    compulsory: this.booleanToString(dataElementGroupSet.compulsory),
-                    dataDimension: this.booleanToString(dataElementGroupSet.dataDimension),
-                };
-            })
-            .value();
-    }
-
-    private buildDataElementGroupTranslationsRows(dataElementGroups: DataElementGroup[]): TranslationRow[] {
-        return dataElementGroups.flatMap(dataElementGroup => {
-            const translations = this.buildTranslationsRows(dataElementGroup.translations);
-            return translations.map(translation => {
-                return { dataElementGroup: dataElementGroup.id, ...translation };
-            });
-        });
-    }
-
-    private buildDataElementGroupsRows(metadata: MetadataItem): DataElementGroupRow[] {
-        return _(metadata.dataElementGroups)
-            .map((dataElementGroup): DataElementGroupRow => {
-                return {
-                    id: dataElementGroup.id,
-                    name: dataElementGroup.name,
-                    shortName: dataElementGroup.shortName,
-                    code: dataElementGroup.code,
-                    description: dataElementGroup.description,
-                };
-            })
-            .value();
-    }
-
-    private buildDataElementGroupElementsRows(dataElementGroupsRows: DataElementGroup[]): DataElementGroupElementRow[] {
-        return dataElementGroupsRows.flatMap(dataElementGroup => {
-            return dataElementGroup.dataElements.map((dataElement): DataElementGroupElementRow => {
-                return { dataElementGroup: dataElementGroup.id, name: dataElement.id };
-            });
-        });
-    }
-
-    private getRelatedIdsInDataElements(dataElementsData: DataElement[]): Id[] {
-        const deGroupIds = dataElementsData.flatMap(dataElement => {
-            const groups = dataElement.dataElementGroups.map(dataElementGroup => dataElementGroup.id);
-            return groups;
-        });
-
-        const deGroupSetIds = dataElementsData.flatMap(dataElement => {
-            const dataGroupSetIds = dataElement.dataElementGroups.flatMap(dataElementGroup =>
-                dataElementGroup.groupSets.map(groupSet => groupSet.id)
-            );
-            return dataGroupSetIds;
-        });
-
-        const uniqueDataElementGroupIds = _(deGroupIds).uniq().value();
-        const uniqueDataElementGroupSetIds = _(deGroupSetIds).uniq().value();
-
-        return [...uniqueDataElementGroupIds, ...uniqueDataElementGroupSetIds];
-    }
-
-    private getRelatedIdsInDataSets(dataSetData: DataSet[]) {
-        return dataSetData.flatMap(dataSet => {
-            const optionSetIds = _(dataSet.dataSetElements)
-                .flatMap(dataSetElement => {
-                    const optionSet = dataSetElement.dataElement.optionSet;
-                    const optionSetId = optionSet?.id;
-                    const optionsIds = _(optionSet?.options)
-                        .map(option => option.id)
-                        .compact()
-                        .value();
-
-                    const commentOptionSet = dataSetElement.dataElement.commentOptionSet;
-                    const commentOptionSetId = commentOptionSet?.id;
-                    const commentOptionsIds = _(commentOptionSet?.options)
-                        .map(option => option.id)
-                        .compact()
-                        .value();
-                    return [...optionsIds, ...commentOptionsIds, optionSetId, commentOptionSetId];
-                })
-                .compact()
-                .uniq()
-                .value();
-            return optionSetIds;
-        });
-    }
-
-    private buildDataElementsLegendsRows(dataElementsData: DataElement[]) {
-        return dataElementsData.flatMap(dataElement => {
-            return dataElement.legendSets.map(legendSet => {
-                return { dataElement: dataElement.id, name: legendSet.id };
-            });
-        });
-    }
-
-    private buildTranslationsRows(translations: Translation[]): TranslationRow[] {
-        return translations.map((translation: Translation): TranslationRow => {
-            const localeDetails = defaultLanguages.find(language => language.id === translation.locale);
-            if (!localeDetails) {
-                logger.warn(`Locale ${translation.locale} not found for translation: ${translation.value}`);
-            }
-            return {
-                name: this.getValueOrEmpty(translation.property),
-                locale: localeDetails ? localeDetails.name : "",
-                value: this.getValueOrEmpty(translation.value),
-            };
-        });
-    }
-
-    private getValueOrEmpty(value: string | undefined): Maybe<string> {
-        return value ? value : "";
-    }
-
-    private async generateSpreadSheet(
-        spreadSheetId: string,
-        csvPath: string,
-        dataSetRows: DataSetsSheetRow[],
-        dataSetElementsRows: DataSetElementsSheetRow[],
-        dataElementsRows: DataElementsSheetRow[],
-        categoryCombosRows: CategoryCombosSheetRow[],
-        categoriesRows: CategoriesSheetRow[],
-        categoryOptionsRows: CategoryOptionsSheetRow[],
-        sectionsDataRows: any[],
-        optionSetsRows: any[],
-        optionsRows: any[],
-        optionSetTranslationsRows: any[],
-        sectionTranslationsRows: any[],
-        sectionDataElementsRows: any,
-        dataSetInputPeriodsRows: DataSetInputPeriodsRows[],
-        dataSetLegendsRows: DataSetLegendRow[],
-        dataSetTranslationsRows: TranslationRow[],
-        dataElementsTranslationsRows: TranslationRow[],
-        dataElementsLegendsRows: DataElementLegendRow[],
-        categoryComboTranslationsRows: TranslationRow[],
-        categoriesTranslationsRows: TranslationRow[],
-        categoryOptionTranslationsRows: TranslationRow[],
-        dataElementGroupsRows: DataElementGroupRow[],
-        dataElementGroupElementsRows: DataElementGroupElementRow[],
-        dataElementGroupTranslationsRows: TranslationRow[],
-        dataElementGroupSetRows: DataElementGroupSetRow[],
-        dataElementGroupSetGroupsRows: DataElementGroupSetGroupsRow[],
-        dataElementGroupSetTranslationsRows: TranslationRow[]
-    ) {
         await this.sheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("dataSets", dataSetRows, convertHeadersToArray(headers.dataSetsHeaders)),
             this.convertToSpreadSheetValue(
@@ -507,7 +280,7 @@ export class PullDataSetUseCase {
             ),
             this.convertToSpreadSheetValue(
                 "categoryTranslations",
-                categoriesTranslationsRows,
+                categoryTranslationsRows,
                 convertHeadersToArray(headers.categoriesTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
@@ -522,7 +295,7 @@ export class PullDataSetUseCase {
             ),
             this.convertToSpreadSheetValue(
                 "optionSets",
-                optionSetsRows,
+                optionSetRows,
                 convertHeadersToArray(headers.optionSetsHeaders)
             ),
             this.convertToSpreadSheetValue("options", optionsRows, convertHeadersToArray(headers.optionsHeaders)),
@@ -534,9 +307,120 @@ export class PullDataSetUseCase {
         ]);
     }
 
-    private convertToSpreadSheetValue(
+    private buildDataElementGroupSetGroupsRows(
+        dataElementGroupSets: DataElementGroupSet[],
+        dataElementGroups: DataElementGroup[]
+    ): DataElementGroupSetGroupsRow[] {
+        return dataElementGroupSets.flatMap(dataElementGroupSet => {
+            const dataElementGroupsIds = _(dataElementGroupSet.dataElementGroups)
+                .map(dataElementGroup => dataElementGroup.id)
+                .value();
+
+            return dataElementGroupsIds.map(dataElementGroupId => {
+                const dataElementGroupName = dataElementGroups.find(deg => deg.id === dataElementGroupId)?.name;
+                return { dataElementGroupSet: dataElementGroupSet.name, name: dataElementGroupName || "" };
+            });
+        });
+    }
+
+    private buildDataElementGroupSetRows(metadata: MetadataItem) {
+        return _(metadata.dataElementGroupSets)
+            .map((dataElementGroupSet): DataElementGroupSetRow => {
+                return {
+                    id: dataElementGroupSet.id,
+                    name: dataElementGroupSet.name,
+                    shortName: dataElementGroupSet.shortName,
+                    code: dataElementGroupSet.code,
+                    description: dataElementGroupSet.description,
+                    compulsory: this.booleanToString(dataElementGroupSet.compulsory),
+                    dataDimension: this.booleanToString(dataElementGroupSet.dataDimension),
+                };
+            })
+            .value();
+    }
+
+    private buildDataElementGroupsRows(metadata: MetadataItem): DataElementGroupRow[] {
+        return _(metadata.dataElementGroups)
+            .map((dataElementGroup): DataElementGroupRow => {
+                return {
+                    id: dataElementGroup.id,
+                    name: dataElementGroup.name,
+                    shortName: dataElementGroup.shortName,
+                    code: dataElementGroup.code,
+                    description: dataElementGroup.description,
+                };
+            })
+            .value();
+    }
+
+    private buildDataElementGroupElementsRows(dataElementGroupsRows: DataElementGroup[]): DataElementGroupElementRow[] {
+        return dataElementGroupsRows.flatMap(dataElementGroup => {
+            return dataElementGroup.dataElements.map((deGroup): DataElementGroupElementRow => {
+                return { dataElementGroup: dataElementGroup.name, name: deGroup.id };
+            });
+        });
+    }
+
+    private getRelatedIdsInDataElements(dataElementsData: DataElement[]): Id[] {
+        const deGroupIds = dataElementsData.flatMap(dataElement => {
+            const groups = dataElement.dataElementGroups.map(dataElementGroup => dataElementGroup.id);
+            return groups;
+        });
+
+        const deGroupSetIds = dataElementsData.flatMap(dataElement => {
+            const dataGroupSetIds = dataElement.dataElementGroups.flatMap(dataElementGroup =>
+                dataElementGroup.groupSets.map(groupSet => groupSet.id)
+            );
+            return dataGroupSetIds;
+        });
+
+        const uniqueDataElementGroupIds = _(deGroupIds).uniq().value();
+        const uniqueDataElementGroupSetIds = _(deGroupSetIds).uniq().value();
+
+        return [...uniqueDataElementGroupIds, ...uniqueDataElementGroupSetIds];
+    }
+
+    private getRelatedIdsInDataSets(dataSetData: DataSet[]) {
+        return dataSetData.flatMap(dataSet => {
+            const optionSetIds = _(dataSet.dataSetElements)
+                .flatMap(dataSetElement => {
+                    const optionSet = dataSetElement.dataElement.optionSet;
+                    const optionSetId = optionSet?.id;
+                    const optionsIds = _(optionSet?.options)
+                        .map(option => option.id)
+                        .compact()
+                        .value();
+
+                    const commentOptionSet = dataSetElement.dataElement.commentOptionSet;
+                    const commentOptionSetId = commentOptionSet?.id;
+                    const commentOptionsIds = _(commentOptionSet?.options)
+                        .map(option => option.id)
+                        .compact()
+                        .value();
+                    return [...optionsIds, ...commentOptionsIds, optionSetId, commentOptionSetId];
+                })
+                .compact()
+                .uniq()
+                .value();
+            return optionSetIds;
+        });
+    }
+
+    private buildDataElementsLegendsRows(dataElementsData: DataElement[]) {
+        return dataElementsData.flatMap(dataElement => {
+            return dataElement.legendSets.map(legendSet => {
+                return { dataElement: dataElement.name, name: legendSet.name };
+            });
+        });
+    }
+
+    private getValueOrEmpty(value: string | undefined): Maybe<string> {
+        return value ? value : "";
+    }
+
+    private convertToSpreadSheetValue<Model>(
         sheetName: SpreadSheetName,
-        rows: DataSetsSheetRow[] | DataSetElementsSheetRow[] | DataElementsSheetRow[] | TranslationRow[],
+        rows: Model[],
         headers: string[]
     ): SpreadSheet {
         return { name: sheetName, range: "A2", values: rows.map(Object.values), columns: headers };
@@ -591,7 +475,7 @@ export class PullDataSetUseCase {
             openFuturePeriods: dataSet?.openFuturePeriods,
             timelyDays: dataSet?.timelyDays,
             periodType: dataSet?.periodType,
-            categoryCombo: dataSet?.categoryCombo?.id,
+            categoryCombo: dataSet?.categoryCombo?.name,
             notifyCompletingUser: this.booleanToString(dataSet.notifyCompletingUser),
             workflow: dataSet?.workflow?.id,
             mobile: this.booleanToString(dataSet.mobile),
@@ -633,13 +517,13 @@ export class PullDataSetUseCase {
             shortName: dataElement.shortName,
             formName: dataElement.formName,
             code: dataElement.code,
-            categoryCombo: dataElement.categoryCombo.id,
+            categoryCombo: dataElement.categoryCombo?.name,
             valueType: dataElement.valueType,
             aggregationType: dataElement.aggregationType,
             domainType: dataElement.domainType,
             description: dataElement.description,
-            optionSet: dataElement.optionSet ? dataElement.optionSet.id : undefined,
-            commentOptionSet: dataElement.commentOptionSet ? dataElement.commentOptionSet.id : undefined,
+            optionSet: dataElement.optionSet ? dataElement.optionSet.name : undefined,
+            commentOptionSet: dataElement.commentOptionSet ? dataElement.commentOptionSet.name : undefined,
             zeroIsSignificant: this.booleanToString(dataElement.zeroIsSignificant),
             url: dataElement.url,
             fieldMask: dataElement.fieldMask,
@@ -711,7 +595,6 @@ type DataSetInputPeriodsRows = { name: string; period: string; openingDate: stri
 
 type DataSetLegendRow = { dataSet: string; name: string };
 
-type DataElementLegendRow = { dataElement: string; name: string };
 type DataElementGroupElementRow = { dataElementGroup: string; name: string };
 type DataElementGroupRow = Omit<DataElementGroup, "translations" | "dataElements" | "groupSets">;
 type DataElementGroupSetRow = Omit<

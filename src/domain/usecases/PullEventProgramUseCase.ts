@@ -33,7 +33,7 @@ import { ProgramRule, ProgramRuleAction } from "domain/entities/ProgramRule";
 import { MetadataItem } from "../entities/MetadataItem";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
-import { TranslationRow, buildTranslationsRows, Translation } from "domain/entities/Translation";
+import { generateTranslations } from "domain/entities/Translation";
 import { Option, OptionSet } from "domain/entities/OptionSet";
 import { getValueOrEmpty } from "utils/utils";
 import { TrackedEntityAttribute, TrackedEntityType } from "domain/entities/TrackedEntityType";
@@ -207,11 +207,6 @@ export class PullEventProgramUseCase {
             this.buildCategoryOptionRow(categoryOption, categoriesData)
         );
 
-        // LEGEND SETS BUILD
-
-        // const legendSetRows = legendSetsData.map(ls => this.buildLegendSetRow(ls));
-        // const legendsRows = legendSetsData.flatMap(ls => this.buildLegendsRows(ls.legends, ls.name));
-
         const dataElementLegendsRows = dataElementsData.flatMap(de => {
             return de.legendSets.flatMap(dels => {
                 const legendSetName = legendSetsData.find(lsToFind => lsToFind.id === dels.id)?.name;
@@ -221,11 +216,11 @@ export class PullEventProgramUseCase {
             });
         });
 
-        const programTranslationsRows = this.generateTranslations("program", programData);
-        const programStageTranslationsRows = this.generateTranslations("programStage", programStagesData);
-        const categoryTranslationsRows = this.generateTranslations("category", categoriesData);
-        const categoryComboTranslationsRows = this.generateTranslations("categoryCombo", categoryCombosData);
-        const categoryOptionTranslationsRows = this.generateTranslations("categoryOption", categoryOptionsData);
+        const programTranslationsRows = generateTranslations("program", programData);
+        const programStageTranslationsRows = generateTranslations("programStage", programStagesData);
+        const categoryTranslationsRows = generateTranslations("category", categoriesData);
+        const categoryComboTranslationsRows = generateTranslations("categoryCombo", categoryCombosData);
+        const categoryOptionTranslationsRows = generateTranslations("categoryOption", categoryOptionsData);
 
         const programRelatedIds = this.getRelatedIdsFromProgram(programData);
         const optionSetIds = this.getOptionSetIds(dataElementsData);
@@ -233,7 +228,7 @@ export class PullEventProgramUseCase {
         const metadata = await this.metadataRepository.getByIds([...optionSetIds, ...programRelatedIds]);
 
         const trackedEntityAttributesRows = this.buildTrackedEntityAttributesRows(metadata.trackedEntityAttributes);
-        const trackedEntityAttributesTranslationsRows = this.generateTranslations(
+        const trackedEntityAttributesTranslationsRows = generateTranslations(
             "trackedEntityAttribute",
             metadata.trackedEntityAttributes
         );
@@ -255,7 +250,7 @@ export class PullEventProgramUseCase {
             metadata.trackedEntityTypes,
             trackedEntityAttributesRows
         );
-        const trackedEntityTypesTranslationsRows = this.generateTranslations(
+        const trackedEntityTypesTranslationsRows = generateTranslations(
             "trackedEntityType",
             metadata.trackedEntityTypes
         );
@@ -271,11 +266,11 @@ export class PullEventProgramUseCase {
         );
 
         const programDataElementsRows = this.buildProgramDataElementsRows(programStagesData, dataElementsData);
-        const programDataElementTranslationsRows = this.generateTranslations("programDataElement", dataElementsData);
+        const programDataElementTranslationsRows = generateTranslations("programDataElement", dataElementsData);
 
         const optionSetsRows = this.buildOptionSetRows(metadata.optionSets);
-        const optionSetTranslationsRows = this.generateTranslations("optionSet", metadata.optionSets);
-        const optionsRows = this.buildOptionsRows(metadata.options);
+        const optionSetTranslationsRows = generateTranslations("optionSet", metadata.optionSets);
+        const optionsRows = this.buildOptionsRows(metadata.options, metadata.optionSets);
 
         await this.spreadSheetsRepository.save(spreadSheetId || csvPath, [
             this.convertToSpreadSheetValue("programs", programRows, convertHeadersToArray(headers.programsHeaders)),
@@ -439,17 +434,6 @@ export class PullEventProgramUseCase {
             ),
             this.convertToSpreadSheetValue("options", optionsRows, convertHeadersToArray(headers.optionsHeaders)),
         ]);
-    }
-
-    private buildProgramDataElementTranslationsRows(dataElements: DataElement[]) {
-        return _(dataElements)
-            .flatMap(dataElement => {
-                const translations = buildTranslationsRows(dataElement.translations);
-                return translations.map(translation => {
-                    return { programDataElement: dataElement.name, ...translation };
-                });
-            })
-            .value();
     }
 
     private buildProgramDataElementsRows(programStage: ProgramStage[], dataElements: DataElement[]) {
@@ -694,14 +678,15 @@ export class PullEventProgramUseCase {
         });
     }
 
-    private buildOptionsRows(options: Option[]): OptionRow[] {
+    private buildOptionsRows(options: Option[], optionSets: OptionSet[]): OptionRow[] {
         return _(options)
             .map(option => {
+                const optionSetName = optionSets.find(optionSet => optionSet.id === option.optionSet?.id)?.name;
                 return {
                     id: option.id,
                     name: getValueOrEmpty(option.name),
                     code: getValueOrEmpty(option.code),
-                    optionSet: getValueOrEmpty(option.optionSet?.id),
+                    optionSet: getValueOrEmpty(optionSetName),
                     shortName: getValueOrEmpty(option.shortName),
                     description: getValueOrEmpty(option.description),
                 };
@@ -741,18 +726,6 @@ export class PullEventProgramUseCase {
         });
 
         return _(optionSetIds).compact().value();
-    }
-
-    private generateTranslations<T extends string, Model extends { name: string; translations: Translation[] }>(
-        key: T,
-        metadata: Model[]
-    ): Array<TranslationRow & { T: string }> {
-        return metadata.flatMap(model => {
-            const translations = buildTranslationsRows(model.translations);
-            return translations.map(translation => {
-                return { [key]: model.name, ...translation } as TranslationRow & { T: string };
-            });
-        });
     }
 
     private convertToSpreadSheetValue<Model>(

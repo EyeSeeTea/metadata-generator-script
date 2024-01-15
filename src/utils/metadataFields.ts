@@ -14,19 +14,10 @@ const dataElementGroupsFields = { id: true, groupSets: true };
 
 const optionSetFields = {
     id: true,
+    name: true,
     options: true,
     translations: true,
 };
-
-// const trackedEntityAttributeFields = {
-//     id: true,
-//     name: true,
-//     shortName: true,
-//     code: true,
-//     description: true,
-//     fieldMask: true,
-//     optionSet: optionSetFields,
-// }
 
 const trackedEntityTypeFields = {
     id: true,
@@ -85,12 +76,15 @@ const dataSetFieds = {
     periodType: true,
     openFuturePeriods: true,
     expiryDays: true,
-    categoryCombo: true,
+    categoryCombo: { id: true, name: true },
     workflow: true,
     dataSetElements: dataSetElementsFields,
     dataInputPeriods: true,
     indicators: true,
-    legendSets: true,
+    legendSets: {
+        id: true,
+        name: true,
+    },
     sections: sectionFields,
     translations: true,
 };
@@ -101,7 +95,7 @@ const dataElementFieds = {
     shortName: true,
     formName: true,
     code: true,
-    categoryCombo: true,
+    categoryCombo: { id: true, name: true },
     valueType: true,
     aggregationType: true,
     domainType: true,
@@ -111,7 +105,7 @@ const dataElementFieds = {
     zeroIsSignificant: true,
     url: true,
     fieldMask: true,
-    legendSets: true,
+    legendSets: { id: true, name: true },
     translations: true,
     dataElementGroups: dataElementGroupsFields,
 };

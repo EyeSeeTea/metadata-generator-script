@@ -23,3 +23,15 @@ export function buildTranslationsRows(translations: Translation[]): TranslationR
         };
     });
 }
+
+export function generateTranslations<T extends string, Model extends { name: string; translations: Translation[] }>(
+    key: T,
+    metadata: Model[]
+): Array<TranslationRow & { T: string }> {
+    return metadata.flatMap(model => {
+        const translations = buildTranslationsRows(model.translations);
+        return translations.map(translation => {
+            return { [key]: model.name, ...translation } as TranslationRow & { T: string };
+        });
+    });
+}

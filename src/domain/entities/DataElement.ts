@@ -1,5 +1,7 @@
 import { AggregationType, ValueType, DomainType, Id, Ref } from "./Base";
+import { CategoryCombo } from "./CategoryCombo";
 import { DataElementGroup } from "./DataElementGroup";
+import { LegendSet } from "./LegendSet";
 import { OptionSet } from "./OptionSet";
 import { Translation } from "./Translation";
 
@@ -9,7 +11,7 @@ export interface DataElement {
     shortName: string;
     formName: string;
     code: string;
-    categoryCombo: Ref;
+    categoryCombo: CategoryCombo;
     valueType: ValueType;
     aggregationType: AggregationType;
     domainType: DomainType;
@@ -19,7 +21,7 @@ export interface DataElement {
     zeroIsSignificant: boolean;
     url: string;
     fieldMask: string;
-    legendSets: Ref[];
+    legendSets: LegendSet[];
     translations: Translation[];
     dataElementGroups: Pick<DataElementGroup, "id" | "groupSets">[];
 }
