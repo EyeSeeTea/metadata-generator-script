@@ -33,22 +33,21 @@ import { ProgramRule, ProgramRuleAction } from "domain/entities/ProgramRule";
 import { MetadataItem } from "../entities/MetadataItem";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
-import { TranslationRow, buildTranslationsRows } from "domain/entities/Translation";
+import { TranslationRow, buildTranslationsRows, Translation } from "domain/entities/Translation";
 import { Option, OptionSet } from "domain/entities/OptionSet";
 import { getValueOrEmpty } from "utils/utils";
-import {
-    TrackedEntityAttribute,
-    TrackedEntityType,
-    TrackedEntityTypeAttribute,
-} from "domain/entities/TrackedEntityType";
+import { TrackedEntityAttribute, TrackedEntityType } from "domain/entities/TrackedEntityType";
 import { Maybe } from "utils/ts-utils";
 import logger from "utils/log";
-import { write, writeFileSync } from "fs";
 
 export class PullEventProgramUseCase {
     constructor(private metadataRepository: MetadataRepository, private spreadSheetsRepository: SheetsRepository) {}
 
     async execute(options: PullEventProgramUseCaseOptions) {
+        await this.exportProgram(options);
+    }
+
+    private async exportProgram(options: PullEventProgramUseCaseOptions): Promise<void> {
         // PROGRAM GET
         const { eventProgramId, csvPath, spreadSheetId } = options;
         const programData = await this.getProgramData([eventProgramId]);
@@ -222,11 +221,11 @@ export class PullEventProgramUseCase {
             });
         });
 
-        const programTranslationsRows = this.buildProgramTranslationsRows(programData);
-        const programStageTranslationsRows = this.buildProgramStageTranslationsRows(programStagesData);
-        const categoryTranslationsRows = this.buildCategoryTranslationsRows(categoriesData);
-        const categoryComboTranslationsRows = this.buildCategoryComboTranslationsRows(categoryCombosData);
-        const categoryOptionTranslationsRows = this.buildCategoryOptionTranslationsRows(categoryOptionsData);
+        const programTranslationsRows = this.generateTranslations("program", programData);
+        const programStageTranslationsRows = this.generateTranslations("programStage", programStagesData);
+        const categoryTranslationsRows = this.generateTranslations("category", categoriesData);
+        const categoryComboTranslationsRows = this.generateTranslations("categoryCombo", categoryCombosData);
+        const categoryOptionTranslationsRows = this.generateTranslations("categoryOption", categoryOptionsData);
 
         const programRelatedIds = this.getRelatedIdsFromProgram(programData);
         const optionSetIds = this.getOptionSetIds(dataElementsData);
@@ -234,7 +233,8 @@ export class PullEventProgramUseCase {
         const metadata = await this.metadataRepository.getByIds([...optionSetIds, ...programRelatedIds]);
 
         const trackedEntityAttributesRows = this.buildTrackedEntityAttributesRows(metadata.trackedEntityAttributes);
-        const trackedEntityAttributesTranslationsRows = this.buildTrackedEntityAttributesTranslationsRows(
+        const trackedEntityAttributesTranslationsRows = this.generateTranslations(
+            "trackedEntityAttribute",
             metadata.trackedEntityAttributes
         );
 
@@ -255,7 +255,8 @@ export class PullEventProgramUseCase {
             metadata.trackedEntityTypes,
             trackedEntityAttributesRows
         );
-        const trackedEntityTypesTranslationsRows = this.buildTrackedEntityTypeTranslationsRows(
+        const trackedEntityTypesTranslationsRows = this.generateTranslations(
+            "trackedEntityType",
             metadata.trackedEntityTypes
         );
         const programTrackedEntityAttributesRows = this.buildProgramTrackedEntityAttributesRows(
@@ -270,10 +271,10 @@ export class PullEventProgramUseCase {
         );
 
         const programDataElementsRows = this.buildProgramDataElementsRows(programStagesData, dataElementsData);
-        const programDataElementTranslationsRows = this.buildProgramDataElementTranslationsRows(dataElementsData);
+        const programDataElementTranslationsRows = this.generateTranslations("programDataElement", dataElementsData);
 
         const optionSetsRows = this.buildOptionSetRows(metadata.optionSets);
-        const optionSetTranslationsRows = this.buildOptionSetTranslationsRows(metadata.optionSets);
+        const optionSetTranslationsRows = this.generateTranslations("optionSet", metadata.optionSets);
         const optionsRows = this.buildOptionsRows(metadata.options);
 
         await this.spreadSheetsRepository.save(spreadSheetId || csvPath, [
@@ -440,7 +441,7 @@ export class PullEventProgramUseCase {
         ]);
     }
 
-    buildProgramDataElementTranslationsRows(dataElements: DataElement[]) {
+    private buildProgramDataElementTranslationsRows(dataElements: DataElement[]) {
         return _(dataElements)
             .flatMap(dataElement => {
                 const translations = buildTranslationsRows(dataElement.translations);
@@ -591,19 +592,6 @@ export class PullEventProgramUseCase {
             .value();
     }
 
-    private buildTrackedEntityTypeTranslationsRows(
-        trackedEntityTypes: TrackedEntityType[]
-    ): TrackedEntityTypeTranslationsRow[] {
-        return _(trackedEntityTypes)
-            .flatMap(trackedEntityType => {
-                const translations = buildTranslationsRows(trackedEntityType.translations);
-                return translations.map(translation => {
-                    return { trackedEntityType: trackedEntityType.name, ...translation };
-                });
-            })
-            .value();
-    }
-
     private buildTrackedEntityTypesRows(trackedEntityTypes: TrackedEntityType[]): TrackedEntityTypeRow[] {
         return _(trackedEntityTypes)
             .map((trackedEntityType): TrackedEntityTypeRow => {
@@ -646,19 +634,6 @@ export class PullEventProgramUseCase {
 
     private buildLegendsSetRows(legendSets: LegendSet[], legendSetsData: LegendSet[]): LegendSetsSheetRow[] {
         return _(legendSets).concat(legendSetsData).map(this.buildLegendSetRow).compact().value();
-    }
-
-    private buildTrackedEntityAttributesTranslationsRows(
-        trackedEntityAttributes: TrackedEntityAttribute[]
-    ): TrackedEntityAttributeTranslationRow[] {
-        return _(trackedEntityAttributes)
-            .flatMap(trackedEntityAttribute => {
-                const translations = buildTranslationsRows(trackedEntityAttribute.translations);
-                return translations.map(translation => {
-                    return { trackedEntityAttribute: trackedEntityAttribute.name, ...translation };
-                });
-            })
-            .value();
     }
 
     private getRelatedIdsFromProgram(programData: Program[]): Id[] {
@@ -734,17 +709,6 @@ export class PullEventProgramUseCase {
             .value();
     }
 
-    private buildOptionSetTranslationsRows(optionSets: OptionSet[]): OptionSetTranslationRow[] {
-        return _(optionSets)
-            .flatMap(optionSet => {
-                const translations = buildTranslationsRows(optionSet.translations);
-                return translations.map(translation => {
-                    return { optionSet: optionSet.id, ...translation };
-                });
-            })
-            .value();
-    }
-
     private buildOptionSetRows(optionSets: OptionSet[]): OptionSetRow[] {
         return _(optionSets)
             .map(optionSet => {
@@ -779,74 +743,21 @@ export class PullEventProgramUseCase {
         return _(optionSetIds).compact().value();
     }
 
-    private buildCategoryOptionTranslationsRows(categoryOptions: CategoryOption[]): CategoryOptionTranslationRow[] {
-        return categoryOptions.flatMap(categoryOption => {
-            const translations = buildTranslationsRows(categoryOption.translations);
+    private generateTranslations<T extends string, Model extends { name: string; translations: Translation[] }>(
+        key: T,
+        metadata: Model[]
+    ): Array<TranslationRow & { T: string }> {
+        return metadata.flatMap(model => {
+            const translations = buildTranslationsRows(model.translations);
             return translations.map(translation => {
-                return { categoryOption: categoryOption.id, ...translation };
+                return { [key]: model.name, ...translation } as TranslationRow & { T: string };
             });
         });
     }
 
-    private buildCategoryComboTranslationsRows(categoryCombos: CategoryCombo[]): CategoryComboTranslationRow[] {
-        return categoryCombos.flatMap(categoryCombo => {
-            const translations = buildTranslationsRows(categoryCombo.translations);
-            return translations.map(translation => {
-                return { categoryCombo: categoryCombo.id, ...translation };
-            });
-        });
-    }
-
-    private buildCategoryTranslationsRows(categories: Category[]): CategoryTranslationRow[] {
-        return categories.flatMap(category => {
-            const translations = buildTranslationsRows(category.translations);
-            return translations.map(translation => {
-                return { category: category.id, ...translation };
-            });
-        });
-    }
-
-    private buildProgramStageTranslationsRows(programStagesData: ProgramStage[]): ProgramStageTranslationRow[] {
-        return programStagesData.flatMap(programStage => {
-            const translations = buildTranslationsRows(programStage.translations);
-            return translations.map(translation => {
-                return { programStage: programStage.id, ...translation };
-            });
-        });
-    }
-
-    private buildProgramTranslationsRows(programData: Program[]): ProgramTranslationRow[] {
-        return programData.flatMap(program => {
-            const translations = buildTranslationsRows(program.translations);
-            return translations.map(translation => {
-                return { program: program.id, ...translation };
-            });
-        });
-    }
-
-    private convertToSpreadSheetValue(
+    private convertToSpreadSheetValue<Model>(
         sheetName: SpreadSheetName,
-        rows:
-            | ProgramsSheetRow[]
-            | ProgramStagesSheetRow[]
-            | ProgramStageDataElementsSheetRow[]
-            | ProgramStageSectionsDataElementsSheetRow[]
-            | ProgramRule[]
-            | ProgramRuleAction[]
-            | ProgramRuleVariablesSheetRow[]
-            | DataElementsSheetRow[]
-            | DataElementLegendsSheetRow[]
-            | LegendsSheetRow[]
-            | LegendsSheetRow[]
-            | ProgramTranslationRow[]
-            | ProgramStageTranslationRow[]
-            | CategoryTranslationRow[]
-            | CategoryComboTranslationRow[]
-            | CategoryOptionTranslationRow[]
-            | OptionSetRow[]
-            | OptionSetTranslationRow[]
-            | OptionRow[]
-            | TrackedEntityAttributesLegendRow[],
+        rows: Model[],
         headers: string[]
     ): SpreadSheet {
         return { name: sheetName, range: "A2", values: rows.map(Object.values), columns: headers };
@@ -1248,38 +1159,6 @@ export class PullEventProgramUseCase {
 }
 
 type PullEventProgramUseCaseOptions = { eventProgramId: string; spreadSheetId: string; csvPath: Path };
-
-interface ProgramTranslationRow extends TranslationRow {
-    program: string;
-}
-
-interface ProgramStageTranslationRow extends TranslationRow {
-    programStage: string;
-}
-
-interface CategoryTranslationRow extends TranslationRow {
-    category: string;
-}
-
-interface CategoryComboTranslationRow extends TranslationRow {
-    categoryCombo: string;
-}
-
-interface CategoryOptionTranslationRow extends TranslationRow {
-    categoryOption: string;
-}
-
-interface OptionSetTranslationRow extends TranslationRow {
-    optionSet: string;
-}
-
-interface TrackedEntityAttributeTranslationRow extends TranslationRow {
-    trackedEntityAttribute: string;
-}
-
-interface TrackedEntityTypeTranslationsRow extends TranslationRow {
-    trackedEntityType: string;
-}
 
 type OptionSetRow = Omit<OptionSet, "translations" | "options">;
 type OptionRow = Partial<Omit<Option, "translations" | "optionSet"> & { optionSet: string }>;
