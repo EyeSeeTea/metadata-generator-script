@@ -1,4 +1,5 @@
 import { DataDimensionType, Id, Ref } from "./Base";
+import { Translation } from "./Translation";
 
 export interface Category {
     id: Id;
@@ -8,4 +9,5 @@ export interface Category {
     description: string;
     categoryOptions: Ref[];
     dataDimensionType: DataDimensionType;
+    translations: Translation[];
 }
