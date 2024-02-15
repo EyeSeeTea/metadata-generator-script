@@ -46,9 +46,18 @@ export class MetadataD2Repository implements MetadataRepository {
             return _.omit(metadata, "system") as MetadataItem;
         });
 
-        return allMetadata.reduce((acum, item) => {
-            return { ...acum, ...(item || {}) };
-        }, emptyMetadataResponse);
+        return _.reduce(
+            allMetadata,
+            (result, obj) => {
+                _.forEach(obj, (value, key) => {
+                    // TODO: MetadataItem is not typed
+                    // @ts-ignore
+                    result[key] = (result[key] || []).concat(value);
+                });
+                return result;
+            },
+            emptyMetadataResponse
+        );
     }
 
     async getMetadata(query: Query): Promise<MetadataItem[]> {
