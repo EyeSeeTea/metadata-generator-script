@@ -584,7 +584,9 @@ export class BuildMetadataUseCase {
 
             this.addSharingSetting(data);
 
-            data.workflow = data.workflow ? { id: data.workflow } : undefined;
+            if (!_.isObjectLike(data.workflow)) {
+                data.workflow = { id: data.workflow.id };
+            }
 
             return {
                 ...data,
