@@ -609,7 +609,7 @@ export class BuildMetadataUseCase {
         existingTranslations: Maybe<Translation[]>,
         newTranslations: Translation[]
     ): Translation[] {
-        const result = _.unionBy(existingTranslations, newTranslations, obj => {
+        const result = _.unionBy(newTranslations, existingTranslations, obj => {
             return _.join([obj.property?.toLowerCase(), obj.locale?.toLowerCase()], "-");
         });
         return result;
@@ -644,6 +644,9 @@ export class BuildMetadataUseCase {
             const legendSets = this.processItemLegendSets(sheets, data.name, data.id, "dataElement");
 
             this.addSharingSetting(data);
+            if (data.id === "LaQe20TdHvH") {
+                console.log(this.mergeAndGetUniqueTranslations(data.translations, translations));
+            }
 
             return {
                 ...data,
