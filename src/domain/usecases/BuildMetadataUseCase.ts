@@ -410,7 +410,7 @@ export class BuildMetadataUseCase {
                     ...section,
                     dataSet: { id: _.isObjectLike(section.dataSet) ? section.dataSet.id : dataSetId },
                     dataElements: [...(section.dataElements || []), ...dataElements],
-                    translations: [...(section.translations || []), ...translations],
+                    translations: this.mergeAndGetUniqueTranslations(section.translations, translations),
                 };
             })
             .groupBy(({ dataSet }) => dataSet.id)
@@ -462,12 +462,14 @@ export class BuildMetadataUseCase {
             return {
                 ...optionSet,
                 options: [...(optionSet.options || []), ...options],
-                translations: [...(optionSet.translations || []), ...translations],
+                translations: this.mergeAndGetUniqueTranslations(optionSet.translations || [], translations),
             };
         });
 
         const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
-            this.addSharingSetting(categoryOption);
+            if (categoryOption.sharing) {
+                this.addSharingSetting(categoryOption);
+            }
             const translations = this.processTranslations(
                 sheets,
                 categoryOption.name,
@@ -475,7 +477,10 @@ export class BuildMetadataUseCase {
                 "categoryOption"
             );
 
-            return { ...categoryOption, translations: [...(categoryOption.translations || []), ...translations] };
+            return {
+                ...categoryOption,
+                translations: this.mergeAndGetUniqueTranslations(categoryOption.translations, translations),
+            };
         });
 
         return {
@@ -644,9 +649,6 @@ export class BuildMetadataUseCase {
             const legendSets = this.processItemLegendSets(sheets, data.name, data.id, "dataElement");
 
             this.addSharingSetting(data);
-            if (data.id === "LaQe20TdHvH") {
-                console.log(this.mergeAndGetUniqueTranslations(data.translations, translations));
-            }
 
             return {
                 ...data,
