@@ -46,9 +46,8 @@ export class BuildMetadataUseCase {
     async execute(sheetId: string): Promise<MetadataOutput> {
         const sheets = await this.sheetsRepository.getSpreadsheet(sheetId);
         const newSheets = await this.getAllExistingMetadata(sheets);
-        const metadata = this.buildMetadata(sheets);
-        const existingMetadata = this.buildMetadata(newSheets);
-        return _(metadata).merge({}, metadata, existingMetadata).value();
+        const metadata = this.buildMetadata(sheets, newSheets);
+        return metadata;
     }
 
     private async getAllExistingMetadata(sheets: Sheet[]) {
@@ -360,8 +359,9 @@ export class BuildMetadataUseCase {
 
     // Return an object containing the metadata representation of all the sheets
     // that are included in the spreadsheet.
-    private buildMetadata(sheets: Sheet[]): MetadataOutput {
+    private buildMetadata(sheets: Sheet[], existingMetadata: Sheet[]): MetadataOutput {
         const get = (name: string) => getItems(sheets, name); // shortcut
+        const getExisting = (name: string) => getItems(existingMetadata, name);
 
         const sheetDataSets = get("dataSets"),
             sheetDataElements = get("dataElements"),
@@ -372,6 +372,9 @@ export class BuildMetadataUseCase {
             sheetCategories = get("categories"),
             sheetOptionSets = get("optionSets"),
             sheetOptions = get("options");
+
+        const existingCategoryOptions = getExisting("categoryOptions");
+        const existingSections = getExisting("sections");
 
         const options = _(sheetOptions)
             .map(option => {
@@ -389,9 +392,11 @@ export class BuildMetadataUseCase {
 
         const sections = _(sheetDataSetSections)
             .map(section => {
-                const dataSetId = this.isValidUid(section.dataSet)
-                    ? section.dataSet
-                    : sheetDataSets.find(({ name }) => name === section.dataSet)?.id;
+                const existingData = existingSections.find(item => item.id === section.id) || {};
+                const sectionData: MetadataItem = { ...existingData, ...JSON.parse(JSON.stringify(section)) };
+                const dataSetId = this.isValidUid(sectionData.dataSet)
+                    ? sectionData.dataSet
+                    : sheetDataSets.find(({ name }) => name === sectionData.dataSet)?.id;
 
                 const dataElements = sheetSectionDataElements
                     .filter(
@@ -403,14 +408,14 @@ export class BuildMetadataUseCase {
                         id: this.isValidUid(name) ? name : this.getByName(sheetDataElements, name).id,
                     }));
 
-                const translations = this.processTranslations(sheets, section.name, section.id, "section");
-                this.addSharingSetting(section);
+                const translations = this.processTranslations(sheets, sectionData.name, sectionData.id, "section");
+                this.addSharingSetting(sectionData);
 
                 return {
-                    ...section,
-                    dataSet: { id: _.isObjectLike(section.dataSet) ? section.dataSet.id : dataSetId },
-                    dataElements: [...(section.dataElements || []), ...dataElements],
-                    translations: this.mergeAndGetUniqueTranslations(section.translations, translations),
+                    ...sectionData,
+                    dataSet: { id: _.isObjectLike(sectionData.dataSet) ? sectionData.dataSet.id : dataSetId },
+                    dataElements: [...(sectionData.dataElements || []), ...dataElements],
+                    translations: this.mergeAndGetUniqueTranslations(sectionData.translations, translations),
                 };
             })
             .groupBy(({ dataSet }) => dataSet.id)
@@ -467,25 +472,22 @@ export class BuildMetadataUseCase {
         });
 
         const categoryOptions = _.uniqBy(sheetCategoryOptions, item => item.id).map(categoryOption => {
-            if (categoryOption.sharing) {
-                this.addSharingSetting(categoryOption);
+            const existingData = existingCategoryOptions.find(item => item.id === categoryOption.id) || {};
+            let data: MetadataItem = { ...existingData, ...JSON.parse(JSON.stringify(categoryOption)) };
+            if (data.sharing) {
+                this.addSharingSetting(data);
             }
-            const translations = this.processTranslations(
-                sheets,
-                categoryOption.name,
-                categoryOption.id,
-                "categoryOption"
-            );
+            const translations = this.processTranslations(sheets, data.name, data.id, "categoryOption");
 
             return {
-                ...categoryOption,
-                translations: this.mergeAndGetUniqueTranslations(categoryOption.translations, translations),
+                ...data,
+                translations: this.mergeAndGetUniqueTranslations(data.translations, translations),
             };
         });
 
         return {
-            dataSets: this.buildDataSets(sheets),
-            dataElements: this.buildDataElements(sheets),
+            dataSets: this.buildDataSets(sheets, existingMetadata),
+            dataElements: this.buildDataElements(sheets, existingMetadata),
             dataElementGroups: this.buildDataElementGroups(sheets),
             dataElementGroupSets: this.buildDataElementGroupSets(sheets),
             options,
@@ -508,8 +510,9 @@ export class BuildMetadataUseCase {
         };
     }
 
-    private buildDataSets(sheets: Sheet[]) {
+    private buildDataSets(sheets: Sheet[], existingSheets: Sheet[]) {
         const get = (name: string) => getItems(sheets, name);
+        const getExisting = (name: string) => getItems(existingSheets, name);
 
         const dataSets = get("dataSets");
         const dataElements = get("dataElements");
@@ -517,9 +520,11 @@ export class BuildMetadataUseCase {
         const dataSetInputPeriods = get("dataSetInputPeriods");
         const dataSetSections = get("sections");
         const categoryCombos = get("categoryCombos");
+        const existingDataSets = getExisting("dataSets");
 
         return dataSets.map(dataSet => {
-            let data: MetadataItem = JSON.parse(JSON.stringify(dataSet));
+            const existingData = existingDataSets.find(item => item.id === dataSet.id) || {};
+            let data: MetadataItem = { ...existingData, ...JSON.parse(JSON.stringify(dataSet)) };
 
             const newDataSetElements = dataSetElements
                 .filter(dseToFilter => {
@@ -583,14 +588,14 @@ export class BuildMetadataUseCase {
                 .uniqBy(this.getAttributeId)
                 .value();
 
-            if (!_.isObjectLike(data.categoryCombo)) {
-                this.replaceById(data, "categoryCombo", categoryCombos);
+            if (!_.isObjectLike(data.categoryCombo) && data.categoryCombo) {
+                data.categoryCombo = { id: data.categoryCombo };
             }
 
             this.addSharingSetting(data);
 
-            if (!_.isObjectLike(data.workflow)) {
-                data.workflow = { id: data.workflow.id };
+            if (!_.isObjectLike(data.workflow) && data.workflow) {
+                data.workflow = { id: data.workflow };
             }
 
             return {
@@ -620,15 +625,22 @@ export class BuildMetadataUseCase {
         return result;
     }
 
-    private buildDataElementsType(sheets: Sheet[], deType: "dataElements" | "programDataElements") {
+    private buildDataElementsType(
+        sheets: Sheet[],
+        deType: "dataElements" | "programDataElements",
+        existingMetadata: Sheet[]
+    ) {
         const get = (name: string) => getItems(sheets, name);
+        const getExisting = (name: string) => getItems(existingMetadata, name);
 
         const dataElements = get(deType);
         const categoryCombos = get("categoryCombos");
         const optionSets = get("optionSets");
 
         return dataElements.map(dataElement => {
-            let data: MetadataItem = JSON.parse(JSON.stringify(dataElement));
+            const existingSheet = getExisting(deType);
+            const existingData = existingSheet.find(item => item.id === dataElement.id) || {};
+            let data: MetadataItem = { ...existingData, ...JSON.parse(JSON.stringify(dataElement)) };
 
             const domainType = deType === "dataElements" ? "AGGREGATE" : "TRACKER";
 
@@ -675,10 +687,10 @@ export class BuildMetadataUseCase {
         return this.isValidUid(value) ? value : this.getByName(items, value)?.id;
     }
 
-    private buildDataElements(sheets: Sheet[]) {
+    private buildDataElements(sheets: Sheet[], existingMetadata: Sheet[]) {
         return [
-            ...this.buildDataElementsType(sheets, "dataElements"),
-            ...this.buildDataElementsType(sheets, "programDataElements"),
+            ...this.buildDataElementsType(sheets, "dataElements", existingMetadata),
+            ...this.buildDataElementsType(sheets, "programDataElements", existingMetadata),
         ];
     }
 
