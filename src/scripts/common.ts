@@ -91,3 +91,12 @@ export const FilePath: Type<string, string> = {
         return resolved;
     },
 };
+
+export const MergeMode: Type<string, string> = {
+    async from(str) {
+        if (str === "MERGE" || str === "REPLACE") {
+            return str;
+        }
+        throw new Error("Invalid MergeMode: MERGE or REPLACE");
+    },
+};

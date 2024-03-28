@@ -11,7 +11,9 @@ export interface DataElement {
     aggregationType: AggregationType;
     domainType: DomainType;
     description: string;
-    optionSet: string;
+    optionSet: {
+        id: Id;
+    };
     commentOptionSet: string;
     zeroIsSignificant: boolean;
     url: string;

@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { command, option, optional, subcommands, boolean, flag } from "cmd-ts";
+import { command, option, optional, subcommands, boolean, flag, string } from "cmd-ts";
 import {
     getApiUrlOption,
     getD2Api,
@@ -9,6 +9,7 @@ import {
     getGoogleSheetsApi,
     DirPath,
     IDString,
+    MergeMode,
 } from "../common";
 import log from "utils/log";
 import { GoogleSheetsRepository } from "data/GoogleSheetsRepository";
@@ -60,15 +61,23 @@ export function getCommand() {
                 short: "c",
                 description: "Update category option combos",
             }),
+            mergeMode: option({
+                type: optional(MergeMode),
+                long: "merge-mode",
+                short: "m",
+                defaultValue: () => "MERGE",
+                description: "DHIS merge mode (default to MERGE)",
+            }),
         },
         handler: async args => {
             try {
                 const sheetsApi = getGoogleSheetsApi(args.gKey);
                 const sheetsRepository = new GoogleSheetsRepository(sheetsApi);
+                const metadataRepository = new MetadataD2Repository(getD2Api(args.url));
                 log.info(`Reading https://docs.google.com/spreadsheets/d/${args.sheetId} ...`);
 
                 log.info("Converting to metadata...");
-                const buildMetadata = new BuildMetadataUseCase(sheetsRepository);
+                const buildMetadata = new BuildMetadataUseCase(sheetsRepository, metadataRepository);
                 const metadata = await buildMetadata.execute(args.sheetId);
 
                 log.info(`Writing metadata to ${args.path} ...`);
@@ -78,7 +87,9 @@ export function getCommand() {
                     log.info(`Updating it on server at ${args.url} ...`);
                     const api = getD2Api(args.url);
                     const MetadataRepository = new MetadataD2Repository(api);
-                    const result = await MetadataRepository.uploadMetadata(metadata);
+                    const result = await MetadataRepository.uploadMetadata(metadata, {
+                        mode: args.mergeMode === "MERGE" ? "MERGE" : "REPLACE",
+                    });
                     const messages = makeUploadMetadataLog(result);
 
                     log.info([result?.status, ...messages].join("\n"));

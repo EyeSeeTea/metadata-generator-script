@@ -4,7 +4,6 @@ import { sheets_v4 } from "googleapis";
 import { getUid } from "utils/uid";
 import { MetadataItem } from "domain/entities/MetadataItem";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
-import log from "utils/log";
 
 export class GoogleSheetsRepository implements SheetsRepository {
     constructor(private spreadsheets: sheets_v4.Resource$Spreadsheets) {}
