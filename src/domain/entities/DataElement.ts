@@ -1,9 +1,4 @@
 import { AggregationType, ValueType, DomainType, Id, Ref } from "./Base";
-import { CategoryCombo } from "./CategoryCombo";
-import { DataElementGroup } from "./DataElementGroup";
-import { LegendSet } from "./LegendSet";
-import { OptionSet } from "./OptionSet";
-import { Translation } from "./Translation";
 
 export interface DataElement {
     id: Id;
@@ -11,17 +6,20 @@ export interface DataElement {
     shortName: string;
     formName: string;
     code: string;
-    categoryCombo: CategoryCombo;
+    categoryCombo: Ref;
     valueType: ValueType;
     aggregationType: AggregationType;
     domainType: DomainType;
     description: string;
-    optionSet?: OptionSet;
-    commentOptionSet?: OptionSet;
+    optionSet: string;
+    commentOptionSet: string;
     zeroIsSignificant: boolean;
     url: string;
     fieldMask: string;
-    legendSets: LegendSet[];
-    translations: Translation[];
-    dataElementGroups: Pick<DataElementGroup, "id" | "groupSets">[];
+    legendSets: Ref[];
 }
+
+//     attributeValues: D2AttributeValueGeneric<D2Attribute>[];
+//     legendSet: D2LegendSet;
+//     optionSetValue: boolean;
+//     translations: D2Translation[];

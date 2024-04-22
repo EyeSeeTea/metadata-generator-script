@@ -5,33 +5,9 @@ import { getUid } from "utils/uid";
 import { MetadataItem } from "domain/entities/MetadataItem";
 import { SheetsRepository } from "domain/repositories/SheetsRepository";
 import log from "utils/log";
-import { SpreadSheet } from "domain/entities/SpreadSheet";
 
 export class GoogleSheetsRepository implements SheetsRepository {
     constructor(private spreadsheets: sheets_v4.Resource$Spreadsheets) {}
-
-    async save(googleSheetId: string, sheets: SpreadSheet[]): Promise<void> {
-        const spreadsheetData = this.convertSpreadSheetsToRequestParams(sheets);
-
-        const result = await this.spreadsheets.values.batchUpdate({
-            spreadsheetId: googleSheetId,
-            requestBody: {
-                data: spreadsheetData,
-                valueInputOption: "USER_ENTERED",
-            },
-        });
-        log.info(`Spreadsheet response: ${result.statusText}`);
-        log.info(`Spreadsheet link: https://docs.google.com/spreadsheets/d/${googleSheetId}`);
-    }
-
-    private convertSpreadSheetsToRequestParams(sheets: SpreadSheet[]) {
-        return sheets.map(sheet => {
-            return {
-                range: `${sheet.name}!${sheet.range}`,
-                values: sheet.values,
-            };
-        });
-    }
 
     async getSpreadsheet(googleSheetId: string): Promise<Sheet[]> {
         const { data } = await this.spreadsheets.get({ spreadsheetId: googleSheetId, includeGridData: true });
