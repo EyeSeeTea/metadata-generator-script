@@ -5,7 +5,6 @@ import { google, sheets_v4 } from "googleapis";
 import log from "../utils/log";
 import path from "path";
 import fs from "fs";
-import { Path } from "domain/entities/Base";
 
 export function getD2Api(baseUrl: string): D2Api {
     const url = new URL(baseUrl);
@@ -14,18 +13,11 @@ export function getD2Api(baseUrl: string): D2Api {
     return new D2Api({ baseUrl: url.origin + url.pathname, auth });
 }
 
-export function getGoogleSheetsApi(googleApiKey: string): sheets_v4.Resource$Spreadsheets {
-    const { spreadsheets } = google.sheets({ version: "v4", auth: googleApiKey });
-
-    return spreadsheets;
-}
-
-export async function getGoogleSheetsApiByCredentials(credentialsPath: Path): Promise<sheets_v4.Resource$Spreadsheets> {
+export async function getGoogleSheetsApi(googleApiKey: string): Promise<sheets_v4.Resource$Spreadsheets> {
     const auth = new google.auth.GoogleAuth({
-        keyFile: credentialsPath,
+        keyFile: googleApiKey,
         scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
-    log.info(`Authenticating to googleapis.com...`);
     const authClient = await auth.getClient();
     const { spreadsheets } = google.sheets({ version: "v4", auth: authClient });
     return spreadsheets;
@@ -101,14 +93,5 @@ export const FilePath: Type<string, string> = {
         }
 
         return resolved;
-    },
-};
-
-export const MergeMode: Type<string, string> = {
-    async from(str) {
-        if (str === "MERGE" || str === "REPLACE") {
-            return str;
-        }
-        throw new Error("Invalid MergeMode: MERGE or REPLACE");
     },
 };

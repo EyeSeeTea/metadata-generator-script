@@ -40,4 +40,4 @@ cypress/fixtures/
 .idea/*
 
 out.json
-/dist
+dist
