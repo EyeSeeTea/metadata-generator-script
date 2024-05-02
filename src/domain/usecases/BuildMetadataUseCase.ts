@@ -1285,7 +1285,7 @@ export class BuildMetadataUseCase {
 
                 return locale
                     ? {
-                          property: translation.name,
+                          property: translation.name?.toUpperCase(),
                           locale: locale,
                           value: translation.value,
                       }
