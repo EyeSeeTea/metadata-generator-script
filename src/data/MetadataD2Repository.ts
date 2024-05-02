@@ -4,52 +4,9 @@ import { MetadataItem } from "../domain/entities/MetadataItem";
 import { Header, MetadataRepository, Query } from "domain/repositories/MetadataRepository";
 import * as CsvWriter from "csv-writer";
 import { metadataFields } from "utils/metadataFields";
-import { promiseMap } from "utils/utils";
-
-const emptyMetadataResponse = {
-    dataSets: [],
-    dataElements: [],
-    dataElementGroups: [],
-    dataElementGroupSets: [],
-    options: [],
-    sections: [],
-    categories: [],
-    categoryCombos: [],
-    categoryOptions: [],
-    optionSets: [],
-    trackedEntityAttributes: [],
-    trackedEntityTypes: [],
-    programSections: [],
-    programs: [],
-    programStages: [],
-    programStageSections: [],
-    programRules: [],
-    programRuleActions: [],
-    programRuleVariables: [],
-    legendSets: [],
-    attributes: [],
-};
 
 export class MetadataD2Repository implements MetadataRepository {
     constructor(private api: D2Api) {}
-
-    async getByIds(metadataIds: string[]): Promise<MetadataItem> {
-        if (metadataIds.length === 0) return emptyMetadataResponse;
-        const allMetadata = await promiseMap(_.chunk(metadataIds, 100), async ids => {
-            const metadata = await this.api
-                .request<MetadataItem>({
-                    url: "/metadata",
-                    method: "get",
-                    params: { fields: ":owner", filter: `id:in:[${ids.join(",")}]` },
-                })
-                .getData();
-            return _.omit(metadata, "system") as MetadataItem;
-        });
-
-        return allMetadata.reduce((acum, item) => {
-            return { ...acum, ...(item || {}) };
-        }, emptyMetadataResponse);
-    }
 
     async getMetadata(query: Query): Promise<MetadataItem[]> {
         const metadata: MetadataItem[] = await this.api.metadata

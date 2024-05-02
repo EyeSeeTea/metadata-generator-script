@@ -1,10 +1,9 @@
-import { NamedRef, Id, Ref, FeatureType, ValidationStrategyType, RenderType } from "./Base";
-import { Translation } from "./Translation";
+import { PeriodType, Id, Ref, AccessLevelType, FeatureType, ValidationStrategyType, RenderType } from "./Base";
 
 export interface ProgramStage {
     id: Id;
     name: string;
-    program: NamedRef;
+    program: Ref;
     enableUserAssignment?: string;
     blockEntryForm?: string;
     featureType?: FeatureType;
@@ -27,16 +26,8 @@ export interface ProgramStage {
     dueDateLabel?: string;
     sortOrder: number;
     programStageDataElements: ProgramStageDataElement[];
-    programStageSections: ProgramStageSection[];
-    translations: Translation[];
+    programStageSections: Ref[];
 }
-
-export type ProgramStageSection = {
-    id: Id;
-    name: string;
-    renderType: RenderType;
-    description: string;
-};
 
 export interface ProgramStageDataElement {
     id: Id;

@@ -1,5 +1,4 @@
 import { DataDimensionType, Id, Ref } from "./Base";
-import { Translation } from "./Translation";
 
 export interface CategoryCombo {
     id: Id;
@@ -8,5 +7,4 @@ export interface CategoryCombo {
     description: string;
     dataDimensionType: DataDimensionType;
     categories: Ref[];
-    translations: Translation[];
 }

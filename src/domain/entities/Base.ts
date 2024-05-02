@@ -1,7 +1,6 @@
 export type Id = string;
 export type Ref = { id: Id };
 export type NamedRef = { id: Id; name: string };
-export type Path = string;
 
 export type ValueType =
     | "TEXT"
