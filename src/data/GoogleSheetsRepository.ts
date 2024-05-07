@@ -11,24 +11,37 @@ export class GoogleSheetsRepository implements SheetsRepository {
     constructor(private spreadsheets: sheets_v4.Resource$Spreadsheets) {}
 
     async save(googleSheetId: string, sheets: SpreadSheet[]): Promise<void> {
-        const spreadsheetData = this.convertSpreadSheetsToRequestParams(sheets);
+        const emptyData = this.convertSpreadSheetsToRequestParams(sheets, { setDocumentAsEmpty: true });
+        await this.saveSpreadSheet(googleSheetId, emptyData);
 
-        const result = await this.spreadsheets.values.batchUpdate({
+        const spreadsheetData = this.convertSpreadSheetsToRequestParams(sheets, { setDocumentAsEmpty: false });
+        const result = await this.saveSpreadSheet(googleSheetId, spreadsheetData);
+        log.info(`Spreadsheet response: ${result.statusText}`);
+        log.info(`Spreadsheet link: https://docs.google.com/spreadsheets/d/${googleSheetId}`);
+    }
+
+    private async saveSpreadSheet(
+        googleSheetId: string,
+        spreadsheetData: { range: string; values: (string | number | undefined)[][] }[]
+    ) {
+        return await this.spreadsheets.values.batchUpdate({
             spreadsheetId: googleSheetId,
             requestBody: {
                 data: spreadsheetData,
                 valueInputOption: "USER_ENTERED",
             },
         });
-        log.info(`Spreadsheet response: ${result.statusText}`);
-        log.info(`Spreadsheet link: https://docs.google.com/spreadsheets/d/${googleSheetId}`);
     }
 
-    private convertSpreadSheetsToRequestParams(sheets: SpreadSheet[]) {
+    private convertSpreadSheetsToRequestParams(sheets: SpreadSheet[], options: SpreadSheetOptions) {
         return sheets.map(sheet => {
             return {
                 range: `${sheet.name}!${sheet.range}`,
-                values: sheet.values,
+                values: options.setDocumentAsEmpty
+                    ? sheet.values.map(value => {
+                          return value.map(() => "");
+                      })
+                    : sheet.values,
             };
         });
     }
@@ -80,3 +93,5 @@ export class GoogleSheetsRepository implements SheetsRepository {
         return seed0;
     }
 }
+
+type SpreadSheetOptions = { setDocumentAsEmpty: boolean };
