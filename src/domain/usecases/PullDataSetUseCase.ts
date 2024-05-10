@@ -94,14 +94,16 @@ export class PullDataSetUseCase {
         const sectionTranslationsRows = generateTranslations("section", allSections);
 
         const sectionDataElementsRows = allSections.flatMap(section => {
-            return section.dataElements.map(dataElement => {
+            return section.dataElements.map(sectionDataElement => {
                 const dataSetName = dataSetData.find(dataSet => dataSet.id === section.dataSet.id)?.name;
-                const dataElementName = dataElementsData.find(dataElement => dataElement.id === dataElement.id)?.name;
+                const dataElementName = dataElementsData.find(
+                    dataElement => dataElement.id === sectionDataElement.id
+                )?.name;
                 if (!dataSetName) {
                     logger.warn(`Cannot found dataSet with id: ${section.dataSet.id} in sheet sectionDataElements`);
                 }
                 if (!dataElementName) {
-                    logger.warn(`Cannot found dataSet with id: ${dataElement.id} in sheet sectionDataElements`);
+                    logger.warn(`Cannot found dataSet with id: ${sectionDataElement.id} in sheet sectionDataElements`);
                 }
                 return { dataSet: dataSetName, section: section.name, name: dataElementName };
             });
