@@ -6,6 +6,7 @@ export interface MetadataRepository {
     uploadMetadata(metadata: any, importOptions: ImportOptions): Promise<MetadataResponse>;
     updateCategoryOptionCombos(): Promise<void>;
     exportMetadataToCSV(metadata: MetadataItem[], header: any, file: string, path?: string): Promise<void>;
+    getByIds(ids: string[]): Promise<MetadataItem>;
 }
 
 export type MetadataQuery = { [key: string]: any };
