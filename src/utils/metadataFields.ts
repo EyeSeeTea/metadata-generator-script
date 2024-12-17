@@ -1,4 +1,59 @@
-export type fieldsType = Record<string, boolean>;
+export type fieldsType = Record<
+    string,
+    | boolean
+    | typeof sectionFields
+    | typeof optionSetFields
+    | typeof dataSetElementsFields
+    | typeof dataElementGroupsFields
+    | typeof trackedEntityTypeFields
+    | typeof programSectionsFields
+    | typeof categoryComboProgramFields
+>;
+
+const dataElementGroupsFields = { id: true, groupSets: true };
+
+const optionSetFields = {
+    id: true,
+    name: true,
+    options: true,
+    translations: true,
+};
+
+const trackedEntityTypeFields = {
+    id: true,
+    name: true,
+    trackedEntityTypeAttributes: {
+        id: true,
+        trackedEntityAttribute: {
+            id: true,
+            optionSet: optionSetFields,
+            translations: true,
+            legendSets: true,
+        },
+    },
+};
+
+const dataSetElementsFields = {
+    categoryCombo: true,
+    dataSet: true,
+    dataElement: {
+        id: true,
+        optionSet: optionSetFields,
+        commentOptionSet: optionSetFields,
+    },
+};
+
+const sectionFields = {
+    id: true,
+    name: true,
+    code: true,
+    showRowTotals: true,
+    showColumnTotals: true,
+    dataSet: true,
+    description: true,
+    translations: true,
+    dataElements: true,
+};
 
 const dataSetFieds = {
     id: true,
@@ -21,13 +76,17 @@ const dataSetFieds = {
     periodType: true,
     openFuturePeriods: true,
     expiryDays: true,
-    categoryCombo: true,
+    categoryCombo: { id: true, name: true },
     workflow: true,
-    dataSetElements: true,
+    dataSetElements: dataSetElementsFields,
     dataInputPeriods: true,
     indicators: true,
-    legendSets: true,
-    sections: true,
+    legendSets: {
+        id: true,
+        name: true,
+    },
+    sections: sectionFields,
+    translations: true,
 };
 
 const dataElementFieds = {
@@ -36,17 +95,19 @@ const dataElementFieds = {
     shortName: true,
     formName: true,
     code: true,
-    categoryCombo: true,
+    categoryCombo: { id: true, name: true },
     valueType: true,
     aggregationType: true,
     domainType: true,
     description: true,
-    optionSet: true,
-    commentOptionSet: true,
+    optionSet: optionSetFields,
+    commentOptionSet: optionSetFields,
     zeroIsSignificant: true,
     url: true,
     fieldMask: true,
-    legendSets: true,
+    legendSets: { id: true, name: true },
+    translations: true,
+    dataElementGroups: dataElementGroupsFields,
 };
 
 const categoryComboFields = {
@@ -56,6 +117,7 @@ const categoryComboFields = {
     dataDimensionType: true,
     description: true,
     categories: true,
+    translations: true,
 };
 
 const categoriesFields = {
@@ -66,6 +128,7 @@ const categoriesFields = {
     description: true,
     categoryOptions: true,
     dataDimensionType: true,
+    translations: true,
 };
 
 const categoryOptionsFields = {
@@ -74,6 +137,23 @@ const categoryOptionsFields = {
     shortName: true,
     code: true,
     description: true,
+    translations: true,
+};
+
+const programSectionsFields = {
+    id: true,
+    name: true,
+    description: true,
+    renderType: true,
+    trackedEntityAttributes: {
+        id: true,
+        name: true,
+    },
+};
+
+const categoryComboProgramFields = {
+    id: true,
+    name: true,
 };
 
 const programsFields = {
@@ -82,8 +162,8 @@ const programsFields = {
     shortName: true,
     code: true,
     description: true,
-    trackedEntityType: true,
-    categoryCombo: true,
+    trackedEntityType: trackedEntityTypeFields,
+    categoryCombo: categoryComboProgramFields,
     version: true,
     expiryPeriodType: true,
     expiryDays: true,
@@ -104,12 +184,18 @@ const programsFields = {
     relatedProgram: true,
     programStages: true,
     programRuleVariables: true,
+    translations: true,
+    programTrackedEntityAttributes: true,
+    programSections: programSectionsFields,
 };
 
 const programStagesFields = {
     id: true,
     name: true,
-    program: true,
+    program: {
+        id: true,
+        name: true,
+    },
     enableUserAssignment: true,
     blockEntryForm: true,
     featureType: true,
@@ -131,8 +217,14 @@ const programStagesFields = {
     hideDueDate: true,
     dueDateLabel: true,
     sortOrder: true,
-    programStageSections: true,
+    programStageSections: {
+        id: true,
+        name: true,
+        renderType: true,
+        description: true,
+    },
     programStageDataElements: true,
+    translations: true,
 };
 
 const programStageSectionFields = {
@@ -207,4 +299,5 @@ export const metadataFields = {
     programRuleVariablesFields: programRuleVariablesFields,
     LegendSetsFields: LegendSetsFields,
     LegendsFields: LegendsFields,
+    programTrackedEntityAttributes: true,
 };

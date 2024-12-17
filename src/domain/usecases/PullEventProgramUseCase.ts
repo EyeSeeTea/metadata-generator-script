@@ -18,25 +18,38 @@ import {
     programRuleActionsSheetRow,
 } from "domain/entities/Sheet";
 import { DataElement } from "domain/entities/DataElement";
-import { Id, Ref, RenderType } from "../entities/Base";
+import { Id, Path, Ref, RenderType } from "../entities/Base";
 import { CategoryCombo } from "domain/entities/CategoryCombo";
 import { Category } from "../entities/Category";
 import { CategoryOption } from "domain/entities/CategoryOptions";
-import { Program } from "domain/entities/Program";
+import { Program, ProgramSection, ProgramTrackedEntityAttribute } from "domain/entities/Program";
 import { ProgramStage } from "../entities/ProgramStage";
 import { ProgramStageSection } from "../entities/ProgramStageSection";
-import { headers } from "utils/csvHeaders";
+import { convertHeadersToArray, headers } from "utils/csvHeaders";
 import { fieldsType, metadataFields } from "utils/metadataFields";
 import { ProgramRuleVariable } from "domain/entities/ProgramRuleVariable";
 import { Legend, LegendSet } from "../entities/LegendSet";
 import { ProgramRule, ProgramRuleAction } from "domain/entities/ProgramRule";
 import { MetadataItem } from "../entities/MetadataItem";
+import { SheetsRepository } from "domain/repositories/SheetsRepository";
+import { SpreadSheet, SpreadSheetName } from "domain/entities/SpreadSheet";
+import { generateTranslations } from "domain/entities/Translation";
+import { Option, OptionSet } from "domain/entities/OptionSet";
+import { getValueOrEmpty } from "utils/utils";
+import { TrackedEntityAttribute, TrackedEntityType } from "domain/entities/TrackedEntityType";
+import { Maybe } from "utils/ts-utils";
+import logger from "utils/log";
 
 export class PullEventProgramUseCase {
-    constructor(private metadataRepository: MetadataRepository) {}
+    constructor(private metadataRepository: MetadataRepository, private spreadSheetsRepository: SheetsRepository) {}
 
-    async execute(eventProgramId: Id, path?: string) {
+    async execute(options: PullEventProgramUseCaseOptions) {
+        await this.exportProgram(options);
+    }
+
+    private async exportProgram(options: PullEventProgramUseCaseOptions): Promise<void> {
         // PROGRAM GET
+        const { eventProgramId, csvPath, spreadSheetId } = options;
         const programData = await this.getProgramData([eventProgramId]);
 
         const programStagesIds = _.uniq(
@@ -136,12 +149,13 @@ export class PullEventProgramUseCase {
         const pssRows = programStageSectionsData.map(pss => {
             const programStageName = programStagesData.find(psToFind => psToFind.id === pss.programStage.id)?.name;
             if (!programStageName) throw new Error(` programStage id ${pss.programStage.id} name not found`);
-            const pssRow = this.buildProgramStageSectionRow(pss, programStageName, programName);
+            const pssRow = this.buildProgramStageSectionRow(pss, programName, programStageName);
             const pssdeRows = this.buildProgramStageSectionsDataElementRow(
                 programName,
                 programStageName,
                 pss.name,
-                pss.dataElements
+                pss.dataElements,
+                dataElementsData
             );
             return {
                 pssRow: pssRow,
@@ -170,7 +184,7 @@ export class PullEventProgramUseCase {
                 ? this.findById(programStageSectionsData, pra.programStageSection.id)?.name
                 : undefined;
 
-            this.buildProgramRuleActionsRows(
+            return this.buildProgramRuleActionsRows(
                 pra,
                 programRuleName,
                 dataElementName,
@@ -193,11 +207,6 @@ export class PullEventProgramUseCase {
             this.buildCategoryOptionRow(categoryOption, categoriesData)
         );
 
-        // LEGEND SETS BUILD
-
-        const legendSetRows = legendSetsData.map(ls => this.buildLegendSetRow(ls));
-        const legendsRows = legendSetsData.flatMap(ls => this.buildLegendsRows(ls.legends, ls.name));
-
         const dataElementLegendsRows = dataElementsData.flatMap(de => {
             return de.legendSets.flatMap(dels => {
                 const legendSetName = legendSetsData.find(lsToFind => lsToFind.id === dels.id)?.name;
@@ -207,96 +216,524 @@ export class PullEventProgramUseCase {
             });
         });
 
-        //
-        // PRINT CSVs
-        //
-        await this.metadataRepository.exportMetadataToCSV(programRows, headers.programsHeaders, "programs", path);
+        const programTranslationsRows = generateTranslations("program", programData);
+        const programStageTranslationsRows = generateTranslations("programStage", programStagesData);
+        const categoryTranslationsRows = generateTranslations("category", categoriesData);
+        const categoryComboTranslationsRows = generateTranslations("categoryCombo", categoryCombosData);
+        const categoryOptionTranslationsRows = generateTranslations("categoryOption", categoryOptionsData);
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programStagesRows,
-            headers.programStagesHeaders,
-            "programStages",
-            path
+        const programRelatedIds = this.getRelatedIdsFromProgram(programData);
+        const optionSetIds = this.getOptionSetIds(dataElementsData);
+
+        const metadata = await this.metadataRepository.getByIds([...optionSetIds, ...programRelatedIds]);
+
+        const trackedEntityAttributesRows = this.buildTrackedEntityAttributesRows(metadata.trackedEntityAttributes);
+        const trackedEntityAttributesTranslationsRows = generateTranslations(
+            "trackedEntityAttribute",
+            metadata.trackedEntityAttributes
         );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programStagesDataElementsRows,
-            headers.programStageDataElementsHeaders,
-            "programStageDataElements",
-            path
+        const legendSetRows = this.buildLegendsSetRows(metadata.legendSets, legendSetsData);
+        const legendsRows = _(legendSetsData)
+            .concat(metadata.legendSets)
+            .flatMap(ls => this.buildLegendsRows(ls.legends, ls.name))
+            .compact()
+            .value();
+
+        const trackedEntityAttributesLegendsRows = this.buildTrackedEntityAttributesLegends(
+            metadata.legendSets,
+            metadata.trackedEntityAttributes
         );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programStageSectionsRows,
-            headers.programStageSectionsHeaders,
-            "programStageSections",
-            path
+        const trackedEntityTypesRows = this.buildTrackedEntityTypesRows(metadata.trackedEntityTypes);
+        const trackedEntityTypeAttributesRows = this.buildTrackedEntityTypeAttributeRows(
+            metadata.trackedEntityTypes,
+            trackedEntityAttributesRows
+        );
+        const trackedEntityTypesTranslationsRows = generateTranslations(
+            "trackedEntityType",
+            metadata.trackedEntityTypes
+        );
+        const programTrackedEntityAttributesRows = this.buildProgramTrackedEntityAttributesRows(
+            programData,
+            metadata.trackedEntityAttributes
         );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programStageSectionsDataElementRow,
-            headers.programStageSectionsDataElementsHeaders,
-            "programStageSectionsDataElements",
-            path
+        const programSectionsRows = this.buildProgramSectionsRows(programData);
+        const programSectionsTrackedEntityAttributesRows = this.buildProgramSectionsTrackedEntityAttributes(
+            programData,
+            metadata.trackedEntityAttributes
         );
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programRulesData,
-            headers.programRulesHeaders,
-            "programRules",
-            path
-        );
+        const programDataElementsRows = this.buildProgramDataElementsRows(programStagesData, dataElementsData);
+        const programDataElementTranslationsRows = generateTranslations("programDataElement", dataElementsData);
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programRuleActionData,
-            headers.programRuleActionsHeaders,
-            "programRuleActions",
-            path
-        );
+        const optionSetsRows = this.buildOptionSetRows(metadata.optionSets);
+        const optionSetTranslationsRows = generateTranslations("optionSet", metadata.optionSets);
+        const optionsRows = this.buildOptionsRows(metadata.options, metadata.optionSets);
 
-        await this.metadataRepository.exportMetadataToCSV(
-            programRuleVariablesRows,
-            headers.programRuleVariablesHeaders,
-            "programRuleVariables",
-            path
-        );
+        await this.spreadSheetsRepository.save(spreadSheetId || csvPath, [
+            this.convertToSpreadSheetValue("programs", programRows, convertHeadersToArray(headers.programsHeaders)),
+            this.convertToSpreadSheetValue(
+                "programSections",
+                programSectionsRows,
+                convertHeadersToArray(headers.programSectionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programSectionsTrackedEntityAttributes",
+                programSectionsTrackedEntityAttributesRows,
+                convertHeadersToArray(headers.programSectionsTrackedEntityAttributesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programTrackedEntityAttributes",
+                programTrackedEntityAttributesRows,
+                convertHeadersToArray(headers.programTrackedEntityAttributesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programDataElements",
+                programDataElementsRows,
+                convertHeadersToArray(headers.programDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programDataElementTranslations",
+                programDataElementTranslationsRows,
+                convertHeadersToArray(headers.programDataElementTranslationsHeaders)
+            ),
 
-        await this.metadataRepository.exportMetadataToCSV(
-            dataElementsRows,
-            headers.dataElementsHeaders,
-            "dataElements",
-            path
-        );
+            this.convertToSpreadSheetValue(
+                "programTranslations",
+                programTranslationsRows,
+                convertHeadersToArray(headers.programTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStages",
+                programStagesRows,
+                convertHeadersToArray(headers.programStagesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStageDataElements",
+                programStagesDataElementsRows,
+                convertHeadersToArray(headers.programStageDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStageTranslations",
+                programStageTranslationsRows,
+                convertHeadersToArray(headers.programStageTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStageSections",
+                programStageSectionsRows,
+                convertHeadersToArray(headers.programStageSectionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programStageSectionsDataElements",
+                programStageSectionsDataElementRow,
+                convertHeadersToArray(headers.programStageSectionsDataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityTypes",
+                trackedEntityTypesRows,
+                convertHeadersToArray(headers.trackedEntityTypesRowsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityTypeAttributes",
+                trackedEntityTypeAttributesRows,
+                convertHeadersToArray(headers.trackedEntityTypeAttributesRowsHeaders)
+            ),
 
-        await this.metadataRepository.exportMetadataToCSV(
-            dataElementLegendsRows,
-            headers.dataElementLegendsHeaders,
-            "dataElementLegends",
-            path
-        );
+            this.convertToSpreadSheetValue(
+                "trackedEntityTypeTranslations",
+                trackedEntityTypesTranslationsRows,
+                convertHeadersToArray(headers.trackedEntityTypeTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityAttributes",
+                trackedEntityAttributesRows,
+                convertHeadersToArray(headers.trackedEntityAttributesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityAttributeTranslations",
+                trackedEntityAttributesTranslationsRows,
+                convertHeadersToArray(headers.trackedEntityAttributeTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "trackedEntityAttributesLegends",
+                trackedEntityAttributesLegendsRows,
+                convertHeadersToArray(headers.trackedEntityAttributesLegendsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programRules",
+                programRulesRows,
+                convertHeadersToArray(headers.programRulesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programRuleActions",
+                programRuleActionsRows,
+                convertHeadersToArray(headers.programRuleActionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "programRuleVariables",
+                programRuleVariablesRows,
+                convertHeadersToArray(headers.programRuleVariablesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataElements",
+                dataElementsRows,
+                convertHeadersToArray(headers.dataElementsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "dataElementLegends",
+                dataElementLegendsRows,
+                convertHeadersToArray(headers.dataElementLegendsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryCombos",
+                categoryCombosRows,
+                convertHeadersToArray(headers.categoryCombosHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryComboTranslations",
+                categoryComboTranslationsRows,
+                convertHeadersToArray(headers.categoryComboTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categories",
+                categoriesRows,
+                convertHeadersToArray(headers.categoriesHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryTranslations",
+                categoryTranslationsRows,
+                convertHeadersToArray(headers.categoryTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryOptions",
+                categoryOptionsRows,
+                convertHeadersToArray(headers.categoryOptionsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "categoryOptionTranslations",
+                categoryOptionTranslationsRows,
+                convertHeadersToArray(headers.categoryOptionTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "legendSets",
+                legendSetRows,
+                convertHeadersToArray(headers.legendSetsHeaders)
+            ),
+            this.convertToSpreadSheetValue("legends", legendsRows, convertHeadersToArray(headers.legendsHeaders)),
+            this.convertToSpreadSheetValue(
+                "optionSets",
+                optionSetsRows,
+                convertHeadersToArray(headers.optionSetsHeaders)
+            ),
+            this.convertToSpreadSheetValue(
+                "optionSetTranslations",
+                optionSetTranslationsRows,
+                convertHeadersToArray(headers.optionSetTranslationsHeaders)
+            ),
+            this.convertToSpreadSheetValue("options", optionsRows, convertHeadersToArray(headers.optionsHeaders)),
+        ]);
+    }
 
-        await this.metadataRepository.exportMetadataToCSV(
-            categoryCombosRows,
-            headers.categoryCombosHeaders,
-            "categoryCombos",
-            path
-        );
-        await this.metadataRepository.exportMetadataToCSV(
-            categoriesRows,
-            headers.categoriesHeaders,
-            "categories",
-            path
-        );
-        await this.metadataRepository.exportMetadataToCSV(
-            categoryOptionsRows,
-            headers.categoryOptionsHeaders,
-            "categoryOptions",
-            path
-        );
+    private buildProgramDataElementsRows(programStage: ProgramStage[], dataElements: DataElement[]) {
+        return programStage.flatMap(section => {
+            return _(section.programStageDataElements)
+                .map(programDataElement => {
+                    const dataElementDetails = dataElements.find(
+                        dataElement => dataElement.id === programDataElement.dataElement.id
+                    );
+                    if (!dataElementDetails) {
+                        logger.warn(
+                            `Cannot find dataElement: ${programDataElement.dataElement.id} in section ${section.name}`
+                        );
+                        return undefined;
+                    }
+                    return {
+                        id: programDataElement.dataElement.id,
+                        name: dataElementDetails.name,
+                        shortName: dataElementDetails.shortName,
+                        formName: dataElementDetails.formName,
+                        programStageSection: section.name,
+                        code: dataElementDetails.code,
+                        valueType: dataElementDetails.valueType,
+                        aggregationType: dataElementDetails.aggregationType,
+                        description: dataElementDetails.description,
+                        optionSet: dataElementDetails.optionSet?.name || "",
+                    };
+                })
+                .compact()
+                .value();
+        });
+    }
 
-        await this.metadataRepository.exportMetadataToCSV(legendSetRows, headers.legendSetsHeaders, "legendSets", path);
+    private buildProgramSectionsTrackedEntityAttributes(
+        programs: Program[],
+        trackedEntityAttributes: TrackedEntityAttribute[] = []
+    ): { name: string; program: string; programSection: string }[] {
+        return _(programs)
+            .flatMap(program => {
+                const allSections = program.programSections.flatMap(section => section);
+                return allSections.flatMap(section => {
+                    const attributes = section.trackedEntityAttributes.flatMap(attribute => attribute);
+                    return _(attributes)
+                        .map(trackedEntityAttribute => {
+                            const attributeDetails = trackedEntityAttributes.find(
+                                tea => tea.id === trackedEntityAttribute.id
+                            );
+                            if (!attributeDetails) {
+                                logger.warn(
+                                    `Cannot found trackedEntityAttribute: ${trackedEntityAttribute.id} in programSectionsTrackedEntityAttributes sheet`
+                                );
+                                return undefined;
+                            }
+                            return {
+                                name: trackedEntityAttribute.name,
+                                program: program.name,
+                                programSection: section.name,
+                            };
+                        })
+                        .compact()
+                        .value();
+                });
+            })
+            .value();
+    }
 
-        await this.metadataRepository.exportMetadataToCSV(legendsRows, headers.legendsHeaders, "legends", path);
+    private buildProgramSectionsRows(programData: Program[]): ProgramSectionRow[] {
+        return _(programData)
+            .flatMap(program => {
+                return program.programSections.map((section): ProgramSectionRow => {
+                    return {
+                        id: section.id,
+                        name: section.name,
+                        program: program.name,
+                        renderTypeMobile: section.renderType.MOBILE.type,
+                        renderTypeDesktop: section.renderType.DESKTOP.type,
+                        description: section.description,
+                    };
+                });
+            })
+            .value();
+    }
+
+    private buildProgramTrackedEntityAttributesRows(
+        programData: Program[],
+        trackedEntityAttributes: TrackedEntityAttribute[]
+    ): ProgramTrackedEntityAttributesRow[] {
+        return _(programData)
+            .flatMap(program => {
+                return _(program.programTrackedEntityAttributes)
+                    .map((programTea): Maybe<ProgramTrackedEntityAttributesRow> => {
+                        const teaDetails = trackedEntityAttributes.find(
+                            tea => tea.id === programTea.trackedEntityAttribute.id
+                        );
+                        if (!teaDetails) return undefined;
+                        return {
+                            id: programTea.id,
+                            name: teaDetails.name,
+                            program: program.name,
+                            displayInList: programTea.displayInList,
+                            mandatory: programTea.mandatory,
+                            allowFutureDate: programTea.allowFutureDate,
+                            searchable: programTea.searchable,
+                            renderTypeDesktop: programTea.renderType ? programTea.renderType.DESKTOP.type : "",
+                            renderTypeMobile: programTea.renderType ? programTea.renderType.MOBILE.type : "",
+                        };
+                    })
+                    .compact()
+                    .value();
+            })
+            .value();
+    }
+
+    private buildTrackedEntityTypeAttributeRows(
+        trackedEntityTypes: TrackedEntityType[],
+        trackedEntityAttributesRows: TrackedEntityAttributeRow[]
+    ) {
+        return _(trackedEntityTypes)
+            .flatMap(trackedEntityType => {
+                return _(trackedEntityType.trackedEntityTypeAttributes)
+                    .map(trackedEntityTypeAttribute => {
+                        const tetAttributeDetails = trackedEntityAttributesRows.find(
+                            tea => tea.id === trackedEntityTypeAttribute.trackedEntityAttribute.id
+                        );
+                        if (!tetAttributeDetails) {
+                            logger.warn(`Cannot find trackedEntityAttribute ${trackedEntityTypeAttribute.id}`);
+                            return undefined;
+                        }
+                        return {
+                            trackedEntityType: trackedEntityType.name,
+                            name: tetAttributeDetails.name,
+                            displayInList: trackedEntityTypeAttribute.displayInList,
+                            mandatory: trackedEntityTypeAttribute.mandatory,
+                            searchable: trackedEntityTypeAttribute.searchable,
+                        };
+                    })
+                    .compact()
+                    .value();
+            })
+            .value();
+    }
+
+    private buildTrackedEntityTypesRows(trackedEntityTypes: TrackedEntityType[]): TrackedEntityTypeRow[] {
+        return _(trackedEntityTypes)
+            .map((trackedEntityType): TrackedEntityTypeRow => {
+                return {
+                    id: trackedEntityType.id,
+                    name: trackedEntityType.name,
+                    description: trackedEntityType.description,
+                    allowAuditLog: trackedEntityType.allowAuditLog,
+                    minAttributesRequiredToSearch: trackedEntityType.minAttributesRequiredToSearch,
+                    maxTeiCountToReturn: trackedEntityType.maxTeiCountToReturn,
+                    featureType: trackedEntityType.featureType,
+                };
+            })
+            .value();
+    }
+
+    private buildTrackedEntityAttributesLegends(
+        legendSets: LegendSet[],
+        trackedEntityAttributes: TrackedEntityAttribute[]
+    ): TrackedEntityAttributesLegendRow[] {
+        return _(trackedEntityAttributes)
+            .flatMap(trackedEntityAttribute => {
+                return _(trackedEntityAttribute.legendSets)
+                    .map(legendSet => {
+                        const legendSetDetails = legendSets.find(l => l.id === legendSet.id);
+                        if (!legendSetDetails) {
+                            logger.warn(
+                                `Cannot find legendSet ${legendSet.id} in trackedEntityAttribute ${trackedEntityAttribute.name}`
+                            );
+                            return undefined;
+                        }
+                        return { trackedEntityAttribute: trackedEntityAttribute.name, name: legendSetDetails.name };
+                    })
+                    .compact()
+                    .value();
+            })
+            .compact()
+            .value();
+    }
+
+    private buildLegendsSetRows(legendSets: LegendSet[], legendSetsData: LegendSet[]): LegendSetsSheetRow[] {
+        return _(legendSets).concat(legendSetsData).map(this.buildLegendSetRow).compact().value();
+    }
+
+    private getRelatedIdsFromProgram(programData: Program[]): Id[] {
+        return _(programData)
+            .flatMap(program => {
+                const trackedEntityTypeAttributes = program.trackedEntityType
+                    ? program.trackedEntityType.trackedEntityTypeAttributes
+                    : [];
+
+                const relatedIds = _(trackedEntityTypeAttributes)
+                    .flatMap(trackedEntityTypeAttribute => {
+                        const { id, trackedEntityAttribute } = trackedEntityTypeAttribute;
+                        const legendSetIds = trackedEntityAttribute.legendSets.map(legendSet => legendSet.id);
+                        const optionSetId = trackedEntityAttribute.optionSet?.id;
+                        const optionsIds = _(trackedEntityAttribute.optionSet?.options)
+                            .map(option => option.id)
+                            .value();
+                        return [...legendSetIds, ...optionsIds, id, optionSetId, trackedEntityAttribute.id];
+                    })
+                    .compact()
+                    .value();
+
+                const allTrackedEntityAttributeIds = program.programTrackedEntityAttributes.map(
+                    pTea => pTea.trackedEntityAttribute.id
+                );
+
+                return [...relatedIds, ...allTrackedEntityAttributeIds, program.trackedEntityType?.id];
+            })
+            .compact()
+            .uniq()
+            .value();
+    }
+
+    private buildTrackedEntityAttributesRows(
+        trackedEntityAttributes: TrackedEntityAttribute[]
+    ): TrackedEntityAttributeRow[] {
+        return trackedEntityAttributes.map((trackedEntityAttribute): TrackedEntityAttributeRow => {
+            return {
+                id: trackedEntityAttribute.id,
+                name: trackedEntityAttribute.name,
+                shortName: trackedEntityAttribute.shortName,
+                formName: trackedEntityAttribute.formName,
+                code: trackedEntityAttribute.code,
+                description: trackedEntityAttribute.description,
+                fieldMask: trackedEntityAttribute.fieldMask,
+                optionSet: trackedEntityAttribute.optionSet?.id,
+                valueType: trackedEntityAttribute.valueType,
+                aggregationType: trackedEntityAttribute.aggregationType,
+                unique: trackedEntityAttribute.unique,
+                orgunitScope: trackedEntityAttribute.orgunitScope,
+                generated: trackedEntityAttribute.generated,
+                pattern: trackedEntityAttribute.pattern,
+                inherit: trackedEntityAttribute.inherit,
+                confidential: trackedEntityAttribute.confidential,
+                displayInListNoProgram: trackedEntityAttribute.displayInListNoProgram,
+                skipSynchronization: trackedEntityAttribute.skipSynchronization,
+            };
+        });
+    }
+
+    private buildOptionsRows(options: Option[], optionSets: OptionSet[]): OptionRow[] {
+        return _(options)
+            .map(option => {
+                const optionSetName = optionSets.find(optionSet => optionSet.id === option.optionSet?.id)?.name;
+                return {
+                    id: option.id,
+                    name: getValueOrEmpty(option.name),
+                    code: getValueOrEmpty(option.code),
+                    optionSet: getValueOrEmpty(optionSetName),
+                    shortName: getValueOrEmpty(option.shortName),
+                    description: getValueOrEmpty(option.description),
+                };
+            })
+            .value();
+    }
+
+    private buildOptionSetRows(optionSets: OptionSet[]): OptionSetRow[] {
+        return _(optionSets)
+            .map(optionSet => {
+                return {
+                    id: optionSet.id,
+                    name: optionSet.name,
+                    code: optionSet.code,
+                    valueType: optionSet.valueType,
+                    description: optionSet.description,
+                };
+            })
+            .value();
+    }
+
+    private getOptionSetIds(dataElements: DataElement[]): Id[] {
+        const optionSetIds = dataElements.flatMap(dataElement => {
+            const optionSet = dataElement.optionSet;
+            const optionSetId = optionSet?.id;
+            const optionsIds = _(optionSet?.options)
+                .map(option => option.id)
+                .value();
+
+            const commentOptionSet = dataElement.commentOptionSet;
+            const commentOptionSetId = commentOptionSet?.id;
+            const commentOptionsIds = _(commentOptionSet?.options)
+                .map(option => option.id)
+                .value();
+
+            return [optionSetId, ...optionsIds, commentOptionSetId, ...commentOptionsIds];
+        });
+
+        return _(optionSetIds).compact().value();
+    }
+
+    private convertToSpreadSheetValue<Model>(
+        sheetName: SpreadSheetName,
+        rows: Model[],
+        headers: string[]
+    ): SpreadSheet {
+        return { name: sheetName, range: "A2", values: rows.map(Object.values), columns: headers };
     }
 
     //
@@ -391,8 +828,8 @@ export class PullEventProgramUseCase {
             shortName: program.shortName,
             code: program.code,
             description: program.description,
-            trackedEntityType: program.trackedEntityType?.id,
-            categoryCombo: program.categoryCombo.id,
+            trackedEntityType: program.trackedEntityType?.name,
+            categoryCombo: program.categoryCombo?.name,
             version: program.version,
             expiryPeriodType: program.expiryPeriodType,
             expiryDays: program.expiryDays,
@@ -418,7 +855,7 @@ export class PullEventProgramUseCase {
         return {
             id: programStage.id,
             name: programStage.name,
-            program: programStage.program.id,
+            program: programStage.program.name,
             enableUserAssignment: programStage.enableUserAssignment,
             blockEntryForm: programStage.blockEntryForm,
             featureType: programStage.featureType,
@@ -428,7 +865,7 @@ export class PullEventProgramUseCase {
             description: programStage.description,
             minDaysFromStart: programStage.minDaysFromStart,
             repeatable: programStage.repeatable,
-            periodType: programStage.preGenerateUID,
+            periodType: programStage.periodType,
             displayGenerateEventBox: programStage.displayGenerateEventBox,
             standardInterval: programStage.standardInterval,
             autoGenerateEvent: programStage.autoGenerateEvent,
@@ -457,9 +894,9 @@ export class PullEventProgramUseCase {
             const render = this.renderToString(psde.renderType);
             return {
                 id: psde.id,
-                name: deName,
                 program: programName,
                 programStage: programStage.name,
+                name: deName,
                 compulsory: psde.compulsory,
                 allowProvidedElsewhere: psde.allowProvidedElsewhere,
                 displayInReports: psde.displayInReports,
@@ -492,16 +929,22 @@ export class PullEventProgramUseCase {
         program: string,
         programStage: string,
         programStageSection: string,
-        dataElements: Ref[]
+        dataElements: Ref[],
+        dataElementsDetails: DataElement[]
     ): ProgramStageSectionsDataElementsSheetRow[] {
-        return dataElements.map(dataElement => {
-            return {
-                program: program,
-                programStage: programStage,
-                programStageSection: programStageSection,
-                name: dataElement.id,
-            };
-        });
+        return _(dataElements)
+            .map(psDataElement => {
+                const dataElementDetail = dataElementsDetails.find(dataElement => dataElement.id === psDataElement.id);
+                if (!dataElementDetail) return undefined;
+                return {
+                    program: program,
+                    programStage: programStage,
+                    programStageSection: programStageSection,
+                    name: dataElementDetail.name,
+                };
+            })
+            .compact()
+            .value();
     }
 
     private buildProgramRuleRow(programRule: ProgramRule, programName: string): ProgramRulesSheetRow {
@@ -578,8 +1021,8 @@ export class PullEventProgramUseCase {
             aggregationType: dataElement.aggregationType,
             domainType: dataElement.domainType,
             description: dataElement.description,
-            optionSet: dataElement.optionSet,
-            commentOptionSet: dataElement.commentOptionSet,
+            optionSet: dataElement.optionSet ? dataElement.optionSet.id : undefined,
+            commentOptionSet: dataElement.commentOptionSet ? dataElement.commentOptionSet.id : undefined,
             zeroIsSignificant: this.booleanToString(dataElement.zeroIsSignificant),
             url: dataElement.url,
             fieldMask: dataElement.fieldMask,
@@ -687,3 +1130,29 @@ export class PullEventProgramUseCase {
         return object.find(item => item.id === id) ?? undefined;
     }
 }
+
+type PullEventProgramUseCaseOptions = { eventProgramId: string; spreadSheetId: string; csvPath: Path };
+
+type OptionSetRow = Omit<OptionSet, "translations" | "options">;
+type OptionRow = Partial<Omit<Option, "translations" | "optionSet"> & { optionSet: string }>;
+type TrackedEntityAttributeRow = Omit<TrackedEntityAttribute, "translations" | "optionSet" | "legendSets"> & {
+    optionSet: Maybe<string>;
+};
+
+type TrackedEntityAttributesLegendRow = { trackedEntityAttribute: string; name: string };
+type TrackedEntityTypeRow = Omit<TrackedEntityType, "trackedEntityTypeAttributes" | "translations">;
+type ProgramTrackedEntityAttributesRow = Omit<
+    ProgramTrackedEntityAttribute,
+    "renderType" | "trackedEntityAttribute"
+> & {
+    name: string;
+    program: string;
+    renderTypeDesktop: string;
+    renderTypeMobile: string;
+};
+
+type ProgramSectionRow = Pick<ProgramSection, "id" | "name" | "description"> & {
+    program: string;
+    renderTypeDesktop: string;
+    renderTypeMobile: string;
+};
