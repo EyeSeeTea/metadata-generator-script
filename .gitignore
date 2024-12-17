@@ -39,4 +39,4 @@ cypress/fixtures/
 # IntelliJ
 .idea/*
 
-out.json
+dist

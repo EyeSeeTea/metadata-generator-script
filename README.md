@@ -40,6 +40,7 @@ OPTIONS:
   --google-key, -g <value> - Google Api key
   --sheet-id, -s <value>   - Google Spreadsheet ID
   --path, -p <value>       - JSON output path (file or directory) [optional]
+  --merge-mode -m         - [DHIS2 merge mode](https://docs.dhis2.org/en/develop/using-the-api/dhis-core-version-master/metadata.html#webapi_metadata_create_update) (default to MERGE)
 
 FLAGS:
   --local-run, -l  - Don't upload metadata to DHIS2 instance
