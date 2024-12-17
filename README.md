@@ -1,4 +1,4 @@
-# GLASS-metadata
+# Metadata Generator Script
 
 Script to generate dhis2 metadata from google sheets.
 
