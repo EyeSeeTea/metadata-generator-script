@@ -1,4 +1,8 @@
-import { PeriodType, Id, Ref } from "./Base";
+import { PeriodType, Id, Ref, NamedRef } from "./Base";
+import { CategoryCombo } from "./CategoryCombo";
+import { DataElement } from "./DataElement";
+import { LegendSet } from "./LegendSet";
+import { Translation } from "./Translation";
 
 export interface DataSet {
     id: Id;
@@ -21,19 +25,40 @@ export interface DataSet {
     periodType: PeriodType;
     openFuturePeriods: number;
     expiryDays: number;
-    categoryCombo: Ref;
+    categoryCombo: Pick<CategoryCombo, "id" | "name">;
     workflow: Ref;
     dataSetElements: Array<DataSetElement>;
     dataInputPeriods: Array<{ openingDate: string; closingDate: string; period: { id: string } }>;
     // attributeValues: Array<{ value: string; attribute: Ref }>;
     indicators: Ref[];
-    legendSets: Ref[];
-    sections: Ref[];
+    legendSets: LegendSet[];
+    sections: DataSetSection[];
+    translations: Translation[];
+}
+
+export interface DataSetSection extends NamedRef {
+    code: string;
+    dataSet: Ref;
+    description: string;
+    showColumnTotals: boolean;
+    showRowTotals: boolean;
+    translations: Translation[];
+    dataElements: DataElement[];
 }
 
 export interface DataSetElement {
     dataSet: Ref;
-    dataElement: Ref;
+    dataElement: {
+        id: Id;
+        optionSet?: {
+            id: Id;
+            options: Ref[];
+        };
+        commentOptionSet?: {
+            id: Id;
+            options: Ref[];
+        };
+    };
     categoryCombo?: Ref;
 }
 
@@ -53,10 +78,10 @@ export interface DataSet2 {
     organisationUnits: Ref[];
 }
 
-interface CategoryCombo {
-    id: Id;
-    categoryOptionCombos: Ref[];
-}
+// interface CategoryCombo {
+//     id: Id;
+//     categoryOptionCombos: Ref[];
+// }
 
 export interface DataSetDataElement {
     id: Id;
