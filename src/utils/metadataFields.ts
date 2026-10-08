@@ -181,7 +181,10 @@ const programsFields = {
     enrollmentDateLabel: true,
     ignoreOverdueEvents: true,
     featureType: true,
-    relatedProgram: true,
+    relatedProgram: {
+        id: true,
+        name: true,
+    },
     programStages: true,
     programRuleVariables: true,
     translations: true,

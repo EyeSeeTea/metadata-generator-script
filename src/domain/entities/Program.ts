@@ -1,5 +1,5 @@
 import { Maybe } from "utils/ts-utils";
-import { PeriodType, Id, Ref, AccessLevelType, FeatureType, RenderType } from "./Base";
+import { PeriodType, Id, NamedRef, Ref, AccessLevelType, FeatureType, RenderType } from "./Base";
 import { CategoryCombo } from "./CategoryCombo";
 import { TrackedEntityAttribute, TrackedEntityType } from "./TrackedEntityType";
 import { Translation } from "./Translation";
@@ -29,7 +29,7 @@ export interface Program {
     enrollmentDateLabel?: string;
     ignoreOverdueEvents?: boolean;
     featureType?: FeatureType;
-    relatedProgram?: Ref;
+    relatedProgram?: NamedRef;
     programStages?: Ref[];
     programRuleVariables?: Ref[];
     translations: Translation[];

@@ -225,6 +225,29 @@ export class PullEventProgramUseCase {
         const programRelatedIds = this.getRelatedIdsFromProgram(programData);
         const optionSetIds = this.getOptionSetIds(dataElementsData);
 
+        if (spreadSheetId) {
+            const getProgramNameRows = this.spreadSheetsRepository.getProgramNameRows;
+            if (!getProgramNameRows) {
+                throw new Error("Spreadsheet repository does not support reading existing program names");
+            }
+
+            const existingProgramNames = await getProgramNameRows.call(this.spreadSheetsRepository, spreadSheetId);
+            const overwrittenProgramNames = new Set(programRows.map(program => program.name));
+            const retainedProgramNames = new Set(
+                existingProgramNames.slice(programRows.length).filter((name): name is string => Boolean(name))
+            );
+            const missingRelatedProgramNames = programData
+                .flatMap(program => program.relatedProgram?.name ?? [])
+                .filter(name => !overwrittenProgramNames.has(name) && !retainedProgramNames.has(name));
+
+            if (missingRelatedProgramNames.length > 0) {
+                const missingNames = [...new Set(missingRelatedProgramNames)].join(", ");
+                throw new Error(
+                    `Cannot export related program name(s) ${missingNames}: they are not present in the programs dropdown after the export overwrites ${programRows.length} program row(s). Add the related program to the spreadsheet first.`
+                );
+            }
+        }
+
         const metadata = await this.metadataRepository.getByIds([...optionSetIds, ...programRelatedIds]);
 
         const trackedEntityAttributesRows = this.buildTrackedEntityAttributesRows(metadata.trackedEntityAttributes);
@@ -663,7 +686,7 @@ export class PullEventProgramUseCase {
                 code: trackedEntityAttribute.code,
                 description: trackedEntityAttribute.description,
                 fieldMask: trackedEntityAttribute.fieldMask,
-                optionSet: trackedEntityAttribute.optionSet?.id,
+                optionSet: trackedEntityAttribute.optionSet?.name,
                 valueType: trackedEntityAttribute.valueType,
                 aggregationType: trackedEntityAttribute.aggregationType,
                 unique: trackedEntityAttribute.unique,
@@ -847,7 +870,7 @@ export class PullEventProgramUseCase {
             enrollmentDateLabel: program.enrollmentDateLabel,
             ignoreOverdueEvents: this.booleanToString(program.ignoreOverdueEvents),
             featureType: program.featureType,
-            relatedProgram: program.relatedProgram?.id,
+            relatedProgram: program.relatedProgram?.name,
         };
     }
 
