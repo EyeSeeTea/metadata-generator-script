@@ -54,6 +54,16 @@ export class GoogleSheetsRepository implements SheetsRepository {
         return sheets;
     }
 
+    async getProgramNameRows(googleSheetId: string): Promise<Array<string | undefined>> {
+        const { data } = await this.spreadsheets.values.get({
+            spreadsheetId: googleSheetId,
+            range: "programs!B2:B",
+        });
+
+        // Keep empty rows in place because the exporter overwrites rows from row 2 onward.
+        return (data.values ?? []).map(row => row[0] as string | undefined);
+    }
+
     // Return an object with the name of the sheet and a list of items that
     // correspond to each row. The items are objects like { col1: v1, col2: v2, ... }
     // and a generated id if they don't contain one already.
