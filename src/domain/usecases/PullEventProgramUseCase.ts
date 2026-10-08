@@ -357,7 +357,7 @@ export class PullEventProgramUseCase {
                 convertHeadersToArray(headers.trackedEntityAttributeTranslationsHeaders)
             ),
             this.convertToSpreadSheetValue(
-                "trackedEntityAttributesLegends",
+                "trackedEntityAttributeLegends",
                 trackedEntityAttributesLegendsRows,
                 convertHeadersToArray(headers.trackedEntityAttributesLegendsHeaders)
             ),
